@@ -1,0 +1,9 @@
+* text=auto
+
+# Keep Unix shell wrappers usable on Linux and macOS.
+**/mvnw text eol=lf
+*.sh text eol=lf
+
+# Keep Windows command wrappers in their native line-ending format.
+*.cmd text eol=crlf
+*.bat text eol=crlf
