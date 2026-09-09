@@ -41,7 +41,7 @@ Flyway no pasa por Hibernate.
 
 ## Backend y BCE
 
-El package base es `edu.unse.sera`, tomado del ZIP de Spring Initializr. Durante la inicialización solo existe infraestructura compartida bajo `shared`; los módulos de negocio que aparecen en esta guía son ejemplos.
+El package base es `edu.unse.sera`, tomado del ZIP de Spring Initializr. `espacio` es la primera feature de referencia y `shared` contiene infraestructura común. Los demás módulos de negocio que aparecen en esta guía son ejemplos.
 
 `GET /api/health` devuelve un DTO con `{"status":"ok"}`. Confirma que la API responde y no consulta PostgreSQL. No mide la disponibilidad de la base de datos.
 
@@ -322,7 +322,7 @@ Los secretos de Mercado Pago solo existen en backend.
 
 ## PostgreSQL
 
-El bootstrap no crea tablas de negocio ni migraciones ficticias. Hibernate usa `ddl-auto=none`. Al incorporar la primera entidad, agregar su migración Flyway y pasar a `ddl-auto=validate` para comprobar la correspondencia entre el modelo y el esquema.
+Flyway crea la tabla `espacios` mediante `V1__create_espacios.sql`. Hibernate usa `ddl-auto=validate` para comprobar que el modelo JPA coincide con el esquema. Cada cambio posterior del esquema debe sumar una migración nueva.
 
 Desarrollo:
 

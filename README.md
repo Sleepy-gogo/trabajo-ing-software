@@ -46,13 +46,13 @@ sera/
 ├── docs/
 │   ├── adr/
 │   ├── ARCHITECTURE.md
+│   ├── CRUD_REFERENCE.md
 │   ├── DEVELOPMENT.md
 │   └── TOOLING.md
 ├── .github/
 │   └── pull_request_template.md
 ├── AGENTS.md
 ├── REPOSITORY_RULES.md
-├── PROJECT_SPEC.md
 ├── compose.yml
 └── README.md
 ```
@@ -91,7 +91,7 @@ Boundary -> Control -> Entity
 
 Los controllers no acceden directamente a repositories. Las entidades no conocen HTTP. Los DTO no se persisten.
 
-Los módulos del diagrama son ejemplos para futuras features. El bootstrap solo incluye `shared` y `GET /api/health`, que devuelve `{"status":"ok"}` sin consultar la base de datos. El package `edu.unse.sera` se conserva del ZIP de Spring Initializr.
+`espacio` es la primera feature de referencia. `shared` contiene infraestructura común y `GET /api/health`, que devuelve `{"status":"ok"}` sin consultar la base de datos. El package `edu.unse.sera` se conserva del ZIP de Spring Initializr.
 
 ## Desarrollo local
 
@@ -127,7 +127,6 @@ pnpm install
 pnpm dev
 ```
 
-Abrir <http://localhost:5173>. La página inicial consulta `/api/health` mediante el proxy de Vite al backend en el puerto 8080 y muestra el estado de la conexión.
 
 ## Checks
 
@@ -157,5 +156,7 @@ Antes de modificar la estructura del repositorio o agregar una dependencia impor
 - `docs/ARCHITECTURE.md`
 - `docs/TOOLING.md`
 - `docs/DEVELOPMENT.md`
+
+Para implementar una feature de punta a punta, usar como guía el [CRUD vertical de espacios](docs/CRUD_REFERENCE.md).
 
 Los agentes de código también deben leer `AGENTS.md`.

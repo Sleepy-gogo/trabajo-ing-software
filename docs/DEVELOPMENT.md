@@ -110,7 +110,7 @@ Hacerlo solo cuando sea intencional.
 
 ## Migraciones
 
-El directorio `db/migration` se conserva sin SQL durante el bootstrap. Todavía no hay entidades ni tablas de negocio. Hibernate usa `ddl-auto=none`; cambiarlo a `validate` junto con la primera migración y su modelo JPA.
+`V1__create_espacios.sql` es la primera migración. Hibernate usa `ddl-auto=validate` y detiene el arranque si el modelo JPA no coincide con el esquema creado por Flyway.
 
 Al agregar o modificar schema:
 
