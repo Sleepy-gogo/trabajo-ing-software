@@ -1,0 +1,7 @@
+export { AdminDashboardPage } from "./dashboard"
+export { AdminPaymentsPage, PaymentsPage } from "./payments"
+export { AdminReservationsPage, ReservationsPage } from "./reservations"
+export { AdminSpaceDetailPage, AdminSpacesPage, SpacesPage } from "./spaces"
+export { MembersPage, UsersPage } from "./people"
+export { RecentReportsPage, ReportsPage } from "./reports"
+export { SettingsPage } from "./settings"
