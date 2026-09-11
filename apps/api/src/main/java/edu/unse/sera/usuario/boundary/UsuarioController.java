@@ -40,7 +40,6 @@ public class UsuarioController {
                 request.email(),
                 request.dni(),
                 request.rol(),
-                request.qrUsuario(),
                 request.password()));
     return ResponseEntity.created(URI.create("/api/usuarios/" + response.id())).body(response);
   }
@@ -66,7 +65,6 @@ public class UsuarioController {
             request.email(),
             request.dni(),
             request.rol(),
-            request.qrUsuario(),
             request.estadoCuenta()));
   }
 

@@ -1,6 +1,7 @@
 package edu.unse.sera.usuario.boundary.dto;
 
 import edu.unse.sera.usuario.entity.EstadoUsuario;
+import edu.unse.sera.usuario.entity.RolUsuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -19,10 +20,5 @@ public record ActualizarUsuarioRequest(
     @Min(value = 1, message = "El DNI debe ser mayor que cero.")
         @Max(value = 99_999_999, message = "El DNI no puede superar los 8 dígitos.")
         int dni,
-    @NotBlank(message = "El rol es obligatorio.")
-        @Size(max = 50, message = "El rol no puede superar los 50 caracteres.")
-        String rol,
-    @NotBlank(message = "El QR de usuario es obligatorio.")
-        @Size(max = 100, message = "El QR de usuario no puede superar los 100 caracteres.")
-        String qrUsuario,
+    @NotNull(message = "El rol es obligatorio.") RolUsuario rol,
     @NotNull(message = "El estado de cuenta es obligatorio.") EstadoUsuario estadoCuenta) {}

@@ -15,15 +15,13 @@ class UsuarioTest {
             "  ADA@EXAMPLE.COM  ",
             12345678,
             EstadoUsuario.ACTIVO,
-            "  socio  ",
-            "  QR-ADA-001  ",
+            RolUsuario.USUARIO,
             "hash");
 
-    assertThat(usuario.getId()).isNotNull();
     assertThat(usuario.getNombreCompleto()).isEqualTo("Ada Lovelace");
     assertThat(usuario.getEmail()).isEqualTo("ada@example.com");
-    assertThat(usuario.getRol()).isEqualTo("socio");
-    assertThat(usuario.getQrUsuario()).isEqualTo("QR-ADA-001");
+    assertThat(usuario.getRol()).isEqualTo(RolUsuario.USUARIO);
+    assertThat(usuario.getQrUsuario()).matches("SERA-U[a-z0-9]{12}");
   }
 
   @Test
@@ -35,8 +33,7 @@ class UsuarioTest {
                     "ada@example.com",
                     12345678,
                     EstadoUsuario.ACTIVO,
-                    "socio",
-                    "QR-ADA-001",
+                    RolUsuario.USUARIO,
                     "hash"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("nombre");
@@ -48,8 +45,7 @@ class UsuarioTest {
                     "ada@example.com",
                     0,
                     EstadoUsuario.ACTIVO,
-                    "socio",
-                    "QR-ADA-001",
+                    RolUsuario.USUARIO,
                     "hash"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("DNI");

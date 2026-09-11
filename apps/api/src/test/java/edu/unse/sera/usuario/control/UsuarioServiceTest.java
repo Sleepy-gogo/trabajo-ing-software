@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import edu.unse.sera.usuario.entity.EstadoUsuario;
+import edu.unse.sera.usuario.entity.RolUsuario;
 import edu.unse.sera.usuario.entity.Usuario;
 import edu.unse.sera.usuario.persistence.UsuarioRepository;
 import java.sql.SQLException;
@@ -46,8 +47,7 @@ class UsuarioServiceTest {
             "  Ada Lovelace  ",
             "  ADA@EXAMPLE.COM  ",
             12345678,
-            "socio",
-            "QR-ADA-001",
+            RolUsuario.USUARIO,
             "password-seguro");
 
     assertThat(detalle.nombreCompleto()).isEqualTo("Ada Lovelace");
@@ -67,8 +67,7 @@ class UsuarioServiceTest {
                     "Ada Lovelace",
                     "ADA@example.com",
                     12345678,
-                    "socio",
-                    "QR-ADA-001",
+                    RolUsuario.USUARIO,
                     "password-seguro"))
         .isInstanceOf(UsuarioDuplicadoException.class)
         .hasMessageContaining("email");
@@ -126,6 +125,7 @@ class UsuarioServiceTest {
   void actualizaYFuerzaLaAuditoriaAntesDeResponder() {
     UUID id = UUID.randomUUID();
     Usuario usuario = crearUsuario();
+    String qrOriginal = usuario.getQrUsuario();
     when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuario));
 
     UsuarioDetalle detalle =
@@ -134,12 +134,12 @@ class UsuarioServiceTest {
             "Ada Byron",
             "ada.byron@example.com",
             12345678,
-            "administrador",
-            "QR-ADA-002",
+            RolUsuario.ADMIN,
             EstadoUsuario.ACTIVO);
 
     assertThat(detalle.nombreCompleto()).isEqualTo("Ada Byron");
-    assertThat(detalle.rol()).isEqualTo("administrador");
+    assertThat(detalle.rol()).isEqualTo(RolUsuario.ADMIN);
+    assertThat(detalle.qrUsuario()).isEqualTo(qrOriginal);
     verify(usuarioRepository).flush();
   }
 
@@ -155,8 +155,7 @@ class UsuarioServiceTest {
                     "Ada Lovelace",
                     "ada@example.com",
                     12345678,
-                    "socio",
-                    "QR-ADA-001",
+                    RolUsuario.USUARIO,
                     "password-seguro"))
         .isInstanceOf(UsuarioDuplicadoException.class)
         .hasMessageContaining("email")
@@ -177,8 +176,7 @@ class UsuarioServiceTest {
                     "Ada Byron",
                     "ada.byron@example.com",
                     87654321,
-                    "administrador",
-                    "QR-ADA-002",
+                    RolUsuario.ADMIN,
                     EstadoUsuario.ACTIVO))
         .isInstanceOf(UsuarioDuplicadoException.class)
         .hasMessageContaining("dni")
@@ -198,8 +196,7 @@ class UsuarioServiceTest {
                     "Ada Lovelace",
                     "ada@example.com",
                     12345678,
-                    "socio",
-                    "QR-ADA-001",
+                    RolUsuario.USUARIO,
                     "password-seguro"))
         .isSameAs(violation);
   }
@@ -210,8 +207,7 @@ class UsuarioServiceTest {
         "ada@example.com",
         12345678,
         EstadoUsuario.ACTIVO,
-        "socio",
-        "QR-ADA-001",
+        RolUsuario.USUARIO,
         "hash");
   }
 

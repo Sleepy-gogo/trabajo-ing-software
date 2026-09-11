@@ -1,6 +1,7 @@
 package edu.unse.sera.usuario.control;
 
 import edu.unse.sera.usuario.entity.EstadoUsuario;
+import edu.unse.sera.usuario.entity.RolUsuario;
 import edu.unse.sera.usuario.entity.Usuario;
 import edu.unse.sera.usuario.persistence.UsuarioRepository;
 import java.util.List;
@@ -28,18 +29,13 @@ public class UsuarioService {
     this.passwordEncoder = passwordEncoder;
   }
 
+  /** Registra una cuenta activa y guarda únicamente el hash de su contraseña. */
   public UsuarioDetalle registrarUsuario(
-      String nombreCompleto,
-      String email,
-      int dni,
-      String rol,
-      String qrUsuario,
-      String rawPassword) {
+      String nombreCompleto, String email, int dni, RolUsuario rol, String rawPassword) {
     validarUnicidad(email, dni, null);
     String hashedPassword = passwordEncoder.encode(rawPassword);
     Usuario usuario =
-        new Usuario(
-            nombreCompleto, email, dni, EstadoUsuario.ACTIVO, rol, qrUsuario, hashedPassword);
+        new Usuario(nombreCompleto, email, dni, EstadoUsuario.ACTIVO, rol, hashedPassword);
     try {
       return toResponse(usuarioRepository.saveAndFlush(usuario));
     } catch (DataIntegrityViolationException exception) {
@@ -47,6 +43,7 @@ public class UsuarioService {
     }
   }
 
+  /** No distingue cuentas inexistentes, inactivas o contraseñas erróneas ante quien llama. */
   @Transactional(readOnly = true)
   public boolean validarCredenciales(String email, String rawPassword) {
     return usuarioRepository
@@ -56,6 +53,7 @@ public class UsuarioService {
         .orElse(false);
   }
 
+  /** Reúne el listado administrativo y su búsqueda en un único caso de uso. */
   @Transactional(readOnly = true)
   public List<UsuarioDetalle> listar(String criterio) {
     List<Usuario> usuarios;
@@ -76,22 +74,23 @@ public class UsuarioService {
     return usuarios.stream().map(this::toResponse).toList();
   }
 
+  /** Devuelve el detalle administrativo sin exponer la entidad persistente. */
   @Transactional(readOnly = true)
   public UsuarioDetalle consultarDetalle(UUID id) {
     return toResponse(buscar(id));
   }
 
+  /** Edita los datos administrativos sin reemplazar el QR estable del usuario. */
   public UsuarioDetalle actualizarUsuario(
       UUID id,
       String nombreCompleto,
       String email,
       int dni,
-      String rol,
-      String qrUsuario,
+      RolUsuario rol,
       EstadoUsuario estadoCuenta) {
     Usuario usuario = buscar(id);
     validarUnicidad(email, dni, id);
-    usuario.actualizarDatos(nombreCompleto, email, dni, rol, qrUsuario);
+    usuario.actualizarDatos(nombreCompleto, email, dni, rol);
     usuario.cambiarEstado(estadoCuenta);
     try {
       usuarioRepository.flush();
@@ -101,10 +100,12 @@ public class UsuarioService {
     return toResponse(usuario);
   }
 
+  /** Conserva el registro y sus futuras relaciones, pero impide usar la cuenta. */
   public void darDeBaja(UUID id) {
     buscar(id).cambiarEstado(EstadoUsuario.INACTIVO);
   }
 
+  /** Separa el cambio de contraseña de la edición de datos administrativos. */
   public void actualizarPasswordUsuario(UUID id, String rawPassword) {
     Usuario usuario = buscar(id);
     usuario.cambiarPasswordHash(passwordEncoder.encode(rawPassword));
@@ -145,6 +146,7 @@ public class UsuarioService {
     }
   }
 
+  /** Mantiene el contrato 409 si la base resuelve una carrera entre dos requests. */
   private RuntimeException traducirConflictoDeUnicidad(DataIntegrityViolationException exception) {
     Optional<ConstraintViolationException> violation = buscarConstraintViolation(exception);
     if (violation.isEmpty()) {

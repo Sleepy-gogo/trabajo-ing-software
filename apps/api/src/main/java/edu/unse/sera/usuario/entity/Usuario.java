@@ -1,9 +1,12 @@
 package edu.unse.sera.usuario.entity;
 
+import io.github.thibaultmeyer.cuid.CUID;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
@@ -18,6 +21,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 public class Usuario {
 
   @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
   private UUID id;
 
@@ -34,10 +38,11 @@ public class Usuario {
   @Column(name = "estado_cuenta", nullable = false)
   private EstadoUsuario estadoCuenta;
 
+  @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 50)
-  private String rol;
+  private RolUsuario rol;
 
-  @Column(name = "qr_usuario", nullable = false, length = 100)
+  @Column(name = "qr_usuario", nullable = false, length = 18, unique = true, updatable = false)
   private String qrUsuario;
 
   @Column(name = "password_hash", nullable = false, length = 255)
@@ -53,33 +58,34 @@ public class Usuario {
 
   protected Usuario() {}
 
+  /** Genera el QR dentro del dominio para que ningún cliente pueda elegirlo o reemplazarlo. */
   public Usuario(
       String nombreCompleto,
       String email,
       int dni,
       EstadoUsuario estadoCuenta,
-      String rol,
-      String qrUsuario,
+      RolUsuario rol,
       String passwordHash) {
-    this.id = UUID.randomUUID();
     this.estadoCuenta = Objects.requireNonNull(estadoCuenta);
-    actualizarDatos(nombreCompleto, email, dni, rol, qrUsuario);
+    this.qrUsuario = generarQrUsuario();
+    actualizarDatos(nombreCompleto, email, dni, rol);
     cambiarPasswordHash(passwordHash);
   }
 
-  public void actualizarDatos(
-      String nombreCompleto, String email, int dni, String rol, String qrUsuario) {
+  /** Mantiene las mismas reglas para los datos editables durante el alta y la actualización. */
+  public void actualizarDatos(String nombreCompleto, String email, int dni, RolUsuario rol) {
     this.nombreCompleto = normalizarNombre(nombreCompleto);
     this.email = normalizarEmail(email);
     this.dni = validarDni(dni);
-    this.rol = normalizarAtributoObligatorio(rol, "El rol es obligatorio.");
-    this.qrUsuario = normalizarAtributoObligatorio(qrUsuario, "El QR de usuario es obligatorio.");
+    this.rol = Objects.requireNonNull(rol, "El rol es obligatorio.");
   }
 
+  /** Permite suspender o reactivar una cuenta sin borrar su historial. */
   public void cambiarEstado(EstadoUsuario estadoCuenta) {
     this.estadoCuenta = Objects.requireNonNull(estadoCuenta);
   }
 
+  /** Recibe solo hashes para que la entidad nunca conserve una contraseña en texto plano. */
   public void cambiarPasswordHash(String passwordHash) {
     if (passwordHash == null || passwordHash.isBlank()) {
       throw new IllegalArgumentException("El hash de contraseña es obligatorio.");
@@ -107,7 +113,7 @@ public class Usuario {
     return dni;
   }
 
-  public String getRol() {
+  public RolUsuario getRol() {
     return rol;
   }
 
@@ -148,10 +154,7 @@ public class Usuario {
     return valor;
   }
 
-  private String normalizarAtributoObligatorio(String valor, String mensaje) {
-    if (valor == null || valor.isBlank()) {
-      throw new IllegalArgumentException(mensaje);
-    }
-    return valor.trim();
+  private String generarQrUsuario() {
+    return "SERA-U" + CUID.randomCUID2(12);
   }
 }

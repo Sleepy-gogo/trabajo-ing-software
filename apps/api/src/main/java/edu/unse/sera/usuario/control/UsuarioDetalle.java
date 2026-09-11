@@ -1,6 +1,7 @@
 package edu.unse.sera.usuario.control;
 
 import edu.unse.sera.usuario.entity.EstadoUsuario;
+import edu.unse.sera.usuario.entity.RolUsuario;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -9,7 +10,7 @@ public record UsuarioDetalle(
     String nombreCompleto,
     String email,
     int dni,
-    String rol,
+    RolUsuario rol,
     String qrUsuario,
     EstadoUsuario estadoCuenta,
     OffsetDateTime creadoEn,

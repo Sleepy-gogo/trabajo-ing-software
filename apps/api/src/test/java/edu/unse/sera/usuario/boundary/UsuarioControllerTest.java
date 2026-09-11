@@ -16,6 +16,7 @@ import edu.unse.sera.usuario.control.UsuarioDetalle;
 import edu.unse.sera.usuario.control.UsuarioDuplicadoException;
 import edu.unse.sera.usuario.control.UsuarioService;
 import edu.unse.sera.usuario.entity.EstadoUsuario;
+import edu.unse.sera.usuario.entity.RolUsuario;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -45,8 +46,7 @@ class UsuarioControllerTest {
             eq("Ada Lovelace"),
             eq("ada@example.com"),
             eq(12345678),
-            eq("socio"),
-            eq("QR-ADA-001"),
+            eq(RolUsuario.USUARIO),
             eq("password-seguro")))
         .thenReturn(detalle(id));
 
@@ -60,16 +60,15 @@ class UsuarioControllerTest {
                       "nombreCompleto": "Ada Lovelace",
                       "email": "ada@example.com",
                       "dni": 12345678,
-                      "rol": "socio",
-                      "qrUsuario": "QR-ADA-001",
+                      "rol": "USUARIO",
                       "password": "password-seguro"
                     }
                     """))
         .andExpect(status().isCreated())
         .andExpect(header().string("Location", "/api/usuarios/" + id))
         .andExpect(jsonPath("$.id").value(id.toString()))
-        .andExpect(jsonPath("$.rol").value("socio"))
-        .andExpect(jsonPath("$.qrUsuario").value("QR-ADA-001"))
+        .andExpect(jsonPath("$.rol").value("USUARIO"))
+        .andExpect(jsonPath("$.qrUsuario").value("SERA-U0123456789ab"))
         .andExpect(jsonPath("$.password").doesNotExist());
   }
 
@@ -85,8 +84,7 @@ class UsuarioControllerTest {
                       "nombreCompleto": " ",
                       "email": "no-es-email",
                       "dni": 0,
-                      "rol": "",
-                      "qrUsuario": "",
+                      "rol": null,
                       "password": "corta"
                     }
                     """))
@@ -98,8 +96,27 @@ class UsuarioControllerTest {
   }
 
   @Test
+  void rechazaUnRolFueraDelEnum() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/usuarios")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "nombreCompleto": "Ada Lovelace",
+                      "email": "ada@example.com",
+                      "dni": 12345678,
+                      "rol": "SUPERVISOR",
+                      "password": "password-seguro"
+                    }
+                    """))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
   void informaUnEmailDuplicadoComoConflicto() throws Exception {
-    when(usuarioService.registrarUsuario(any(), any(), anyInt(), any(), any(), any()))
+    when(usuarioService.registrarUsuario(any(), any(), anyInt(), any(), any()))
         .thenThrow(new UsuarioDuplicadoException("email"));
 
     mockMvc
@@ -112,8 +129,7 @@ class UsuarioControllerTest {
                       "nombreCompleto": "Ada Lovelace",
                       "email": "ada@example.com",
                       "dni": 12345678,
-                      "rol": "socio",
-                      "qrUsuario": "QR-ADA-001",
+                      "rol": "USUARIO",
                       "password": "password-seguro"
                     }
                     """))
@@ -150,8 +166,8 @@ class UsuarioControllerTest {
         "Ada Lovelace",
         "ada@example.com",
         12345678,
-        "socio",
-        "QR-ADA-001",
+        RolUsuario.USUARIO,
+        "SERA-U0123456789ab",
         EstadoUsuario.ACTIVO,
         ahora,
         ahora);
