@@ -35,7 +35,7 @@ public class UsuarioService {
     Usuario usuario =
         new Usuario(
             nombreCompleto, email, dni, EstadoUsuario.ACTIVO, rol, qrUsuario, hashedPassword);
-    return toResponse(usuarioRepository.save(usuario));
+    return toResponse(usuarioRepository.saveAndFlush(usuario));
   }
 
   @Transactional(readOnly = true)
@@ -84,6 +84,7 @@ public class UsuarioService {
     validarUnicidad(email, dni, id);
     usuario.actualizarDatos(nombreCompleto, email, dni, rol, qrUsuario);
     usuario.cambiarEstado(estadoCuenta);
+    usuarioRepository.flush();
     return toResponse(usuario);
   }
 

@@ -35,7 +35,7 @@ class UsuarioServiceTest {
   @Test
   void registraUnUsuarioActivoConPasswordHasheado() {
     when(passwordEncoder.encode("password-seguro")).thenReturn("hash");
-    when(usuarioRepository.save(any(Usuario.class)))
+    when(usuarioRepository.saveAndFlush(any(Usuario.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     UsuarioDetalle detalle =
@@ -51,7 +51,7 @@ class UsuarioServiceTest {
     assertThat(detalle.email()).isEqualTo("ada@example.com");
     assertThat(detalle.estadoCuenta()).isEqualTo(EstadoUsuario.ACTIVO);
     verify(passwordEncoder).encode("password-seguro");
-    verify(usuarioRepository).save(any(Usuario.class));
+    verify(usuarioRepository).saveAndFlush(any(Usuario.class));
   }
 
   @Test
@@ -71,7 +71,7 @@ class UsuarioServiceTest {
         .hasMessageContaining("email");
 
     verify(passwordEncoder, never()).encode(any());
-    verify(usuarioRepository, never()).save(any());
+    verify(usuarioRepository, never()).saveAndFlush(any());
   }
 
   @Test
@@ -117,6 +117,27 @@ class UsuarioServiceTest {
     assertThat(usuarioService.listar("12345678"))
         .extracting(UsuarioDetalle::email)
         .containsExactly("ada@example.com");
+  }
+
+  @Test
+  void actualizaYFuerzaLaAuditoriaAntesDeResponder() {
+    UUID id = UUID.randomUUID();
+    Usuario usuario = crearUsuario();
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuario));
+
+    UsuarioDetalle detalle =
+        usuarioService.actualizarUsuario(
+            id,
+            "Ada Byron",
+            "ada.byron@example.com",
+            12345678,
+            "administrador",
+            "QR-ADA-002",
+            EstadoUsuario.ACTIVO);
+
+    assertThat(detalle.nombreCompleto()).isEqualTo("Ada Byron");
+    assertThat(detalle.rol()).isEqualTo("administrador");
+    verify(usuarioRepository).flush();
   }
 
   private Usuario crearUsuario() {
