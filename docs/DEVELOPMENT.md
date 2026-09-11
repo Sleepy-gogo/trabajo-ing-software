@@ -67,7 +67,7 @@ Convención inicial:
 
 ```text
 Frontend Vite:   5173
-Backend Spring:  8080
+Backend Spring:  4500
 PostgreSQL:      5432
 ```
 
@@ -219,7 +219,7 @@ pnpm build
 
 No dejar un PR con checks conocidos fallando.
 
-El test HTTP del health endpoint no necesita Docker. El arranque completo de la API sí necesita PostgreSQL disponible. Para comprobar la conexión entre aplicaciones, levantar ambas y abrir <http://localhost:5173>: debe mostrar que la API está disponible. También se puede consultar `http://localhost:8080/api/health` directamente.
+El test HTTP del health endpoint no necesita Docker. El arranque completo de la API sí necesita PostgreSQL disponible. Para comprobar la conexión entre aplicaciones, levantar ambas y abrir <http://localhost:5173>: debe mostrar que la API está disponible. También se puede consultar `http://localhost:4500/api/health` directamente.
 
 ## Formato
 
@@ -236,7 +236,7 @@ Frontend debe mantener el formatter/linter definido por el proyecto.
 Para exponer Spring Boot:
 
 ```bash
-ngrok http 8080
+ngrok http 4500
 ```
 
 ngrok entrega una URL HTTPS pública.
