@@ -1,9 +1,11 @@
 package edu.unse.sera.usuario.control;
 
-public class UsuarioNoEncontradoException extends RuntimeException {
+import edu.unse.sera.shared.exception.RecursoNoEncontradoException;
+import java.util.UUID;
 
-  public UsuarioNoEncontradoException(String message) {
-    super("No existe el usuario con " + message + ".");
+public class UsuarioNoEncontradoException extends RecursoNoEncontradoException {
+
+  public UsuarioNoEncontradoException(UUID id) {
+    super("No existe el usuario con id " + id + ".");
   }
-
 }

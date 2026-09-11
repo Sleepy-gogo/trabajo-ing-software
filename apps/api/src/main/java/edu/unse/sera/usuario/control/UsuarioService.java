@@ -1,9 +1,10 @@
 package edu.unse.sera.usuario.control;
 
 import edu.unse.sera.usuario.entity.EstadoUsuario;
-import edu.unse.sera.usuario.entity.RolUsuario;
 import edu.unse.sera.usuario.entity.Usuario;
 import edu.unse.sera.usuario.persistence.UsuarioRepository;
+import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,54 +15,45 @@ import org.springframework.transaction.annotation.Transactional;
 public class UsuarioService {
 
   private final UsuarioRepository usuarioRepository;
+  private final PasswordEncoder passwordEncoder;
 
-  private PasswordEncoder passwordEncoder;
-
-  public UsuarioService(UsuarioRepository usuarioRepository) {
+  public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
     this.usuarioRepository = usuarioRepository;
+    this.passwordEncoder = passwordEncoder;
   }
 
-  public UsuarioDetalle registrarUsuario(String nombreCompleto, String email, int dni,
-    RolUsuario rol, String rawPassword) {
+  public UsuarioDetalle registrarUsuario(
+      String nombreCompleto,
+      String email,
+      int dni,
+      String rol,
+      String qrUsuario,
+      String rawPassword) {
+    validarUnicidad(email, dni, null);
     String hashedPassword = passwordEncoder.encode(rawPassword);
-    // TODO: VALIDACION
-
-    Usuario user = new Usuario(nombreCompleto, email, dni, EstadoUsuario.ACTIVO, rol,
-      hashedPassword);
-    return toResponse(usuarioRepository.save(user));
+    Usuario usuario =
+        new Usuario(
+            nombreCompleto, email, dni, EstadoUsuario.ACTIVO, rol, qrUsuario, hashedPassword);
+    return toResponse(usuarioRepository.save(usuario));
   }
 
+  @Transactional(readOnly = true)
   public boolean validarCredenciales(String email, String rawPassword) {
-    Usuario user = buscarPorEmail(email);
-    return passwordEncoder.matches(rawPassword, user.getPasswordHash());
+    return usuarioRepository
+        .findByEmailIgnoreCase(normalizarEmail(email))
+        .filter(usuario -> usuario.getEstadoCuenta() == EstadoUsuario.ACTIVO)
+        .map(usuario -> passwordEncoder.matches(rawPassword, usuario.getPasswordHash()))
+        .orElse(false);
   }
 
-
-  public Usuario buscar(UUID id) {
-    return usuarioRepository.findById(id)
-      .orElseThrow(() -> new UsuarioNoEncontradoException("id " + id.toString()));
-  }
-
-
-  public Usuario buscarPorEmail(String email) {
-    return usuarioRepository.findByEmail(email)
-      .orElseThrow(() -> new UsuarioNoEncontradoException("email " + email));
-  }
-
-  public Usuario buscarPorDni(int dni) {
-    return usuarioRepository.findByDni(dni)
-      .orElseThrow(() -> new UsuarioNoEncontradoException("dni " + dni));
-  }
-
-  // TODO: LA CONSULTA POR CRITERIOS
-  // TODO: LISTAR lo que sea
-
-  public UsuarioDetalle actualizarPasswordUsuario(UUID id, String rawPassword) {
-    Usuario user = buscar(id);
-
-    String hashedPassword = passwordEncoder.encode(rawPassword);
-    user.setPasswordHash(hashedPassword);
-    return toResponse(user);
+  @Transactional(readOnly = true)
+  public List<UsuarioDetalle> listar(String nombre) {
+    List<Usuario> usuarios =
+        nombre == null || nombre.isBlank()
+            ? usuarioRepository.findAllByOrderByNombreCompletoAsc()
+            : usuarioRepository.findByNombreCompletoContainingIgnoreCaseOrderByNombreCompletoAsc(
+                nombre.trim());
+    return usuarios.stream().map(this::toResponse).toList();
   }
 
   @Transactional(readOnly = true)
@@ -69,17 +61,67 @@ public class UsuarioService {
     return toResponse(buscar(id));
   }
 
-  public UsuarioDetalle actualizarUsuario(UUID id, String nombreCompleto, String email, int dni,
-    EstadoUsuario estadoCuenta) {
-    Usuario user = buscar(id);
-    user.actualizar(nombreCompleto, email, dni, estadoCuenta);
-    return toResponse(user);
+  public UsuarioDetalle actualizarUsuario(
+      UUID id,
+      String nombreCompleto,
+      String email,
+      int dni,
+      String rol,
+      String qrUsuario,
+      EstadoUsuario estadoCuenta) {
+    Usuario usuario = buscar(id);
+    validarUnicidad(email, dni, id);
+    usuario.actualizarDatos(nombreCompleto, email, dni, rol, qrUsuario);
+    usuario.cambiarEstado(estadoCuenta);
+    return toResponse(usuario);
   }
 
+  public void darDeBaja(UUID id) {
+    buscar(id).cambiarEstado(EstadoUsuario.INACTIVO);
+  }
+
+  public void actualizarPasswordUsuario(UUID id, String rawPassword) {
+    Usuario usuario = buscar(id);
+    usuario.cambiarPasswordHash(passwordEncoder.encode(rawPassword));
+  }
+
+  private Usuario buscar(UUID id) {
+    return usuarioRepository.findById(id).orElseThrow(() -> new UsuarioNoEncontradoException(id));
+  }
+
+  private void validarUnicidad(String email, int dni, UUID usuarioId) {
+    String emailNormalizado = normalizarEmail(email);
+    boolean emailEnUso =
+        usuarioId == null
+            ? usuarioRepository.existsByEmailIgnoreCase(emailNormalizado)
+            : usuarioRepository.existsByEmailIgnoreCaseAndIdNot(emailNormalizado, usuarioId);
+    if (emailEnUso) {
+      throw new UsuarioDuplicadoException("email");
+    }
+
+    boolean dniEnUso =
+        usuarioId == null
+            ? usuarioRepository.existsByDni(dni)
+            : usuarioRepository.existsByDniAndIdNot(dni, usuarioId);
+    if (dniEnUso) {
+      throw new UsuarioDuplicadoException("dni");
+    }
+  }
+
+  private String normalizarEmail(String email) {
+    return email.trim().toLowerCase(Locale.ROOT);
+  }
 
   private UsuarioDetalle toResponse(Usuario usuario) {
-    return new UsuarioDetalle(usuario.getId(), usuario.getNombreCompleto(), usuario.getEmail(),
-      usuario.getDni(), usuario.getRolUsuario(), usuario.getQrCode(), usuario.getEstadoCuenta());
+    return new UsuarioDetalle(
+        usuario.getId(),
+        usuario.getNombreCompleto(),
+        usuario.getEmail(),
+        usuario.getDni(),
+        usuario.getRol(),
+        usuario.getQrUsuario(),
+        usuario.getEstadoCuenta(),
+        usuario.getCreatedAt(),
+        usuario.getUpdatedAt());
   }
-
 }

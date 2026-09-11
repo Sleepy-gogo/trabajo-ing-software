@@ -1,16 +1,13 @@
-CREATE TYPE ESTADOS as ENUM ('ACTIVO','DESHABILITADO','INACTIVO');
-
-CREATE TYPE ROLES as ENUM ('ADMIN','STAFF','USUARIO');
-
 CREATE TABLE usuarios (
     id UUID PRIMARY KEY,
     nombre_completo VARCHAR(200) NOT NULL,
-    email VARCHAR(100) unique not null,
-    dni INTEGER unique not null,
-    estado_cuenta ESTADOS not null,
-    rol_usuario ROLES not null,
-    qr_code VARCHAR(18) not null unique,
-    password_hash VARCHAR not null,
-    created_at TIMESTAMPTZ not null default CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ not null default CURRENT_TIMESTAMP
+    email VARCHAR(100) NOT NULL UNIQUE,
+    dni INTEGER NOT NULL UNIQUE CHECK (dni BETWEEN 1 AND 99999999),
+    estado_cuenta VARCHAR(20) NOT NULL
+        CHECK (estado_cuenta IN ('ACTIVO', 'DESHABILITADO', 'INACTIVO')),
+    rol VARCHAR(50) NOT NULL,
+    qr_usuario VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

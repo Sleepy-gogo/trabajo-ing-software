@@ -8,13 +8,20 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
-  Optional<Usuario> findByEmail(String email);
+  Optional<Usuario> findByEmailIgnoreCase(String email);
 
-  List<Usuario> findByNombreCompletoContainingIgnoreCase(String nombreCompleto);
+  List<Usuario> findAllByOrderByNombreCompletoAsc();
+
+  List<Usuario> findByNombreCompletoContainingIgnoreCaseOrderByNombreCompletoAsc(
+      String nombreCompleto);
 
   Optional<Usuario> findByDni(int dni);
 
-  Optional<Usuario> findByQrCode(String qrCode);
+  boolean existsByEmailIgnoreCase(String email);
 
-  boolean existsByEmail(String email);
+  boolean existsByEmailIgnoreCaseAndIdNot(String email, UUID id);
+
+  boolean existsByDni(int dni);
+
+  boolean existsByDniAndIdNot(int dni, UUID id);
 }

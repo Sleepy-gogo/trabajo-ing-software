@@ -1,15 +1,14 @@
 package edu.unse.sera.usuario.entity;
 
-import io.github.thibaultmeyer.cuid.CUID;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -19,7 +18,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 public class Usuario {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.UUID)
+  @Column(nullable = false, updatable = false)
   private UUID id;
 
   @Column(name = "nombre_completo", nullable = false, length = 200)
@@ -28,19 +27,18 @@ public class Usuario {
   @Column(nullable = false, length = 100, unique = true)
   private String email;
 
-  @Column(nullable = false, length = 8, unique = true)
+  @Column(nullable = false, unique = true)
   private int dni;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "estado_cuenta", nullable = false)
   private EstadoUsuario estadoCuenta;
 
-  @Enumerated(EnumType.STRING)
-  @Column(name = "rol_usuario", nullable = false)
-  private RolUsuario rolUsuario;
+  @Column(nullable = false, length = 50)
+  private String rol;
 
-  @Column(name = "qr_code", nullable = false, unique = true)
-  private String qrCode;
+  @Column(name = "qr_usuario", nullable = false, length = 100)
+  private String qrUsuario;
 
   @Column(name = "password_hash", nullable = false, length = 255)
   private String passwordHash;
@@ -53,32 +51,40 @@ public class Usuario {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
-  protected Usuario() {
+  protected Usuario() {}
+
+  public Usuario(
+      String nombreCompleto,
+      String email,
+      int dni,
+      EstadoUsuario estadoCuenta,
+      String rol,
+      String qrUsuario,
+      String passwordHash) {
+    this.id = UUID.randomUUID();
+    this.estadoCuenta = Objects.requireNonNull(estadoCuenta);
+    actualizarDatos(nombreCompleto, email, dni, rol, qrUsuario);
+    cambiarPasswordHash(passwordHash);
   }
 
-  public Usuario(String nombreCompleto, String email, int dni, EstadoUsuario estadoCuenta,
-    RolUsuario rol, String passwordHash) {
-    final CUID preCuid = CUID.randomCUID2(12);
-
-    this.nombreCompleto = nombreCompleto;
-    this.email = email;
-    this.dni = dni;
-    this.estadoCuenta = estadoCuenta;
-    this.passwordHash = passwordHash;
-    this.qrCode = "SERA-U" + preCuid.toString();
-    this.rolUsuario = rol;
-  }
-
-
-  public String getPasswordHash() {
-    return passwordHash;
-  }
-
-  public void actualizar(String nombreCompleto, String email, int dni, EstadoUsuario estadoCuenta) {
+  public void actualizarDatos(
+      String nombreCompleto, String email, int dni, String rol, String qrUsuario) {
     this.nombreCompleto = normalizarNombre(nombreCompleto);
-    this.email = email;
-    this.dni = dni;
-    this.estadoCuenta = estadoCuenta;
+    this.email = normalizarEmail(email);
+    this.dni = validarDni(dni);
+    this.rol = normalizarAtributoObligatorio(rol, "El rol es obligatorio.");
+    this.qrUsuario = normalizarAtributoObligatorio(qrUsuario, "El QR de usuario es obligatorio.");
+  }
+
+  public void cambiarEstado(EstadoUsuario estadoCuenta) {
+    this.estadoCuenta = Objects.requireNonNull(estadoCuenta);
+  }
+
+  public void cambiarPasswordHash(String passwordHash) {
+    if (passwordHash == null || passwordHash.isBlank()) {
+      throw new IllegalArgumentException("El hash de contraseña es obligatorio.");
+    }
+    this.passwordHash = passwordHash;
   }
 
   public UUID getId() {
@@ -101,32 +107,12 @@ public class Usuario {
     return dni;
   }
 
-  public void setNombreCompleto(String nombreCompleto) {
-    this.nombreCompleto = nombreCompleto;
+  public String getRol() {
+    return rol;
   }
 
-  public void setEmail(String email) {
-    this.email = email;
-  }
-
-  public void setDni(int dni) {
-    this.dni = dni;
-  }
-
-  public void setEstadoCuenta(EstadoUsuario estadoCuenta) {
-    this.estadoCuenta = estadoCuenta;
-  }
-
-  public RolUsuario getRolUsuario() {
-    return rolUsuario;
-  }
-
-  public void setRolUsuario(RolUsuario rolUsuario) {
-    this.rolUsuario = rolUsuario;
-  }
-
-  public void setPasswordHash(String passwordHash) {
-    this.passwordHash = passwordHash;
+  public String getPasswordHash() {
+    return passwordHash;
   }
 
   public OffsetDateTime getCreatedAt() {
@@ -137,17 +123,34 @@ public class Usuario {
     return updatedAt;
   }
 
-  public String getQrCode() {
-    return qrCode;
-  }
-
-  public void setQrCode(String qrCode) {
-    this.qrCode = qrCode;
+  public String getQrUsuario() {
+    return qrUsuario;
   }
 
   private String normalizarNombre(String valor) {
     if (valor == null || valor.isBlank()) {
-      return null;
+      throw new IllegalArgumentException("El nombre completo es obligatorio.");
+    }
+    return valor.trim();
+  }
+
+  private String normalizarEmail(String valor) {
+    if (valor == null || valor.isBlank()) {
+      throw new IllegalArgumentException("El email es obligatorio.");
+    }
+    return valor.trim().toLowerCase(Locale.ROOT);
+  }
+
+  private int validarDni(int valor) {
+    if (valor < 1 || valor > 99_999_999) {
+      throw new IllegalArgumentException("El DNI debe tener entre 1 y 8 dígitos.");
+    }
+    return valor;
+  }
+
+  private String normalizarAtributoObligatorio(String valor, String mensaje) {
+    if (valor == null || valor.isBlank()) {
+      throw new IllegalArgumentException(mensaje);
     }
     return valor.trim();
   }
