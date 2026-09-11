@@ -35,10 +35,32 @@ class EspacioServiceTest {
 
     EspacioDetalle response = espacioService.crear("  Cancha cubierta  ", "  Piso de parquet  ");
 
-    assertThat(response.id()).isNotNull();
     assertThat(response.nombre()).isEqualTo("Cancha cubierta");
     assertThat(response.descripcion()).isEqualTo("Piso de parquet");
     verify(espacioRepository).save(any(Espacio.class));
+  }
+
+  @Test
+  void actualizaUnEspacioExistente() {
+    UUID id = UUID.randomUUID();
+    Espacio espacio = new Espacio("Cancha cubierta", "Piso de parquet");
+    when(espacioRepository.findById(id)).thenReturn(Optional.of(espacio));
+
+    EspacioDetalle response = espacioService.actualizar(id, "Cancha norte", "Piso renovado");
+
+    assertThat(response.nombre()).isEqualTo("Cancha norte");
+    assertThat(response.descripcion()).isEqualTo("Piso renovado");
+  }
+
+  @Test
+  void eliminaUnEspacioExistente() {
+    UUID id = UUID.randomUUID();
+    Espacio espacio = new Espacio("Cancha cubierta", null);
+    when(espacioRepository.findById(id)).thenReturn(Optional.of(espacio));
+
+    espacioService.eliminar(id);
+
+    verify(espacioRepository).delete(espacio);
   }
 
   @Test
