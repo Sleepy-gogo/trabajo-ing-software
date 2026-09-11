@@ -279,7 +279,7 @@
           <h1>Usuarios ya tiene una base que se puede repetir.</h1>
           <p class="lede">La rama pasó de un modelo que no arrancaba a un módulo BCE completo para administración de usuarios. Este informe deja por escrito los errores, las correcciones y las reglas que conviene repetir.</p>
           <div class="status" aria-label="Estado del trabajo">
-            <span>28 tests aprobados</span>
+            <span>31 tests aprobados</span>
             <span>Flyway y arranque verificados</span>
             <span class="neutral">Autenticación pendiente de redefinir</span>
           </div>
@@ -290,7 +290,7 @@
           <p>El módulo cubre el trabajo compatible con las decisiones actuales de <code>TRA-19</code>, <code>TRA-22</code> y <code>TRA-24</code>. Tiene entidad, migración, repository, service, DTOs, controller, errores consistentes, búsqueda, baja lógica y pruebas. <code>rol</code> y <code>qrUsuario</code> son textos simples. No hay catálogo de roles ni rotación de QR.</p>
           <ul>
             <li>La API nunca recibe ni devuelve la entidad JPA.</li>
-            <li>Email y DNI tienen validación de unicidad en Control y restricciones en PostgreSQL.</li>
+            <li>Email y DNI tienen validación previa y restricciones en PostgreSQL. Si dos requests compiten, la colisión de la base también devuelve <code>409 usuario_duplicado</code>.</li>
             <li>Las contraseñas se guardan con BCrypt y no aparecen en responses.</li>
             <li>La baja cambia el estado a <code>INACTIVO</code>; no borra el historial.</li>
           </ul>
@@ -370,7 +370,7 @@
               <tbody>
                 <tr><td><code>TRA-19</code></td><td>In Review</td><td>Modelo, migración, repository y DTOs terminados según la decisión nueva.</td></tr>
                 <tr><td><code>TRA-22</code></td><td>Backlog</td><td>CRUD administrativo y búsqueda implementados. Permisos quedan fuera hasta definir autenticación.</td></tr>
-                <tr><td><code>TRA-24</code></td><td>Backlog</td><td>Unicidad, timestamps, errores y tests implementados.</td></tr>
+                <tr><td><code>TRA-24</code></td><td>Backlog</td><td>Unicidad, timestamps, errores y tests implementados. Las colisiones concurrentes conservan el contrato HTTP.</td></tr>
                 <tr><td><code>TRA-20</code></td><td>Backlog</td><td>Bloqueada por una definición nueva de login y permisos sin el RBAC descartado.</td></tr>
                 <tr><td><code>TRA-21</code></td><td>Backlog</td><td>Necesita saber cómo se identifica al usuario actual.</td></tr>
                 <tr><td><code>TRA-23</code></td><td>Backlog</td><td>Conviene conectar el frontend cuando TRA-20 y TRA-21 tengan un contrato estable.</td></tr>
@@ -386,12 +386,12 @@
         <section id="validacion" aria-labelledby="validacion-title">
           <h2 id="validacion-title">Verificación ejecutada</h2>
           <ol class="checklist">
-            <li><code>.\mvnw.cmd verify</code>: 28 tests, empaquetado, Spotless y Checkstyle aprobados.</li>
+            <li><code>.\mvnw.cmd verify</code>: 31 tests, empaquetado, Spotless y Checkstyle aprobados.</li>
             <li><code>pnpm lint</code> y <code>pnpm typecheck</code>: aprobados.</li>
             <li><code>pnpm build</code>: aprobado. Vite mantiene una advertencia por un chunk de 1,13 MB del frontend base.</li>
             <li><code>docker compose config</code>: configuración válida.</li>
             <li><code>docker compose up -d</code>: PostgreSQL 17 saludable.</li>
-            <li><code>.\mvnw.cmd spring-boot:run</code>: Flyway aplicó V2, Hibernate validó el schema y Tomcat inició en 4500.</li>
+            <li><code>.\mvnw.cmd spring-boot:run</code>: Flyway aplicó V2 y V3, Hibernate validó el schema y Tomcat inició en 4500.</li>
             <li><code>GET /api/health</code> devolvió <code>ok</code> y <code>GET /api/usuarios</code> respondió una lista vacía.</li>
           </ol>
           <div class="callout">
