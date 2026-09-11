@@ -9,6 +9,11 @@ public class UsuarioDuplicadoException extends RuntimeException {
     this.campo = campo;
   }
 
+  public UsuarioDuplicadoException(String campo, Throwable cause) {
+    super("Ya existe un usuario con ese " + campo + ".", cause);
+    this.campo = campo;
+  }
+
   public String getCampo() {
     return campo;
   }

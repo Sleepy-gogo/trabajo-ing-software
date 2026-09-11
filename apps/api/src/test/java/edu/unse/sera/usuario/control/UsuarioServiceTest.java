@@ -10,13 +10,16 @@ import static org.mockito.Mockito.when;
 import edu.unse.sera.usuario.entity.EstadoUsuario;
 import edu.unse.sera.usuario.entity.Usuario;
 import edu.unse.sera.usuario.persistence.UsuarioRepository;
+import java.sql.SQLException;
 import java.util.Optional;
 import java.util.UUID;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -140,6 +143,67 @@ class UsuarioServiceTest {
     verify(usuarioRepository).flush();
   }
 
+  @Test
+  void traduceUnaColisionConcurrenteDeEmailAlRegistrar() {
+    when(passwordEncoder.encode("password-seguro")).thenReturn("hash");
+    when(usuarioRepository.saveAndFlush(any(Usuario.class)))
+        .thenThrow(violacionDeUnicidad("uk_usuarios_email"));
+
+    assertThatThrownBy(
+            () ->
+                usuarioService.registrarUsuario(
+                    "Ada Lovelace",
+                    "ada@example.com",
+                    12345678,
+                    "socio",
+                    "QR-ADA-001",
+                    "password-seguro"))
+        .isInstanceOf(UsuarioDuplicadoException.class)
+        .hasMessageContaining("email")
+        .hasCauseInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void traduceUnaColisionConcurrenteDeDniAlActualizar() {
+    UUID id = UUID.randomUUID();
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(crearUsuario()));
+    DataIntegrityViolationException violation = violacionDeUnicidad("uk_usuarios_dni");
+    org.mockito.Mockito.doThrow(violation).when(usuarioRepository).flush();
+
+    assertThatThrownBy(
+            () ->
+                usuarioService.actualizarUsuario(
+                    id,
+                    "Ada Byron",
+                    "ada.byron@example.com",
+                    87654321,
+                    "administrador",
+                    "QR-ADA-002",
+                    EstadoUsuario.ACTIVO))
+        .isInstanceOf(UsuarioDuplicadoException.class)
+        .hasMessageContaining("dni")
+        .hasCause(violation);
+  }
+
+  @Test
+  void noDisfrazaOtraViolacionDeIntegridadComoDuplicado() {
+    when(passwordEncoder.encode("password-seguro")).thenReturn("hash");
+    DataIntegrityViolationException violation =
+        new DataIntegrityViolationException("Otra restricción");
+    when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenThrow(violation);
+
+    assertThatThrownBy(
+            () ->
+                usuarioService.registrarUsuario(
+                    "Ada Lovelace",
+                    "ada@example.com",
+                    12345678,
+                    "socio",
+                    "QR-ADA-001",
+                    "password-seguro"))
+        .isSameAs(violation);
+  }
+
   private Usuario crearUsuario() {
     return new Usuario(
         "Ada Lovelace",
@@ -149,5 +213,12 @@ class UsuarioServiceTest {
         "socio",
         "QR-ADA-001",
         "hash");
+  }
+
+  private DataIntegrityViolationException violacionDeUnicidad(String constraintName) {
+    SQLException sqlException = new SQLException("Clave duplicada", "23505");
+    ConstraintViolationException constraintViolation =
+        new ConstraintViolationException("Restricción única", sqlException, constraintName);
+    return new DataIntegrityViolationException("No se pudo guardar", constraintViolation);
   }
 }

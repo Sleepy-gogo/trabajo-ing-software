@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class UsuarioService {
+
+  private static final String EMAIL_UNIQUE_CONSTRAINT = "uk_usuarios_email";
+  private static final String DNI_UNIQUE_CONSTRAINT = "uk_usuarios_dni";
 
   private final UsuarioRepository usuarioRepository;
   private final PasswordEncoder passwordEncoder;
@@ -35,7 +40,11 @@ public class UsuarioService {
     Usuario usuario =
         new Usuario(
             nombreCompleto, email, dni, EstadoUsuario.ACTIVO, rol, qrUsuario, hashedPassword);
-    return toResponse(usuarioRepository.saveAndFlush(usuario));
+    try {
+      return toResponse(usuarioRepository.saveAndFlush(usuario));
+    } catch (DataIntegrityViolationException exception) {
+      throw traducirConflictoDeUnicidad(exception);
+    }
   }
 
   @Transactional(readOnly = true)
@@ -84,7 +93,11 @@ public class UsuarioService {
     validarUnicidad(email, dni, id);
     usuario.actualizarDatos(nombreCompleto, email, dni, rol, qrUsuario);
     usuario.cambiarEstado(estadoCuenta);
-    usuarioRepository.flush();
+    try {
+      usuarioRepository.flush();
+    } catch (DataIntegrityViolationException exception) {
+      throw traducirConflictoDeUnicidad(exception);
+    }
     return toResponse(usuario);
   }
 
@@ -130,6 +143,33 @@ public class UsuarioService {
     } catch (NumberFormatException exception) {
       return Optional.empty();
     }
+  }
+
+  private RuntimeException traducirConflictoDeUnicidad(DataIntegrityViolationException exception) {
+    Optional<ConstraintViolationException> violation = buscarConstraintViolation(exception);
+    if (violation.isEmpty()) {
+      return exception;
+    }
+
+    String constraintName = violation.get().getConstraintName();
+    if (EMAIL_UNIQUE_CONSTRAINT.equals(constraintName)) {
+      return new UsuarioDuplicadoException("email", exception);
+    }
+    if (DNI_UNIQUE_CONSTRAINT.equals(constraintName)) {
+      return new UsuarioDuplicadoException("dni", exception);
+    }
+    return exception;
+  }
+
+  private Optional<ConstraintViolationException> buscarConstraintViolation(Throwable exception) {
+    Throwable cause = exception;
+    while (cause != null) {
+      if (cause instanceof ConstraintViolationException violation) {
+        return Optional.of(violation);
+      }
+      cause = cause.getCause();
+    }
+    return Optional.empty();
   }
 
   private UsuarioDetalle toResponse(Usuario usuario) {
