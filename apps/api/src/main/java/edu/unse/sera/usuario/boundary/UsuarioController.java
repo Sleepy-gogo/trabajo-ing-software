@@ -1,0 +1,97 @@
+package edu.unse.sera.usuario.boundary;
+
+import edu.unse.sera.usuario.boundary.dto.ActualizarUsuarioRequest;
+import edu.unse.sera.usuario.boundary.dto.CambiarPasswordRequest;
+import edu.unse.sera.usuario.boundary.dto.CrearUsuarioRequest;
+import edu.unse.sera.usuario.boundary.dto.UsuarioResponse;
+import edu.unse.sera.usuario.control.UsuarioDetalle;
+import edu.unse.sera.usuario.control.UsuarioService;
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/usuarios")
+public class UsuarioController {
+
+  private final UsuarioService usuarioService;
+
+  public UsuarioController(UsuarioService usuarioService) {
+    this.usuarioService = usuarioService;
+  }
+
+  @PostMapping
+  public ResponseEntity<UsuarioResponse> crear(@Valid @RequestBody CrearUsuarioRequest request) {
+    UsuarioResponse response =
+        toResponse(
+            usuarioService.registrarUsuario(
+                request.nombreCompleto(),
+                request.email(),
+                request.dni(),
+                request.rol(),
+                request.qrUsuario(),
+                request.password()));
+    return ResponseEntity.created(URI.create("/api/usuarios/" + response.id())).body(response);
+  }
+
+  @GetMapping
+  public List<UsuarioResponse> listar(@RequestParam(required = false) String nombre) {
+    return usuarioService.listar(nombre).stream().map(this::toResponse).toList();
+  }
+
+  @GetMapping("/{id}")
+  public UsuarioResponse obtener(@PathVariable UUID id) {
+    return toResponse(usuarioService.consultarDetalle(id));
+  }
+
+  @PutMapping("/{id}")
+  public UsuarioResponse actualizar(
+      @PathVariable UUID id, @Valid @RequestBody ActualizarUsuarioRequest request) {
+    return toResponse(
+        usuarioService.actualizarUsuario(
+            id,
+            request.nombreCompleto(),
+            request.email(),
+            request.dni(),
+            request.rol(),
+            request.qrUsuario(),
+            request.estadoCuenta()));
+  }
+
+  @PutMapping("/{id}/password")
+  public ResponseEntity<Void> cambiarPassword(
+      @PathVariable UUID id, @Valid @RequestBody CambiarPasswordRequest request) {
+    usuarioService.actualizarPasswordUsuario(id, request.password());
+    return ResponseEntity.noContent().build();
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> darDeBaja(@PathVariable UUID id) {
+    usuarioService.darDeBaja(id);
+    return ResponseEntity.noContent().build();
+  }
+
+  private UsuarioResponse toResponse(UsuarioDetalle usuario) {
+    return new UsuarioResponse(
+        usuario.id(),
+        usuario.nombreCompleto(),
+        usuario.email(),
+        usuario.dni(),
+        usuario.rol(),
+        usuario.qrUsuario(),
+        usuario.estadoCuenta(),
+        usuario.creadoEn(),
+        usuario.actualizadoEn());
+  }
+}
