@@ -5,11 +5,9 @@ import edu.unse.sera.espacio.boundary.dto.GuardarEspacioRequest;
 import edu.unse.sera.espacio.control.EspacioDetalle;
 import edu.unse.sera.espacio.control.EspacioService;
 import jakarta.validation.Valid;
-
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +31,7 @@ public class EspacioController {
   @PostMapping
   public ResponseEntity<EspacioResponse> crear(@Valid @RequestBody GuardarEspacioRequest request) {
     EspacioResponse response =
-      toResponse(espacioService.crear(request.nombre(), request.descripcion()));
+        toResponse(espacioService.crear(request.nombre(), request.descripcion()));
     return ResponseEntity.created(URI.create("/api/espacios/" + response.id())).body(response);
   }
 
@@ -49,7 +47,7 @@ public class EspacioController {
 
   @PutMapping("/{id}")
   public EspacioResponse actualizar(
-    @PathVariable UUID id, @Valid @RequestBody GuardarEspacioRequest request) {
+      @PathVariable UUID id, @Valid @RequestBody GuardarEspacioRequest request) {
     return toResponse(espacioService.actualizar(id, request.nombre(), request.descripcion()));
   }
 
