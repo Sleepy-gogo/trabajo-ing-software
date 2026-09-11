@@ -279,7 +279,7 @@
           <h1>Usuarios ya tiene una base que se puede repetir.</h1>
           <p class="lede">La rama pasó de un modelo que no arrancaba a un módulo BCE completo para administración de usuarios. Este informe deja por escrito los errores, las correcciones y las reglas que conviene repetir.</p>
           <div class="status" aria-label="Estado del trabajo">
-            <span>27 tests aprobados</span>
+            <span>28 tests aprobados</span>
             <span>Flyway y arranque verificados</span>
             <span class="neutral">Autenticación pendiente de redefinir</span>
           </div>
@@ -358,6 +358,7 @@
             <li><code>c244fa5</code> limpia el diff del POM.</li>
             <li><code>9f18049</code> documenta el contrato real.</li>
             <li><code>001f7f3</code> aplica el formato pendiente que llegó desde main.</li>
+            <li><code>7951dfe</code> garantiza timestamps de auditoría actualizados en las respuestas.</li>
           </ul>
         </section>
 
@@ -385,7 +386,7 @@
         <section id="validacion" aria-labelledby="validacion-title">
           <h2 id="validacion-title">Verificación ejecutada</h2>
           <ol class="checklist">
-            <li><code>.\mvnw.cmd verify</code>: 27 tests, empaquetado, Spotless y Checkstyle aprobados.</li>
+            <li><code>.\mvnw.cmd verify</code>: 28 tests, empaquetado, Spotless y Checkstyle aprobados.</li>
             <li><code>pnpm lint</code> y <code>pnpm typecheck</code>: aprobados.</li>
             <li><code>pnpm build</code>: aprobado. Vite mantiene una advertencia por un chunk de 1,13 MB del frontend base.</li>
             <li><code>docker compose config</code>: configuración válida.</li>
