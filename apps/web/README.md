@@ -1,6 +1,6 @@
 # SERA web
 
-Frontend React, TypeScript y Vite. React Router maneja las rutas y TanStack Query consulta `GET /api/health` mediante el proxy de Vite a `http://localhost:8080`.
+Frontend React, TypeScript y Vite. React Router maneja las rutas y TanStack Query consulta `GET /api/health` mediante el proxy de Vite a `http://localhost:4500`.
 
 ## Desarrollo
 

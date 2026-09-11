@@ -97,17 +97,17 @@ cd apps/api
 En otra terminal:
 
 ```powershell
-$espacio = Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/espacios `
+$espacio = Invoke-RestMethod -Method Post -Uri http://localhost:4500/api/espacios `
   -ContentType "application/json" `
   -Body '{"nombre":"Cancha cubierta","descripcion":"Piso de parquet"}'
 
-Invoke-RestMethod http://localhost:8080/api/espacios
+Invoke-RestMethod http://localhost:4500/api/espacios
 
-Invoke-RestMethod -Method Put -Uri "http://localhost:8080/api/espacios/$($espacio.id)" `
+Invoke-RestMethod -Method Put -Uri "http://localhost:4500/api/espacios/$($espacio.id)" `
   -ContentType "application/json" `
   -Body '{"nombre":"Cancha norte","descripcion":"Piso renovado"}'
 
-Invoke-RestMethod -Method Delete -Uri "http://localhost:8080/api/espacios/$($espacio.id)"
+Invoke-RestMethod -Method Delete -Uri "http://localhost:4500/api/espacios/$($espacio.id)"
 ```
 
 Antes de abrir el PR:

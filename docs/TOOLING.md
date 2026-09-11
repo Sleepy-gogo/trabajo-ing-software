@@ -130,7 +130,7 @@ Configurar proxy para `/api` hacia Spring Boot durante desarrollo.
 Ejemplo conceptual:
 
 ```text
-/api/* -> http://localhost:8080/api/*
+/api/* -> http://localhost:4500/api/*
 ```
 
 Eso evita hardcodear URLs de ngrok o localhost dentro de componentes React.
@@ -239,7 +239,7 @@ No mezclar ambas responsabilidades.
 Uso previsto:
 
 ```bash
-ngrok http 8080
+ngrok http 4500
 ```
 
 Objetivo:
