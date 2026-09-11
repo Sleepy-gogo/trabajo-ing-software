@@ -28,4 +28,40 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: ["src/components/ui/badge.tsx"],
+    rules: {
+      "react-refresh/only-export-components": [
+        "error",
+        { allowExportNames: ["badgeVariants"] },
+      ],
+    },
+  },
+  {
+    files: ["src/components/ui/sidebar.tsx"],
+    rules: {
+      "react-refresh/only-export-components": [
+        "error",
+        { allowExportNames: ["useSidebar"] },
+      ],
+    },
+  },
+  {
+    files: ["src/components/ui/tabs.tsx"],
+    rules: {
+      "react-refresh/only-export-components": [
+        "error",
+        { allowExportNames: ["tabsListVariants"] },
+      ],
+    },
+  },
+  {
+    files: ["src/pages/admin/common.tsx"],
+    rules: {
+      "react-refresh/only-export-components": [
+        "error",
+        { allowExportNames: ["exportCsv"] },
+      ],
+    },
+  },
 ])
