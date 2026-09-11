@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Revisión técnica del módulo de usuarios de SERA y guía concreta para los próximos módulos." />
+    <title>Revisión del módulo de usuarios · SERA</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #000;
+        --text: #f3f3f3;
+        --muted: #a0a0a0;
+        --faint: #6b6b6b;
+        --line: #262626;
+        --panel: #0c0c0c;
+        --accent: #a7e7c3;
+        --warn: #f1ce84;
+        --danger: #ff9e99;
+        --link: #b9d4ff;
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; background: var(--bg); }
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        font-size: 16px;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      a { color: var(--link); text-underline-offset: 3px; }
+      a:hover { color: #fff; }
+      a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 4px;
+        border-radius: 2px;
+      }
+
+      .page {
+        display: grid;
+        grid-template-columns: 210px minmax(0, 780px);
+        gap: 72px;
+        width: min(100% - 48px, 1090px);
+        margin: 0 auto;
+        padding: 72px 0 120px;
+      }
+
+      nav { position: sticky; top: 40px; align-self: start; }
+      nav p {
+        margin: 0 0 16px;
+        color: var(--faint);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+      }
+      nav ol { margin: 0; padding: 0; list-style: none; }
+      nav li + li { margin-top: 8px; }
+      nav a {
+        color: var(--muted);
+        font-size: 13px;
+        text-decoration: none;
+      }
+      nav a:hover { color: var(--text); }
+
+      main { min-width: 0; }
+      header { padding-bottom: 52px; border-bottom: 1px solid var(--line); }
+      .eyebrow {
+        margin: 0 0 20px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+      }
+      h1 {
+        max-width: 720px;
+        margin: 0;
+        font-size: clamp(42px, 7vw, 74px);
+        font-weight: 650;
+        letter-spacing: -.055em;
+        line-height: .98;
+      }
+      .lede {
+        max-width: 680px;
+        margin: 28px 0 0;
+        color: #b8b8b8;
+        font-size: 19px;
+        line-height: 1.55;
+      }
+      .status {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px 18px;
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .status span { display: inline-flex; align-items: center; gap: 8px; }
+      .status span::before {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        content: "";
+      }
+      .status .neutral::before { background: var(--warn); }
+
+      section {
+        padding: 52px 0;
+        border-bottom: 1px solid var(--line);
+        scroll-margin-top: 24px;
+      }
+      h2 { margin: 0 0 22px; font-size: 28px; letter-spacing: -.025em; line-height: 1.2; }
+      h3 { margin: 34px 0 12px; font-size: 18px; letter-spacing: -.01em; }
+      p { margin: 0; }
+      p + p { margin-top: 16px; }
+      ul, ol { margin: 18px 0 0; padding-left: 23px; }
+      li { padding-left: 7px; }
+      li + li { margin-top: 12px; }
+      li::marker { color: var(--faint); }
+      strong { font-weight: 650; }
+      small { color: var(--muted); font-size: 14px; }
+
+      code {
+        overflow-wrap: anywhere;
+        color: #fff;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: .88em;
+      }
+      pre {
+        overflow-x: auto;
+        margin: 18px 0 0;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        line-height: 1.55;
+      }
+      pre code { overflow-wrap: normal; white-space: pre; }
+
+      .flow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 22px;
+        color: var(--muted);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 14px;
+      }
+      .flow strong { color: var(--text); font-weight: 500; }
+      .flow span:not(:last-child)::after { color: #555; content: " →"; }
+
+      .callout {
+        margin-top: 24px;
+        padding: 20px 22px;
+        border-left: 2px solid var(--accent);
+        background: var(--panel);
+      }
+      .callout.warn { border-left-color: var(--warn); }
+      .callout.danger { border-left-color: var(--danger); }
+      .callout p + p { margin-top: 8px; }
+      .callout-label {
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+      }
+      .callout.warn .callout-label { color: var(--warn); }
+      .callout.danger .callout-label { color: var(--danger); }
+
+      .table-wrap { overflow-x: auto; margin-top: 22px; }
+      table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14px; }
+      th, td {
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+      td:first-child { color: #fff; }
+
+      .steps { margin-top: 28px; padding: 0; list-style: none; counter-reset: steps; }
+      .steps > li {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        gap: 16px;
+        padding: 0;
+        counter-increment: steps;
+      }
+      .steps > li + li { margin-top: 30px; }
+      .steps > li::before {
+        color: var(--faint);
+        content: counter(steps, decimal-leading-zero);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.8;
+      }
+      .steps h3 { margin: 0 0 8px; }
+      .steps ul, .steps ol { margin-top: 12px; }
+
+      .checklist { margin-top: 22px; padding: 0; list-style: none; }
+      .checklist li {
+        display: grid;
+        grid-template-columns: 20px minmax(0, 1fr);
+        gap: 10px;
+        padding: 0;
+      }
+      .checklist li::before { color: var(--accent); content: "□"; }
+      .checklist li + li { margin-top: 13px; }
+
+      .source-list { color: var(--muted); font-size: 14px; }
+      footer { padding-top: 40px; color: var(--faint); font-size: 13px; }
+
+      @media (max-width: 900px) {
+        .page { display: block; width: min(100% - 40px, 780px); padding-top: 48px; }
+        nav {
+          position: static;
+          margin-bottom: 42px;
+          padding-bottom: 30px;
+          border-bottom: 1px solid var(--line);
+        }
+        nav ol { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+        nav li + li { margin-top: 0; }
+      }
+
+      @media (max-width: 520px) {
+        .page { width: min(100% - 28px, 780px); padding: 32px 0 72px; }
+        header { padding-bottom: 40px; }
+        section { padding: 40px 0; }
+        h2 { font-size: 24px; }
+        .lede { font-size: 17px; }
+        .steps > li { grid-template-columns: 28px minmax(0, 1fr); gap: 10px; }
+        pre { padding: 15px; font-size: 13px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+      }
+
+      @media print {
+        body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .page { display: block; width: 100%; padding: 0; }
+        nav { display: none; }
+        section { break-inside: avoid; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <nav aria-label="Contenido del documento">
+        <p>Contenido</p>
+        <ol>
+          <li><a href="#resumen">Resultado</a></li>
+          <li><a href="#hallazgos">Qué salió mal</a></li>
+          <li><a href="#cambios">Qué se corrigió</a></li>
+          <li><a href="#linear">Estado en Linear</a></li>
+          <li><a href="#validacion">Verificación</a></li>
+          <li><a href="#proximos">Próximos módulos</a></li>
+        </ol>
+      </nav>
+
+      <main>
+        <header>
+          <p class="eyebrow">SERA · revisión técnica</p>
+          <h1>Usuarios ya tiene una base que se puede repetir.</h1>
+          <p class="lede">La rama pasó de un modelo que no arrancaba a un módulo BCE completo para administración de usuarios. Este informe deja por escrito los errores, las correcciones y las reglas que conviene repetir.</p>
+          <div class="status" aria-label="Estado del trabajo">
+            <span>27 tests aprobados</span>
+            <span>Flyway y arranque verificados</span>
+            <span class="neutral">Autenticación pendiente de redefinir</span>
+          </div>
+        </header>
+
+        <section id="resumen" aria-labelledby="resumen-title">
+          <h2 id="resumen-title">Resultado</h2>
+          <p>El módulo cubre el trabajo compatible con las decisiones actuales de <code>TRA-19</code>, <code>TRA-22</code> y <code>TRA-24</code>. Tiene entidad, migración, repository, service, DTOs, controller, errores consistentes, búsqueda, baja lógica y pruebas. <code>rol</code> y <code>qrUsuario</code> son textos simples. No hay catálogo de roles ni rotación de QR.</p>
+          <ul>
+            <li>La API nunca recibe ni devuelve la entidad JPA.</li>
+            <li>Email y DNI tienen validación de unicidad en Control y restricciones en PostgreSQL.</li>
+            <li>Las contraseñas se guardan con BCrypt y no aparecen en responses.</li>
+            <li>La baja cambia el estado a <code>INACTIVO</code>; no borra el historial.</li>
+          </ul>
+          <div class="callout">
+            <p class="callout-label">Mi recomendación</p>
+            <p>No empezar login ni <code>users/me</code> hasta reescribir <code>TRA-20</code> y <code>TRA-21</code>. Esas tareas todavía exigen RBAC y un modelo de perfil que el equipo ya descartó. Implementarlas hoy volvería a meter decisiones inventadas en el código.</p>
+          </div>
+        </section>
+
+        <section id="hallazgos" aria-labelledby="hallazgos-title">
+          <h2 id="hallazgos-title">Qué salió mal</h2>
+          <p>El problema no era una clase aislada. La rama había empezado por escribir archivos sin cerrar el recorrido vertical ni ejecutar el build.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Hallazgo</th><th>Consecuencia</th><th>Corrección</th></tr></thead>
+              <tbody>
+                <tr><td><code>PasswordEncoder</code> no se inyectaba</td><td>Registrar o validar un usuario terminaba en <code>NullPointerException</code>.</td><td>Campo <code>final</code> e inyección por constructor.</td></tr>
+                <tr><td>Dos excepciones de usuario no encontrado</td><td>Dos mensajes y dos ubicaciones para el mismo error.</td><td>Una excepción en Control que hereda del error común.</td></tr>
+                <tr><td>Configuración dentro de Entity</td><td>El dominio dependía de una clase de infraestructura mal ubicada.</td><td><code>PasswordConfig</code> pasó a <code>shared/config</code>.</td></tr>
+                <tr><td>Enums y CUID sin necesidad confirmada</td><td>Más dependencias y un modelo rígido basado en documentación descartada.</td><td>Rol y QR quedaron como textos. UUID usa el JDK.</td></tr>
+                <tr><td>Enums nativos de PostgreSQL</td><td>Riesgo de que Hibernate esperara <code>varchar</code> y fallara <code>ddl-auto=validate</code>.</td><td><code>VARCHAR</code> con <code>CHECK</code> solo para el estado real.</td></tr>
+                <tr><td>Setters públicos para todos los campos</td><td>Cualquier caller podía saltarse normalización e invariantes.</td><td>Métodos de dominio concretos y setters eliminados.</td></tr>
+                <tr><td>Sin Boundary ni tests</td><td>No existía un contrato HTTP verificable.</td><td>DTOs validados, controller y tests MockMvc.</td></tr>
+                <tr><td>POM reindentado completo</td><td>Más de 300 líneas de ruido ocultaban dos dependencias reales.</td><td>Se restauró el formato. Solo queda <code>spring-security-crypto</code>.</td></tr>
+                <tr><td>El formatter no se había ejecutado</td><td>El baseline tenía 5 tests verdes, pero <code>mvn verify</code> fallaba.</td><td>Spotless aplicado y verificado en toda la API.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout danger">
+            <p class="callout-label">La lección incómoda</p>
+            <p>"Compila en el IDE" no alcanza. La primera señal objetiva fue clara: el branch ni siquiera pasaba el formatter que ya estaba configurado. Ejecutar <code>mvn verify</code> antes del primer push habría expuesto varios problemas cuando todavía eran baratos.</p>
+          </div>
+        </section>
+
+        <section id="cambios" aria-labelledby="cambios-title">
+          <h2 id="cambios-title">Qué se corrigió</h2>
+          <div class="flow" aria-label="Recorrido de una solicitud">
+            <span><strong>DTO validado</strong></span>
+            <span><strong>UsuarioController</strong></span>
+            <span><strong>UsuarioService</strong></span>
+            <span><strong>UsuarioRepository</strong></span>
+            <span>PostgreSQL</span>
+          </div>
+          <h3>Contrato administrativo</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Método</th><th>Ruta</th><th>Comportamiento</th></tr></thead>
+              <tbody>
+                <tr><td>POST</td><td><code>/api/usuarios</code></td><td>Crea un usuario activo. Responde 201 y Location.</td></tr>
+                <tr><td>GET</td><td><code>/api/usuarios</code></td><td>Lista por nombre.</td></tr>
+                <tr><td>GET</td><td><code>/api/usuarios?buscar=...</code></td><td>Nombre o email parcial, DNI exacto.</td></tr>
+                <tr><td>GET</td><td><code>/api/usuarios/{id}</code></td><td>Consulta detalle sin password.</td></tr>
+                <tr><td>PUT</td><td><code>/api/usuarios/{id}</code></td><td>Actualiza datos y estado.</td></tr>
+                <tr><td>PUT</td><td><code>/api/usuarios/{id}/password</code></td><td>Reemplaza el hash y responde 204.</td></tr>
+                <tr><td>DELETE</td><td><code>/api/usuarios/{id}</code></td><td>Baja lógica mediante estado INACTIVO.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>Commits nuevos</h3>
+          <ul>
+            <li><code>b21e840</code> corrige el modelo persistente y sus pruebas.</li>
+            <li><code>61e9e1b</code> agrega administración HTTP.</li>
+            <li><code>4e17c4c</code> unifica el puerto 4500.</li>
+            <li><code>cee4ab3</code> completa la búsqueda por nombre, email y DNI.</li>
+            <li><code>c244fa5</code> limpia el diff del POM.</li>
+            <li><code>9f18049</code> documenta el contrato real.</li>
+            <li><code>001f7f3</code> aplica el formato pendiente que llegó desde main.</li>
+          </ul>
+        </section>
+
+        <section id="linear" aria-labelledby="linear-title">
+          <h2 id="linear-title">Estado en Linear</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tarea</th><th>Estado observado</th><th>Resultado</th></tr></thead>
+              <tbody>
+                <tr><td><code>TRA-19</code></td><td>In Review</td><td>Modelo, migración, repository y DTOs terminados según la decisión nueva.</td></tr>
+                <tr><td><code>TRA-22</code></td><td>Backlog</td><td>CRUD administrativo y búsqueda implementados. Permisos quedan fuera hasta definir autenticación.</td></tr>
+                <tr><td><code>TRA-24</code></td><td>Backlog</td><td>Unicidad, timestamps, errores y tests implementados.</td></tr>
+                <tr><td><code>TRA-20</code></td><td>Backlog</td><td>Bloqueada por una definición nueva de login y permisos sin el RBAC descartado.</td></tr>
+                <tr><td><code>TRA-21</code></td><td>Backlog</td><td>Necesita saber cómo se identifica al usuario actual.</td></tr>
+                <tr><td><code>TRA-23</code></td><td>Backlog</td><td>Conviene conectar el frontend cuando TRA-20 y TRA-21 tengan un contrato estable.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout warn">
+            <p class="callout-label">Desalineación pendiente</p>
+            <p>Linear y <code>docs/SPEC.md</code> todavía hablan de autorización por rol, capacidades y QR personal. El código no debe intentar cumplir esas frases hasta que el equipo marque qué requisitos siguen vigentes. El documento técnico actual del módulo es <code>docs/USUARIOS.md</code>.</p>
+          </div>
+        </section>
+
+        <section id="validacion" aria-labelledby="validacion-title">
+          <h2 id="validacion-title">Verificación ejecutada</h2>
+          <ol class="checklist">
+            <li><code>.\mvnw.cmd verify</code>: 27 tests, empaquetado, Spotless y Checkstyle aprobados.</li>
+            <li><code>pnpm lint</code> y <code>pnpm typecheck</code>: aprobados.</li>
+            <li><code>pnpm build</code>: aprobado. Vite mantiene una advertencia por un chunk de 1,13 MB del frontend base.</li>
+            <li><code>docker compose config</code>: configuración válida.</li>
+            <li><code>docker compose up -d</code>: PostgreSQL 17 saludable.</li>
+            <li><code>.\mvnw.cmd spring-boot:run</code>: Flyway aplicó V2, Hibernate validó el schema y Tomcat inició en 4500.</li>
+            <li><code>GET /api/health</code> devolvió <code>ok</code> y <code>GET /api/usuarios</code> respondió una lista vacía.</li>
+          </ol>
+          <div class="callout">
+            <p class="callout-label">Estado de salida</p>
+            <p>El worktree quedó limpio antes de generar este informe. PostgreSQL sigue levantado mediante Docker Compose. La API se detuvo después del smoke test.</p>
+          </div>
+        </section>
+
+        <section id="proximos" aria-labelledby="proximos-title">
+          <h2 id="proximos-title">Checklist para los próximos módulos</h2>
+          <ol class="steps">
+            <li><div><h3>Separar hechos de deseos</h3><p>Antes de escribir una entidad, anotar qué pide una consigna vigente y qué salió de un mock, un documento generado o una idea del equipo. Si no hay acuerdo, la tarea no está lista para programar.</p></div></li>
+            <li><div><h3>Cerrar un recorrido vertical pequeño</h3><p>Entity, migración, repository, Control, DTOs, Boundary y dos o tres pruebas que cubran decisiones reales. No dejar media feature repartida entre capas.</p></div></li>
+            <li><div><h3>Proteger el dominio</h3><p>Evitar setters generales. Dar nombres a los cambios de estado. Normalizar los datos en un solo lugar y duplicar en la base las restricciones que protegen integridad.</p></div></li>
+            <li><div><h3>Revisar el diff antes del commit</h3><p>Un POM entero reindentado, un puerto cambiado sin docs o una dependencia sin uso deberían saltar a la vista con <code>git diff --stat</code> y <code>git diff</code>.</p></div></li>
+            <li><div><h3>Ejecutar el mismo cierre siempre</h3><pre><code>cd apps/api
+.\mvnw.cmd spotless:apply
+.\mvnw.cmd verify
+
+cd ../web
+pnpm lint
+pnpm typecheck
+pnpm build
+
+cd ../..
+docker compose config
+git diff --check
+git status --short</code></pre></div></li>
+            <li><div><h3>Probar la migración de verdad</h3><p>Cuando cambia el schema, levantar PostgreSQL y arrancar Spring. Un test unitario no demuestra que Flyway y Hibernate estén de acuerdo.</p></div></li>
+            <li><div><h3>Commits que expliquen una sola cosa</h3><p>Usar Conventional Commits y mencionar la tarea en el cuerpo. No mezclar formato, comportamiento, documentación y una migración ajena si pueden revisarse por separado.</p></div></li>
+          </ol>
+          <div class="callout danger">
+            <p class="callout-label">No integrar si</p>
+            <p>El branch falla <code>verify</code>, expone una entidad JPA, guarda contraseñas sin hash, modifica una migración ya consolidada o implementa reglas que el equipo todavía discute.</p>
+          </div>
+        </section>
+
+        <footer>SERA · revisión del módulo de usuarios · 10 de septiembre de 2026</footer>
+      </main>
+    </div>
+  </body>
+</html>
