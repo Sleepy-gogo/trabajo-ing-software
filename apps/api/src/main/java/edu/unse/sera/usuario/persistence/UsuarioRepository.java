@@ -12,8 +12,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
   List<Usuario> findAllByOrderByNombreCompletoAsc();
 
-  List<Usuario> findByNombreCompletoContainingIgnoreCaseOrderByNombreCompletoAsc(
-      String nombreCompleto);
+  List<Usuario>
+      findByNombreCompletoContainingIgnoreCaseOrEmailContainingIgnoreCaseOrderByNombreCompletoAsc(
+          String nombreCompleto, String email);
 
   Optional<Usuario> findByDni(int dni);
 

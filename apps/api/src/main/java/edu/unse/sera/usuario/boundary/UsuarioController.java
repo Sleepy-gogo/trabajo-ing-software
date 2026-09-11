@@ -46,8 +46,9 @@ public class UsuarioController {
   }
 
   @GetMapping
-  public List<UsuarioResponse> listar(@RequestParam(required = false) String nombre) {
-    return usuarioService.listar(nombre).stream().map(this::toResponse).toList();
+  public List<UsuarioResponse> listar(
+      @RequestParam(name = "buscar", required = false) String criterio) {
+    return usuarioService.listar(criterio).stream().map(this::toResponse).toList();
   }
 
   @GetMapping("/{id}")

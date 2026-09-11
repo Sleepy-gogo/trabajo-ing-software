@@ -5,6 +5,7 @@ import edu.unse.sera.usuario.entity.Usuario;
 import edu.unse.sera.usuario.persistence.UsuarioRepository;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -47,12 +48,22 @@ public class UsuarioService {
   }
 
   @Transactional(readOnly = true)
-  public List<UsuarioDetalle> listar(String nombre) {
-    List<Usuario> usuarios =
-        nombre == null || nombre.isBlank()
-            ? usuarioRepository.findAllByOrderByNombreCompletoAsc()
-            : usuarioRepository.findByNombreCompletoContainingIgnoreCaseOrderByNombreCompletoAsc(
-                nombre.trim());
+  public List<UsuarioDetalle> listar(String criterio) {
+    List<Usuario> usuarios;
+    if (criterio == null || criterio.isBlank()) {
+      usuarios = usuarioRepository.findAllByOrderByNombreCompletoAsc();
+    } else {
+      String valor = criterio.trim();
+      usuarios =
+          convertirDni(valor)
+              .flatMap(usuarioRepository::findByDni)
+              .map(List::of)
+              .orElseGet(
+                  () ->
+                      usuarioRepository
+                          .findByNombreCompletoContainingIgnoreCaseOrEmailContainingIgnoreCaseOrderByNombreCompletoAsc(
+                              valor, valor));
+    }
     return usuarios.stream().map(this::toResponse).toList();
   }
 
@@ -110,6 +121,14 @@ public class UsuarioService {
 
   private String normalizarEmail(String email) {
     return email.trim().toLowerCase(Locale.ROOT);
+  }
+
+  private Optional<Integer> convertirDni(String valor) {
+    try {
+      return Optional.of(Integer.valueOf(valor));
+    } catch (NumberFormatException exception) {
+      return Optional.empty();
+    }
   }
 
   private UsuarioDetalle toResponse(Usuario usuario) {

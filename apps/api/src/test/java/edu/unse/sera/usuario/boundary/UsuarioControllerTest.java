@@ -128,7 +128,7 @@ class UsuarioControllerTest {
     when(usuarioService.listar("ada")).thenReturn(List.of(detalle(id)));
 
     mockMvc
-        .perform(get("/api/usuarios").queryParam("nombre", "ada"))
+        .perform(get("/api/usuarios").queryParam("buscar", "ada"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(id.toString()))
         .andExpect(jsonPath("$[0].nombreCompleto").value("Ada Lovelace"));

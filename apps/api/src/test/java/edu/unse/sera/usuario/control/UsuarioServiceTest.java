@@ -109,6 +109,16 @@ class UsuarioServiceTest {
     verify(usuarioRepository, never()).delete(any());
   }
 
+  @Test
+  void buscaUnUsuarioPorDniExacto() {
+    Usuario usuario = crearUsuario();
+    when(usuarioRepository.findByDni(12345678)).thenReturn(Optional.of(usuario));
+
+    assertThat(usuarioService.listar("12345678"))
+        .extracting(UsuarioDetalle::email)
+        .containsExactly("ada@example.com");
+  }
+
   private Usuario crearUsuario() {
     return new Usuario(
         "Ada Lovelace",
