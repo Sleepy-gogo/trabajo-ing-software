@@ -8,17 +8,17 @@ Este documento describe el contrato implementado. No define autenticación ni pe
 
 | Campo | Regla |
 | --- | --- |
-| `id` | UUID generado por la aplicación |
+| `id` | UUID generado por JPA con `GenerationType.UUID` |
 | `nombreCompleto` | Obligatorio, hasta 200 caracteres |
 | `email` | Obligatorio, hasta 100 caracteres, único sin distinguir mayúsculas |
 | `dni` | Número entre 1 y 99.999.999, único |
-| `rol` | Texto obligatorio, hasta 50 caracteres |
-| `qrUsuario` | Texto obligatorio, hasta 100 caracteres |
+| `rol` | `ADMIN`, `STAFF` o `USUARIO` |
+| `qrUsuario` | Identificador único generado al crear la cuenta, con formato `SERA-U` más 12 caracteres CUID2 |
 | `estadoCuenta` | `ACTIVO`, `DESHABILITADO` o `INACTIVO` |
 | `passwordHash` | Hash BCrypt, nunca se devuelve por HTTP |
 | `createdAt`, `updatedAt` | Auditoría administrada por Hibernate |
 
-`rol` y `qrUsuario` son atributos de texto. El módulo no contiene un catálogo de roles ni genera, rota o interpreta códigos QR.
+`RolUsuario` limita los roles generales del sistema. No modela permisos individuales ni agrega RBAC granular. El QR identifica al usuario y no puede editarse desde la API.
 
 ## API administrativa
 
@@ -28,7 +28,7 @@ Este documento describe el contrato implementado. No define autenticación ni pe
 | `GET` | `/api/usuarios` | Lista usuarios ordenados por nombre |
 | `GET` | `/api/usuarios?buscar=valor` | Busca por nombre o email parcial, o por DNI exacto |
 | `GET` | `/api/usuarios/{id}` | Consulta un usuario |
-| `PUT` | `/api/usuarios/{id}` | Actualiza datos, rol, QR y estado |
+| `PUT` | `/api/usuarios/{id}` | Actualiza datos, rol y estado |
 | `PUT` | `/api/usuarios/{id}/password` | Cambia la contraseña y responde `204` |
 | `DELETE` | `/api/usuarios/{id}` | Cambia el estado a `INACTIVO` y responde `204` |
 
@@ -42,4 +42,4 @@ La baja es lógica. El registro permanece disponible para auditoría y relacione
 
 ## Pendiente
 
-Linear todavía describe login, usuario actual y autorización por rol en `TRA-20` y `TRA-21`. El equipo debe corregir esas tareas según la decisión de simplificar roles antes de implementarlas. Este módulo no publica un endpoint de login ni confía en un rol enviado por el cliente para autorizar acciones.
+Linear todavía describe login, usuario actual y autorización detallada en `TRA-20` y `TRA-21`. El equipo debe corregir esas tareas antes de implementarlas. Este módulo define tres roles generales, pero todavía no publica un endpoint de login ni aplica permisos.

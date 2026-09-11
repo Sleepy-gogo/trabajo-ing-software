@@ -29,7 +29,7 @@ public class UsuarioService {
     this.passwordEncoder = passwordEncoder;
   }
 
-  /** Registra una cuenta activa y guarda únicamente el hash de su contraseña. */
+  /** Registra una cuenta activa y guarda solo el hash de su contraseña. */
   public UsuarioDetalle registrarUsuario(
       String nombreCompleto, String email, int dni, RolUsuario rol, String rawPassword) {
     validarUnicidad(email, dni, null);
