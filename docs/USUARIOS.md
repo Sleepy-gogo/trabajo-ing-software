@@ -1,6 +1,6 @@
 # Usuarios
 
-Este documento describe el contrato implementado. No define autenticación ni permisos. Esos temas siguen pendientes de una decisión del equipo.
+Contrato del Incremento 1: registro, sesión, perfil y administración de cuentas. Conserva el modelo de usuarios ya integrado en `main`.
 
 ## Modelo
 
@@ -40,6 +40,45 @@ La baja es lógica. El registro permanece disponible para auditoría y relacione
 - Un email o DNI repetido responde `409` con el código `usuario_duplicado`.
 - Un UUID inexistente responde `404` con el código común `recurso_no_encontrado`.
 
-## Pendiente
+## Sesión y perfil
 
-Linear todavía describe login, usuario actual y autorización detallada en `TRA-20` y `TRA-21`. El equipo debe corregir esas tareas antes de implementarlas. Este módulo define tres roles generales, pero todavía no publica un endpoint de login ni aplica permisos.
+| Método | Ruta | Permiso y resultado |
+| --- | --- | --- |
+| `GET` | `/api/auth/csrf` | Público. Entrega `token` y `headerName`; conserva la cookie de sesión |
+| `POST` | `/api/auth/registro` | Público con CSRF. Recibe `nombreCompleto`, `email`, `dni`, `password`; crea siempre `USUARIO` y responde `201` |
+| `POST` | `/api/auth/login` | Público con CSRF. Recibe `email`, `password`; devuelve el usuario y una nueva sesión |
+| `POST` | `/api/auth/logout` | Sesión y CSRF. Invalida la sesión, responde `204` |
+| `GET` | `/api/usuarios/me` | Sesión. Devuelve el usuario actual |
+| `PUT` | `/api/usuarios/me` | Sesión y CSRF. Recibe solo `nombreCompleto`, `email`, `dni` |
+
+Todos los endpoints administrativos de `/api/usuarios` exigen `ADMIN`. `STAFF` y `USUARIO` pueden consultar y editar su propio perfil. El CRUD de referencia de espacios también exige `ADMIN`; los permisos de las futuras consultas públicas se definirán en Incremento 3.
+
+La sesión vive en el servidor, vence tras 30 minutos de inactividad y usa cookie HttpOnly/SameSite=Lax. El login invalida la sesión anterior. Cada request vuelve a consultar el rol y estado: una baja o deshabilitación invalida la sesión existente y un cambio de rol rige en la siguiente operación. Reiniciar la API requiere iniciar sesión de nuevo. En HTTPS, configurar `SERVER_SERVLET_SESSION_COOKIE_SECURE=true`.
+
+El cliente obtiene un token CSRF antes de cada escritura y envía el header indicado. La API conserva la protección CSRF de Spring Security. No se guardan tokens ni contraseñas en localStorage. Ver [ADR de sesiones](adr/0001-sesiones-de-usuario.md).
+
+Un login inválido o una cuenta no activa responde `401`. Las operaciones sin permiso o sin CSRF válido responden `403`. Las contraseñas tienen entre 8 y 72 caracteres y un máximo de 72 bytes UTF-8, límite de BCrypt.
+
+## Primera cuenta administrativa local
+
+Registrar una cuenta desde `/register`. Después, un integrante con acceso a la base local puede promover **esa cuenta** desde psql:
+
+```bash
+docker compose exec postgres psql -U sera -d sera
+```
+
+```sql
+UPDATE usuarios SET rol = 'ADMIN' WHERE email = 'email-de-la-cuenta@ejemplo.com';
+```
+
+Reemplazar el email por el de la cuenta registrada. Luego iniciar sesión desde `/login`. No hay contraseñas predeterminadas, promoción automática del primer usuario ni endpoint público para elegir roles.
+
+## Frontend y pruebas
+
+`/login`, `/register`, `/app/profile`, `/admin/users` y `/admin/users/:id` consumen la API real mediante TanStack Query. La administración permite buscar, crear, editar, cambiar contraseña y dar de baja con confirmación. La recuperación de acceso remite a administración. Teléfono, relación UNSE y legajo no se recopilan porque el contrato persistente actual no los incluye.
+
+Las pantallas de los incrementos siguientes conservan sus mocks y muestran un aviso de demostración. Las rutas administrativas exigen rol; el backend vuelve a comprobarlo independientemente del frontend.
+
+La auditoría mínima de este incremento consiste en `created_at` y `updated_at`; la baja es lógica y el QR permanece estable. No se agrega un historial por responsable ni permisos granulares.
+
+Ejecutar `mvnw verify` en `apps/api` y `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm build` en `apps/web`. Los tests de seguridad cubren CSRF, permisos, sesión, baja y protección del perfil. Los tests de interacción del frontend usan Vitest, Testing Library y jsdom; no sustituyen una revisión visual en navegador.

@@ -14,4 +14,17 @@ public record UsuarioResponse(
     String qrUsuario,
     EstadoUsuario estadoCuenta,
     OffsetDateTime creadoEn,
-    OffsetDateTime actualizadoEn) {}
+    OffsetDateTime actualizadoEn) {
+  public static UsuarioResponse from(edu.unse.sera.usuario.control.UsuarioDetalle usuario) {
+    return new UsuarioResponse(
+        usuario.id(),
+        usuario.nombreCompleto(),
+        usuario.email(),
+        usuario.dni(),
+        usuario.rol(),
+        usuario.qrUsuario(),
+        usuario.estadoCuenta(),
+        usuario.creadoEn(),
+        usuario.actualizadoEn());
+  }
+}

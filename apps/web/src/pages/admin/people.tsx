@@ -555,9 +555,7 @@ function PeoplePage({ members = false }: { members?: boolean }) {
   )
 }
 
-export function UsersPage() {
-  return <PeoplePage />
-}
+export { UsersPage } from "./users"
 export function MembersPage() {
   return <PeoplePage members />
 }

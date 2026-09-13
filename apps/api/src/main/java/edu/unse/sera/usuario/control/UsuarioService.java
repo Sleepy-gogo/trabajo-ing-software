@@ -32,6 +32,7 @@ public class UsuarioService {
   /** Registra una cuenta activa y guarda solo el hash de su contraseña. */
   public UsuarioDetalle registrarUsuario(
       String nombreCompleto, String email, int dni, RolUsuario rol, String rawPassword) {
+    validarPassword(rawPassword);
     validarUnicidad(email, dni, null);
     String hashedPassword = passwordEncoder.encode(rawPassword);
     Usuario usuario =
@@ -51,6 +52,32 @@ public class UsuarioService {
         .filter(usuario -> usuario.getEstadoCuenta() == EstadoUsuario.ACTIVO)
         .map(usuario -> passwordEncoder.matches(rawPassword, usuario.getPasswordHash()))
         .orElse(false);
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<UsuarioDetalle> autenticar(String email, String password) {
+    if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+      return Optional.empty();
+    }
+    return usuarioRepository
+        .findByEmailIgnoreCase(normalizarEmail(email))
+        .filter(usuario -> passwordEncoder.matches(password, usuario.getPasswordHash()))
+        .filter(usuario -> usuario.getEstadoCuenta() == EstadoUsuario.ACTIVO)
+        .map(this::toResponse);
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<UsuarioDetalle> consultarActivo(UUID id) {
+    return usuarioRepository
+        .findById(id)
+        .filter(usuario -> usuario.getEstadoCuenta() == EstadoUsuario.ACTIVO)
+        .map(this::toResponse);
+  }
+
+  public UsuarioDetalle actualizarPerfil(UUID id, String nombreCompleto, String email, int dni) {
+    Usuario usuario = buscar(id);
+    return actualizarUsuario(
+        id, nombreCompleto, email, dni, usuario.getRol(), usuario.getEstadoCuenta());
   }
 
   /** Reúne el listado administrativo y su búsqueda en un único caso de uso. */
@@ -107,12 +134,19 @@ public class UsuarioService {
 
   /** Separa el cambio de contraseña de la edición de datos administrativos. */
   public void actualizarPasswordUsuario(UUID id, String rawPassword) {
+    validarPassword(rawPassword);
     Usuario usuario = buscar(id);
     usuario.cambiarPasswordHash(passwordEncoder.encode(rawPassword));
   }
 
   private Usuario buscar(UUID id) {
     return usuarioRepository.findById(id).orElseThrow(() -> new UsuarioNoEncontradoException(id));
+  }
+
+  private void validarPassword(String password) {
+    if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+      throw new PasswordInvalidaException();
+    }
   }
 
   private void validarUnicidad(String email, int dni, UUID usuarioId) {

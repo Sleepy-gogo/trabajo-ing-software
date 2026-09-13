@@ -1,6 +1,6 @@
 # SERA web
 
-Frontend React, TypeScript y Vite. React Router maneja las rutas y TanStack Query consulta `GET /api/health` mediante el proxy de Vite a `http://localhost:4500`.
+Frontend React, TypeScript y Vite. React Router maneja las rutas y TanStack Query administra sesión, perfil y usuarios mediante el proxy `/api` de Vite a `http://localhost:4500`.
 
 ## Desarrollo
 
@@ -11,7 +11,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Abrir <http://localhost:5173>. La API debe estar ejecutándose para que la página muestre una conexión correcta. Ver [desarrollo local](../../docs/DEVELOPMENT.md) para iniciar el backend y PostgreSQL.
+Abrir <http://localhost:5173> e iniciar sesión o registrar una cuenta. Ver [desarrollo local](../../docs/DEVELOPMENT.md) para iniciar backend y PostgreSQL, y [usuarios](../../docs/USUARIOS.md) para crear el primer administrador local. Las secciones de incrementos posteriores siguen en demostración.
 
 ## Checks
 
@@ -20,10 +20,11 @@ pnpm format
 pnpm format-check
 pnpm lint
 pnpm typecheck
+pnpm test
 pnpm build
 ```
 
-`typecheck` comprueba tanto la aplicación como la configuración de Vite. `build` genera `dist/`.
+`typecheck` comprueba tanto la aplicación como la configuración de Vite. `build` ejecuta los tests antes de generar `dist/`, por lo que el job de CI existente también los verifica.
 
 ## Componentes y estilos
 

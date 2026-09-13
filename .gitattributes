@@ -1,5 +1,8 @@
 * text=auto
 
+# Prettier requires LF, including Windows checkouts.
+/apps/web/** text=auto eol=lf
+
 # Keep Unix shell wrappers usable on Linux and macOS.
 **/mvnw text eol=lf
 *.sh text eol=lf

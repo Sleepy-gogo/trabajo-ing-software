@@ -1,3 +1,6 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useSession } from "@/hooks/use-session"
+import { usersApi, ApiError } from "@/lib/users-api"
 import { useState, type ReactNode } from "react"
 import {
   Link,
@@ -29,13 +32,6 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Sheet,
   SheetClose,
@@ -76,7 +72,11 @@ const staffNav = [
     icon: Activity,
   },
 ]
-const roleNames = { admin: "Administración", member: "Socio", staff: "Accesos" }
+const roleNames = {
+  admin: "Administración",
+  member: "Usuario",
+  staff: "Accesos",
+}
 
 export function SeraBrand({
   light = false,
@@ -87,7 +87,7 @@ export function SeraBrand({
 }) {
   return (
     <Link
-      to="/admin"
+      to="/app/profile"
       aria-label="SERA, inicio"
       className={cn(
         "inline-flex items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4",
@@ -130,18 +130,39 @@ export function AppShell({
 }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const session = useSession()
   const role: DemoRole =
-    roleProp ?? (location.pathname.startsWith("/app") ? "member" : "admin")
+    location.pathname === "/app/profile" && session.data
+      ? session.data.rol === "ADMIN"
+        ? "admin"
+        : session.data.rol === "STAFF"
+          ? "staff"
+          : "member"
+      : (roleProp ??
+        (location.pathname.startsWith("/app") ? "member" : "admin"))
   const [menuOpen, setMenuOpen] = useState(false)
   const links =
     role === "member" ? memberNav : role === "staff" ? staffNav : adminNav
-  const person =
-    role === "member"
-      ? "Gonzalo Pérez"
-      : role === "staff"
-        ? "Lucía Fernández"
-        : "Axel Castaño"
-  const initials = role === "member" ? "GP" : role === "staff" ? "LF" : "AC"
+  const client = useQueryClient()
+  const logout = useMutation({
+    mutationFn: async () => {
+      try {
+        await usersApi.logout()
+      } catch (error) {
+        if (!(error instanceof ApiError && error.status === 401)) throw error
+      }
+    },
+    onSuccess: () => {
+      client.clear()
+      navigate("/login", { replace: true })
+    },
+  })
+  const person = session.data?.nombreCompleto ?? ""
+  const initials = person
+    .split(" ")
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
   const navContent = (
     <>
       <div className="px-6 pt-7 pb-8">
@@ -212,7 +233,7 @@ export function AppShell({
           </p>
         </div>
         <Link
-          to={role === "member" ? "/app/profile" : "/admin/settings"}
+          to="/app/profile"
           className="flex items-center gap-3 rounded-lg py-2 text-white"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-600 text-xs font-bold">
@@ -288,36 +309,6 @@ export function AppShell({
             <span className="font-bold sm:hidden">SERA.</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-2">
-              <span className="hidden text-[11px] text-muted-foreground xl:block">
-                Vista previa
-              </span>
-              <Select
-                value={role}
-                onValueChange={(value) => {
-                  if (value)
-                    navigate(
-                      value === "member"
-                        ? "/app"
-                        : value === "staff"
-                          ? "/admin/access"
-                          : "/admin"
-                    )
-                }}
-              >
-                <SelectTrigger
-                  aria-label="Cambiar vista previa"
-                  className="h-9 min-w-32 bg-muted/60 text-xs"
-                >
-                  <SelectValue>{roleNames[role]}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Administración</SelectItem>
-                  <SelectItem value="member">Socio</SelectItem>
-                  <SelectItem value="staff">Accesos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <Popover>
               <PopoverTrigger
                 render={
@@ -342,13 +333,19 @@ export function AppShell({
                 </p>
               </PopoverContent>
             </Popover>
-            <Link
-              to="/login"
-              className="hidden rounded-md p-2 text-muted-foreground hover:text-primary sm:inline-flex"
-              aria-label="Ver pantalla de inicio de sesión"
+            <Button
+              variant="ghost"
+              disabled={logout.isPending}
+              onClick={() => logout.mutate()}
+              aria-label="Cerrar sesión"
             >
               <LogOut className="size-[18px]" />
-            </Link>
+            </Button>
+            {logout.error && (
+              <p role="alert" className="text-xs text-destructive">
+                {logout.error.message}
+              </p>
+            )}
           </div>
         </header>
         <main
@@ -358,6 +355,13 @@ export function AppShell({
             role === "member" && "pb-28 lg:pb-10"
           )}
         >
+          {!location.pathname.startsWith("/admin/users") &&
+            location.pathname !== "/app/profile" && (
+              <p className="mb-5 rounded-lg border bg-muted p-3 text-sm">
+                Esta sección muestra datos de demostración. Se conectará en los
+                próximos incrementos.
+              </p>
+            )}
           {children ?? <Outlet />}
         </main>
         <footer
