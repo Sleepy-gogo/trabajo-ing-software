@@ -1,4 +1,4 @@
-export { MemberCardPage, MemberHomePage, MemberProfilePage } from "./account"
+export { MemberCardPage, MemberHomePage } from "./account"
 export {
   MemberPaymentsPage,
   MembershipStatusPage,
@@ -12,3 +12,5 @@ export {
   MemberServicesPage,
 } from "./reservations"
 export { MemberSurveysPage } from "./surveys"
+
+export { MemberProfilePage } from "./profile"

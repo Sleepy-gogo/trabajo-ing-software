@@ -100,6 +100,46 @@ class UsuarioServiceTest {
   }
 
   @Test
+  void autenticarRechazaPasswordIncorrectoYCuentaInactiva() {
+    Usuario usuario = crearUsuario();
+    when(usuarioRepository.findByEmailIgnoreCase("ada@example.com"))
+        .thenReturn(Optional.of(usuario));
+    when(passwordEncoder.matches("correcta", "hash")).thenReturn(true);
+    when(passwordEncoder.matches("incorrecta", "hash")).thenReturn(false);
+    assertThat(usuarioService.autenticar(" ADA@example.com ", "incorrecta")).isEmpty();
+    assertThat(usuarioService.autenticar(" ADA@example.com ", "correcta")).isPresent();
+    usuario.cambiarEstado(EstadoUsuario.INACTIVO);
+    assertThat(usuarioService.autenticar("ada@example.com", "correcta")).isEmpty();
+  }
+
+  @Test
+  void perfilConservaRolEstadoYQr() {
+    UUID id = UUID.randomUUID();
+    Usuario usuario = crearUsuario();
+    String qr = usuario.getQrUsuario();
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuario));
+    UsuarioDetalle detalle =
+        usuarioService.actualizarPerfil(id, "Otro nombre", "nuevo@example.com", 23456789);
+    assertThat(detalle.nombreCompleto()).isEqualTo("Otro nombre");
+    assertThat(detalle.email()).isEqualTo("nuevo@example.com");
+    assertThat(detalle.rol()).isEqualTo(usuario.getRol());
+    assertThat(detalle.estadoCuenta()).isEqualTo(EstadoUsuario.ACTIVO);
+    assertThat(detalle.qrUsuario()).isEqualTo(qr);
+    verify(usuarioRepository).flush();
+  }
+
+  @Test
+  void rechazaPasswordQueExcedeLimiteUtf8DeBcrypt() {
+    assertThatThrownBy(
+            () ->
+                usuarioService.registrarUsuario(
+                    "Ada", "ada@example.com", 12345678, RolUsuario.USUARIO, "á".repeat(40)))
+        .isInstanceOf(PasswordInvalidaException.class);
+    assertThat(usuarioService.autenticar("ada@example.com", "á".repeat(40))).isEmpty();
+    verify(passwordEncoder, never()).encode(any());
+  }
+
+  @Test
   void daDeBajaSinEliminarElRegistro() {
     UUID id = UUID.randomUUID();
     Usuario usuario = crearUsuario();

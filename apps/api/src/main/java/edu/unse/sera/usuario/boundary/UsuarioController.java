@@ -31,6 +31,23 @@ public class UsuarioController {
     this.usuarioService = usuarioService;
   }
 
+  @GetMapping("/me")
+  public UsuarioResponse actual(java.security.Principal principal) {
+    return toResponse(usuarioService.consultarDetalle(UUID.fromString(principal.getName())));
+  }
+
+  @PutMapping("/me")
+  public UsuarioResponse perfil(
+      java.security.Principal principal,
+      @Valid @RequestBody edu.unse.sera.usuario.boundary.dto.PerfilRequest request) {
+    return toResponse(
+        usuarioService.actualizarPerfil(
+            UUID.fromString(principal.getName()),
+            request.nombreCompleto(),
+            request.email(),
+            request.dni()));
+  }
+
   @PostMapping
   public ResponseEntity<UsuarioResponse> crear(@Valid @RequestBody CrearUsuarioRequest request) {
     UsuarioResponse response =

@@ -1,3 +1,6 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { ApiError, usersApi } from "@/lib/users-api"
+import { homeFor } from "@/hooks/use-session"
 import { useState, type FormEvent, type ReactNode } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import {
@@ -18,13 +21,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 function AuthLayout({
   children,
@@ -97,13 +93,6 @@ function AuthLayout({
               <br />
               Santiago del Estero, Argentina
             </span>
-            <Link
-              to="/admin"
-              className="ml-auto inline-flex items-center gap-2 text-xs font-semibold text-primary sm:ml-5"
-            >
-              Explorar demostración
-              <ArrowRight className="size-3.5" aria-hidden="true" />
-            </Link>
           </header>
           <main
             id="main-content"
@@ -144,7 +133,8 @@ function PasswordInput({
           type={visible ? "text" : "password"}
           autoComplete={autoComplete}
           required
-          minLength={6}
+          minLength={8}
+          maxLength={72}
           placeholder="Tu contraseña"
           className="h-11 pr-12 pl-10"
         />
@@ -166,16 +156,30 @@ function PasswordInput({
 export function LoginPage() {
   const navigate = useNavigate()
   const [error, setError] = useState("")
+  const client = useQueryClient()
+  const login = useMutation({
+    mutationFn: usersApi.login,
+    onSuccess: (user) => {
+      client.clear()
+      client.setQueryData(["session"], user)
+      navigate(homeFor(user.rol), { replace: true })
+    },
+    onError: (error) =>
+      setError(
+        error instanceof ApiError && Object.keys(error.fields).length
+          ? Object.values(error.fields).join(" ")
+          : error.message
+      ),
+  })
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (login.isPending) return
+    setError("")
     const data = new FormData(event.currentTarget)
-    if (String(data.get("email")).includes("error")) {
-      setError(
-        "El email o la contraseña no coinciden. Revisá los datos e intentá de nuevo."
-      )
-      return
-    }
-    navigate("/app")
+    login.mutate({
+      email: String(data.get("email")).trim(),
+      password: String(data.get("password")),
+    })
   }
   return (
     <AuthLayout>
@@ -189,7 +193,7 @@ export function LoginPage() {
       </div>
       <form onSubmit={submit} className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="email">Email o usuario</Label>
+          <Label htmlFor="email">Email</Label>
           <div className="relative">
             <Mail
               className="absolute top-3.5 left-3.5 size-4 text-muted-foreground"
@@ -197,6 +201,7 @@ export function LoginPage() {
             />
             <Input
               id="email"
+              type="email"
               name="email"
               autoComplete="username"
               placeholder="nombre@unse.edu.ar"
@@ -207,18 +212,6 @@ export function LoginPage() {
           </div>
         </div>
         <PasswordInput id="password" />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Label className="gap-2 text-xs font-normal">
-            <Checkbox name="remember" />
-            Mantener sesión iniciada
-          </Label>
-          <Link
-            to="/forgot-password"
-            className="text-xs font-semibold text-primary"
-          >
-            ¿Olvidaste tu contraseña?
-          </Link>
-        </div>
         {error && (
           <p
             id="login-error"
@@ -228,7 +221,11 @@ export function LoginPage() {
             {error}
           </p>
         )}
-        <Button type="submit" className="h-11 w-full">
+        <Button
+          type="submit"
+          disabled={login.isPending}
+          className="h-11 w-full"
+        >
           Iniciar sesión
           <ArrowRight aria-hidden="true" />
         </Button>
@@ -246,7 +243,7 @@ export function LoginPage() {
         Crear una cuenta
       </Button>
       <p className="mt-8 text-center text-xs leading-relaxed text-muted-foreground">
-        Podés recorrer todas las pantallas sin una cuenta desde la demostración.
+        Ingresá con el email y la contraseña de tu cuenta.
       </p>
     </AuthLayout>
   )
@@ -254,11 +251,24 @@ export function LoginPage() {
 
 export function RegisterPage() {
   const [success, setSuccess] = useState(false)
-  const [relationship, setRelationship] = useState<string | null>("Estudiante")
   const [error, setError] = useState("")
+  const registration = useMutation({
+    mutationFn: usersApi.register,
+    onSuccess: () => setSuccess(true),
+    onError: (error) =>
+      setError(
+        error instanceof ApiError && Object.keys(error.fields).length
+          ? Object.values(error.fields).join(" ")
+          : error.message
+      ),
+  })
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
+    if (new TextEncoder().encode(String(data.get("password"))).length > 72) {
+      setError("La contraseña es demasiado larga. Usá menos caracteres.")
+      return
+    }
     if (data.get("password") !== data.get("confirm-password")) {
       setError("Las contraseñas no coinciden. Volvé a escribirlas.")
       return
@@ -268,17 +278,23 @@ export function RegisterPage() {
       return
     }
     setError("")
-    setSuccess(true)
+    if (registration.isPending) return
+    registration.mutate({
+      nombreCompleto: `${String(data.get("first-name")).trim()} ${String(data.get("last-name")).trim()}`,
+      email: String(data.get("email")).trim(),
+      dni: Number(data.get("dni")),
+      password: String(data.get("password")),
+    })
   }
   return (
     <AuthLayout wide>
       {success ? (
         <FeedbackState
           title="Tu cuenta está lista"
-          description="Ya podés explorar los espacios y reservar. Administración verificará tu relación con la UNSE antes de aplicar los beneficios correspondientes."
+          description="Tu cuenta se registró. Iniciá sesión para consultar y actualizar tus datos."
           action={
-            <Button render={<Link to="/app" />}>
-              Ir a mi inicio
+            <Button render={<Link to="/login" />}>
+              Iniciar sesión
               <ArrowRight />
             </Button>
           }
@@ -319,12 +335,6 @@ export function RegisterPage() {
                   placeholder: "Sin puntos",
                   autoComplete: "off",
                 },
-                {
-                  id: "phone",
-                  label: "Teléfono",
-                  placeholder: "385 123 4567",
-                  autoComplete: "tel",
-                },
               ].map((field) => (
                 <div key={field.id} className="space-y-2">
                   <Label htmlFor={field.id}>{field.label}</Label>
@@ -334,6 +344,8 @@ export function RegisterPage() {
                     placeholder={field.placeholder}
                     autoComplete={field.autoComplete}
                     required
+                    maxLength={field.id === "dni" ? 8 : 100}
+                    pattern={field.id === "dni" ? "[0-9]{1,8}" : undefined}
                     inputMode={
                       field.id === "dni"
                         ? "numeric"
@@ -353,48 +365,12 @@ export function RegisterPage() {
                 name="email"
                 type="email"
                 autoComplete="email"
+                maxLength={100}
                 placeholder="nombre@unse.edu.ar"
                 required
                 className="h-11"
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="relationship">Relación con la UNSE</Label>
-                <Select value={relationship} onValueChange={setRelationship}>
-                  <SelectTrigger id="relationship" className="h-11 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["Estudiante", "Docente", "No docente", "Externo"].map(
-                      (value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="legajo">
-                  Legajo{" "}
-                  <span className="font-normal text-muted-foreground">
-                    opcional
-                  </span>
-                </Label>
-                <Input
-                  id="legajo"
-                  name="legajo"
-                  placeholder="Tu número de legajo"
-                  className="h-11"
-                />
-              </div>
-            </div>
-            <p className="rounded-lg bg-blue-50 p-3 text-xs leading-relaxed text-blue-800">
-              Administración verificará tu relación con la UNSE de forma
-              presencial.
-            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <PasswordInput id="password" autoComplete="new-password" />
               <PasswordInput
@@ -404,7 +380,7 @@ export function RegisterPage() {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Usá al menos 6 caracteres en esta demostración.
+              Usá entre 8 y 72 caracteres.
             </p>
             <Label className="items-start gap-2 text-xs leading-relaxed font-normal">
               <Checkbox name="terms" value="accepted" className="mt-0.5" />
@@ -419,7 +395,11 @@ export function RegisterPage() {
                 {error}
               </p>
             )}
-            <Button type="submit" className="h-11 w-full">
+            <Button
+              type="submit"
+              disabled={registration.isPending}
+              className="h-11 w-full"
+            >
               Crear cuenta
               <ArrowRight />
             </Button>
@@ -431,64 +411,15 @@ export function RegisterPage() {
 }
 
 export function ForgotPasswordPage() {
-  const [sent, setSent] = useState(false)
   return (
     <AuthLayout>
-      {sent ? (
-        <FeedbackState
-          title="Revisá tu email"
-          description="Si el email está asociado a una cuenta, recibirás las instrucciones para recuperar el acceso. Esta pantalla muestra el resultado de ejemplo."
-          action={
-            <Button variant="outline" render={<Link to="/login" />}>
-              Volver a iniciar sesión
-            </Button>
-          }
-        />
-      ) : (
-        <>
-          <Link
-            to="/login"
-            className="mb-7 flex items-center gap-2 text-xs text-muted-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            Volver a iniciar sesión
-          </Link>
-          <span className="mb-6 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <LockKeyhole className="size-6" />
-          </span>
-          <h1 className="text-3xl font-bold tracking-[-0.04em]">
-            Recuperar contraseña
-          </h1>
-          <p className="mt-3 mb-8 text-sm leading-relaxed text-muted-foreground">
-            Ingresá el email de tu cuenta para recibir las instrucciones de
-            recuperación.
-          </p>
-          <form
-            className="space-y-5"
-            onSubmit={(event) => {
-              event.preventDefault()
-              setSent(true)
-            }}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="recovery-email">Email</Label>
-              <Input
-                id="recovery-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="nombre@unse.edu.ar"
-                className="h-11"
-                required
-              />
-            </div>
-            <Button type="submit" className="h-11 w-full">
-              Enviar instrucciones
-              <ArrowRight />
-            </Button>
-          </form>
-        </>
-      )}
+      <h1 className="text-3xl font-bold">Recuperar acceso</h1>
+      <p className="my-6 text-sm text-muted-foreground">
+        Contactá a administración para solicitar un cambio de contraseña.
+      </p>
+      <Button variant="outline" render={<Link to="/login" />}>
+        Volver a iniciar sesión
+      </Button>
     </AuthLayout>
   )
 }

@@ -11,6 +11,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class UsuarioExceptionHandler {
 
+  @ExceptionHandler(edu.unse.sera.usuario.control.PasswordInvalidaException.class)
+  public ResponseEntity<ApiError> handlePasswordInvalida(
+      edu.unse.sera.usuario.control.PasswordInvalidaException exception) {
+    return ResponseEntity.badRequest()
+        .body(
+            new ApiError(
+                "datos_invalidos",
+                exception.getMessage(),
+                Map.of("password", exception.getMessage())));
+  }
+
   @ExceptionHandler(UsuarioDuplicadoException.class)
   public ResponseEntity<ApiError> handleUsuarioDuplicado(UsuarioDuplicadoException exception) {
     ApiError error =
