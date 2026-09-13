@@ -24,7 +24,7 @@ pnpm test
 pnpm build
 ```
 
-`typecheck` comprueba tanto la aplicación como la configuración de Vite. `build` genera `dist/`.
+`typecheck` comprueba tanto la aplicación como la configuración de Vite. `build` ejecuta los tests antes de generar `dist/`, por lo que el job de CI existente también los verifica.
 
 ## Componentes y estilos
 
