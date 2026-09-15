@@ -6,7 +6,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.OffsetDateTime;
 import java.util.UUID;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "espacios")
@@ -23,17 +26,40 @@ public class Espacio {
   @Column(length = 500)
   private String descripcion;
 
-  protected Espacio() {}
+  @Column(nullable = false)
+  private int capacidad;
 
-  public Espacio(String nombre, String descripcion) {
-    actualizar(nombre, descripcion);
+  @Column(nullable = false, length = 100)
+  private String tipo;
+
+  @Column(name = "ruta_imagen")
+  private String rutaImagen;
+
+  @CreationTimestamp
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private OffsetDateTime createdAt;
+
+  @UpdateTimestamp
+  @Column(name = "updated_at", nullable = false)
+  private OffsetDateTime updatedAt;
+
+  protected Espacio() {
   }
 
-  public void actualizar(String nombre, String descripcion) {
+  public Espacio(String nombre, String descripcion, int capacidad, String tipo, String rutaImagen) {
+    actualizar(nombre, descripcion, capacidad, tipo, rutaImagen);
+  }
+
+  public void actualizar(String nombre, String descripcion, int capacidad, String tipo,
+    String rutaImagen) {
     String nombreNormalizado = normalizarNombre(nombre);
     String descripcionNormalizada = normalizarDescripcion(descripcion);
+    String tipoNormalizado = normalizarNombre(tipo);
     this.nombre = nombreNormalizado;
     this.descripcion = descripcionNormalizada;
+    this.capacidad = capacidad;
+    this.tipo = tipoNormalizado;
+    this.rutaImagen = rutaImagen;
   }
 
   public UUID getId() {
@@ -70,5 +96,17 @@ public class Espacio {
       throw new IllegalArgumentException("La descripción no puede superar los 500 caracteres.");
     }
     return descripcionNormalizada;
+  }
+
+  public String getTipo() {
+    return tipo;
+  }
+
+  public int getCapacidad() {
+    return capacidad;
+  }
+
+  public String getRutaImagen() {
+    return rutaImagen;
   }
 }

@@ -31,7 +31,9 @@ public class EspacioController {
   @PostMapping
   public ResponseEntity<EspacioResponse> crear(@Valid @RequestBody GuardarEspacioRequest request) {
     EspacioResponse response =
-        toResponse(espacioService.crear(request.nombre(), request.descripcion()));
+      toResponse(espacioService.registrarEspacio(request.nombre(), request.descripcion(),
+        request.capacidad(),
+        request.tipo(), request.rutaImagen()));
     return ResponseEntity.created(URI.create("/api/espacios/" + response.id())).body(response);
   }
 
@@ -42,13 +44,15 @@ public class EspacioController {
 
   @GetMapping("/{id}")
   public EspacioResponse obtener(@PathVariable UUID id) {
-    return toResponse(espacioService.obtener(id));
+    return toResponse(espacioService.consultarDetalle(id));
   }
 
   @PutMapping("/{id}")
   public EspacioResponse actualizar(
-      @PathVariable UUID id, @Valid @RequestBody GuardarEspacioRequest request) {
-    return toResponse(espacioService.actualizar(id, request.nombre(), request.descripcion()));
+    @PathVariable UUID id, @Valid @RequestBody GuardarEspacioRequest request) {
+    return toResponse(
+      espacioService.actualizar(id, request.nombre(), request.descripcion(), request.capacidad(),
+        request.tipo(), request.rutaImagen()));
   }
 
   @DeleteMapping("/{id}")

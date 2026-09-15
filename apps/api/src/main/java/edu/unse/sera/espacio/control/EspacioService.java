@@ -17,8 +17,12 @@ public class EspacioService {
     this.espacioRepository = espacioRepository;
   }
 
-  public EspacioDetalle crear(String nombre, String descripcion) {
-    Espacio espacio = new Espacio(nombre, descripcion);
+  public EspacioDetalle registrarEspacio(String nombre, String descripcion, int capacidad,
+    String tipo, String rutaImagen) {
+    if (espacioRepository.existsByNombreIgnoreCase(nombre)) {
+      throw new EspacioDuplicadoException(nombre);
+    }
+    Espacio espacio = new Espacio(nombre, descripcion, capacidad, tipo, rutaImagen);
     return toResponse(espacioRepository.save(espacio));
   }
 
@@ -28,13 +32,14 @@ public class EspacioService {
   }
 
   @Transactional(readOnly = true)
-  public EspacioDetalle obtener(UUID id) {
+  public EspacioDetalle consultarDetalle(UUID id) {
     return toResponse(buscar(id));
   }
 
-  public EspacioDetalle actualizar(UUID id, String nombre, String descripcion) {
+  public EspacioDetalle actualizar(UUID id, String nombre, String descripcion, int capacidad,
+    String tipo, String rutaImagen) {
     Espacio espacio = buscar(id);
-    espacio.actualizar(nombre, descripcion);
+    espacio.actualizar(nombre, descripcion, capacidad, tipo, rutaImagen);
     return toResponse(espacio);
   }
 
@@ -42,11 +47,30 @@ public class EspacioService {
     espacioRepository.delete(buscar(id));
   }
 
+
   private Espacio buscar(UUID id) {
     return espacioRepository.findById(id).orElseThrow(() -> new EspacioNoEncontradoException(id));
   }
 
+
+  /**
+   * Reúne el listado administrativo y su búsqueda en un único caso de uso.
+   */
+  @Transactional(readOnly = true)
+  public List<EspacioDetalle> listar(String criterio) {
+    List<Espacio> espacios;
+    if (criterio == null || criterio.isBlank()) {
+      espacios = espacioRepository.findAllByOrderByNombreAsc();
+    } else {
+      String valor = criterio.trim();
+      espacios = espacioRepository.findAllByNombreContainingIgnoreCase(valor);
+      //espacios = espacioRepository.findAllByTipoContainingIgnoreCaseOrderByNombreAsc(valor);
+    }
+    return espacios.stream().map(this::toResponse).toList();
+  }
+
   private EspacioDetalle toResponse(Espacio espacio) {
-    return new EspacioDetalle(espacio.getId(), espacio.getNombre(), espacio.getDescripcion());
+    return new EspacioDetalle(espacio.getId(), espacio.getNombre(), espacio.getDescripcion(),
+      espacio.getCapacidad(), espacio.getTipo(), espacio.getRutaImagen());
   }
 }
