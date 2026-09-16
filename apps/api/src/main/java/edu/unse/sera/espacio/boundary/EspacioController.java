@@ -31,9 +31,14 @@ public class EspacioController {
   @PostMapping
   public ResponseEntity<EspacioResponse> crear(@Valid @RequestBody GuardarEspacioRequest request) {
     EspacioResponse response =
-      toResponse(espacioService.registrarEspacio(request.nombre(), request.descripcion(),
-        request.capacidad(),
-        request.tipo(), request.rutaImagen()));
+        toResponse(
+            espacioService.registrarEspacio(
+                request.nombre(),
+                request.descripcion(),
+                request.capacidad(),
+                request.tarifaHora(),
+                request.tipo(),
+                request.rutaImagen()));
     return ResponseEntity.created(URI.create("/api/espacios/" + response.id())).body(response);
   }
 
@@ -49,10 +54,16 @@ public class EspacioController {
 
   @PutMapping("/{id}")
   public EspacioResponse actualizar(
-    @PathVariable UUID id, @Valid @RequestBody GuardarEspacioRequest request) {
+      @PathVariable UUID id, @Valid @RequestBody GuardarEspacioRequest request) {
     return toResponse(
-      espacioService.actualizar(id, request.nombre(), request.descripcion(), request.capacidad(),
-        request.tipo(), request.rutaImagen()));
+        espacioService.actualizar(
+            id,
+            request.nombre(),
+            request.descripcion(),
+            request.capacidad(),
+            request.tarifaHora(),
+            request.tipo(),
+            request.rutaImagen()));
   }
 
   @DeleteMapping("/{id}")
@@ -62,6 +73,14 @@ public class EspacioController {
   }
 
   private EspacioResponse toResponse(EspacioDetalle espacio) {
-    return new EspacioResponse(espacio.id(), espacio.nombre(), espacio.descripcion());
+    return new EspacioResponse(
+        espacio.id(),
+        espacio.nombre(),
+        espacio.descripcion(),
+        espacio.capacidad(),
+        espacio.tarifaHora(),
+        espacio.tipo(),
+        espacio.rutaImagen(),
+        espacio.disponibilidadList());
   }
 }

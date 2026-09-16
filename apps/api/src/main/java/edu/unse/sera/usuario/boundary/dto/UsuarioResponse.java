@@ -1,5 +1,6 @@
 package edu.unse.sera.usuario.boundary.dto;
 
+import edu.unse.sera.usuario.control.UsuarioDetalle;
 import edu.unse.sera.usuario.entity.EstadoUsuario;
 import edu.unse.sera.usuario.entity.RolUsuario;
 import java.time.OffsetDateTime;
@@ -15,7 +16,8 @@ public record UsuarioResponse(
     EstadoUsuario estadoCuenta,
     OffsetDateTime creadoEn,
     OffsetDateTime actualizadoEn) {
-  public static UsuarioResponse from(edu.unse.sera.usuario.control.UsuarioDetalle usuario) {
+
+  public static UsuarioResponse from(UsuarioDetalle usuario) {
     return new UsuarioResponse(
         usuario.id(),
         usuario.nombreCompleto(),

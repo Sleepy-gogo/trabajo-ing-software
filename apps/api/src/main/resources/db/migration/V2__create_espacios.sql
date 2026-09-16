@@ -1,0 +1,11 @@
+CREATE TABLE espacios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(500),
+    capacidad INTEGER NOT NULL,
+    tarifa_hora NUMERIC(12, 2) NOT NULL,
+    tipo VARCHAR(100) NOT NULL,
+    ruta_imagen VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

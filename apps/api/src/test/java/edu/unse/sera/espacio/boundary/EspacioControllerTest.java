@@ -29,8 +29,7 @@ class EspacioControllerTest {
 
   private final MockMvc mockMvc;
 
-  @MockitoBean
-  private EspacioService espacioService;
+  @MockitoBean private EspacioService espacioService;
 
   @Autowired
   EspacioControllerTest(MockMvc mockMvc) {
@@ -41,48 +40,48 @@ class EspacioControllerTest {
   void creaUnEspacio() throws Exception {
     UUID id = UUID.randomUUID();
     when(espacioService.registrarEspacio(eq("Cancha cubierta"), any()))
-      .thenReturn(new EspacioDetalle(id, "Cancha cubierta", null));
+        .thenReturn(new EspacioDetalle(id, "Cancha cubierta", null));
 
     mockMvc
-      .perform(
-        post("/api/espacios")
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(
-            """
+        .perform(
+            post("/api/espacios")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
               {"nombre":"Cancha cubierta","descripcion":null}
               """))
-      .andExpect(status().isCreated())
-      .andExpect(header().string("Location", "/api/espacios/" + id))
-      .andExpect(jsonPath("$.id").value(id.toString()))
-      .andExpect(jsonPath("$.nombre").value("Cancha cubierta"));
+        .andExpect(status().isCreated())
+        .andExpect(header().string("Location", "/api/espacios/" + id))
+        .andExpect(jsonPath("$.id").value(id.toString()))
+        .andExpect(jsonPath("$.nombre").value("Cancha cubierta"));
   }
 
   @Test
   void rechazaUnNombreVacio() throws Exception {
     mockMvc
-      .perform(
-        post("/api/espacios")
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(
-            """
+        .perform(
+            post("/api/espacios")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
               {"nombre":" ","descripcion":null}
               """))
-      .andExpect(status().isBadRequest())
-      .andExpect(jsonPath("$.codigo").value("datos_invalidos"))
-      .andExpect(jsonPath("$.campos.nombre").value("El nombre es obligatorio."));
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.codigo").value("datos_invalidos"))
+        .andExpect(jsonPath("$.campos.nombre").value("El nombre es obligatorio."));
   }
 
   @Test
   void listaLosEspacios() throws Exception {
     UUID id = UUID.randomUUID();
     when(espacioService.listar())
-      .thenReturn(List.of(new EspacioDetalle(id, "Cancha cubierta", null)));
+        .thenReturn(List.of(new EspacioDetalle(id, "Cancha cubierta", null)));
 
     mockMvc
-      .perform(get("/api/espacios"))
-      .andExpect(status().isOk())
-      .andExpect(jsonPath("$[0].id").value(id.toString()))
-      .andExpect(jsonPath("$[0].nombre").value("Cancha cubierta"));
+        .perform(get("/api/espacios"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(id.toString()))
+        .andExpect(jsonPath("$[0].nombre").value("Cancha cubierta"));
   }
 
   @Test
@@ -91,30 +90,30 @@ class EspacioControllerTest {
     when(espacioService.consultarDetalle(id)).thenThrow(new EspacioNoEncontradoException(id));
 
     mockMvc
-      .perform(get("/api/espacios/{id}", id))
-      .andExpect(status().isNotFound())
-      .andExpect(jsonPath("$.codigo").value("recurso_no_encontrado"))
-      .andExpect(jsonPath("$.mensaje").value("No existe el espacio con id " + id + "."));
+        .perform(get("/api/espacios/{id}", id))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.codigo").value("recurso_no_encontrado"))
+        .andExpect(jsonPath("$.mensaje").value("No existe el espacio con id " + id + "."));
   }
 
   @Test
   void actualizaUnEspacio() throws Exception {
     UUID id = UUID.randomUUID();
     when(espacioService.actualizar(id, "Cancha norte", "Piso renovado"))
-      .thenReturn(new EspacioDetalle(id, "Cancha norte", "Piso renovado"));
+        .thenReturn(new EspacioDetalle(id, "Cancha norte", "Piso renovado"));
 
     mockMvc
-      .perform(
-        put("/api/espacios/{id}", id)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(
-            """
+        .perform(
+            put("/api/espacios/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
               {"nombre":"Cancha norte","descripcion":"Piso renovado"}
               """))
-      .andExpect(status().isOk())
-      .andExpect(jsonPath("$.id").value(id.toString()))
-      .andExpect(jsonPath("$.nombre").value("Cancha norte"))
-      .andExpect(jsonPath("$.descripcion").value("Piso renovado"));
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(id.toString()))
+        .andExpect(jsonPath("$.nombre").value("Cancha norte"))
+        .andExpect(jsonPath("$.descripcion").value("Piso renovado"));
   }
 
   @Test

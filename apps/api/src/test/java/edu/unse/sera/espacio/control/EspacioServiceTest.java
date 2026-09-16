@@ -19,8 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class EspacioServiceTest {
 
-  @Mock
-  private EspacioRepository espacioRepository;
+  @Mock private EspacioRepository espacioRepository;
 
   private EspacioService espacioService;
 
@@ -32,10 +31,10 @@ class EspacioServiceTest {
   @Test
   void creaUnEspacioNormalizandoLosTextos() {
     when(espacioRepository.save(any(Espacio.class)))
-      .thenAnswer(invocation -> invocation.getArgument(0));
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
-    EspacioDetalle response = espacioService.registrarEspacio("  Cancha cubierta  ",
-      "  Piso de parquet  ", 20, "futsal");
+    EspacioDetalle response =
+        espacioService.registrarEspacio("  Cancha cubierta  ", "  Piso de parquet  ", 20, "futsal");
 
     assertThat(response.nombre()).isEqualTo("Cancha cubierta");
     assertThat(response.descripcion()).isEqualTo("Piso de parquet");
@@ -48,8 +47,8 @@ class EspacioServiceTest {
     Espacio espacio = new Espacio("Cancha cubierta", "Piso de parquet", 20, "futsal");
     when(espacioRepository.findById(id)).thenReturn(Optional.of(espacio));
 
-    EspacioDetalle response = espacioService.actualizar(id, "Cancha norte", "Piso renovado", 20,
-      "futsal");
+    EspacioDetalle response =
+        espacioService.actualizar(id, "Cancha norte", "Piso renovado", 20, "futsal");
 
     assertThat(response.nombre()).isEqualTo("Cancha norte");
     assertThat(response.descripcion()).isEqualTo("Piso renovado");
@@ -72,7 +71,7 @@ class EspacioServiceTest {
     when(espacioRepository.findById(id)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> espacioService.consultarDetalle(id))
-      .isInstanceOf(EspacioNoEncontradoException.class)
-      .hasMessageContaining(id.toString());
+        .isInstanceOf(EspacioNoEncontradoException.class)
+        .hasMessageContaining(id.toString());
   }
 }
