@@ -1,0 +1,24 @@
+package edu.unse.sera.socio.boundary.dto;
+
+import edu.unse.sera.membresia.entity.EstadoMembresia;
+import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
+import edu.unse.sera.socio.entity.RelacionUnse;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record SocioResponse(
+    UUID id,
+    UUID usuarioId,
+    String nombreCompleto,
+    String email,
+    int dni,
+    RelacionUnse relacionUnse,
+    EstadoVerificacionUnse estadoVerificacionUnse,
+    String identificadorUnse,
+    UUID membresiaId,
+    UUID nivelMembresiaId,
+    String nivelMembresiaNombre,
+    EstadoMembresia estadoMembresia,
+    LocalDate proximoVencimiento,
+    BigDecimal cargoMensual) {}
