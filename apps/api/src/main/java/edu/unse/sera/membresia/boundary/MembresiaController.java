@@ -1,43 +1,16 @@
 package edu.unse.sera.membresia.boundary;
 
-import edu.unse.sera.membresia.boundary.dto.CancelarMembresiaRequest;
-import edu.unse.sera.membresia.boundary.dto.ContratarMembresiaRequest;
-import edu.unse.sera.membresia.boundary.dto.MembresiaResponse;
-import jakarta.validation.Valid;
-import java.util.UUID;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+/** Definición pendiente del boundary HTTP de membresías. */
+public final class MembresiaController {
 
-/** Rutas de contratación, consulta, modificación y cancelación de membresías. */
-@RestController
-@RequestMapping("/api/membresias")
-public class MembresiaController {
+  private MembresiaController() {}
 
-  @PostMapping
-  public ResponseEntity<MembresiaResponse> contratar(
-      @Valid @RequestBody ContratarMembresiaRequest request) {
-    // TODO(TRA-26): Delegar en MembresiaService y responder 201 con Location. La membresía nace en
-    // PENDIENTE_PAGO; no asumir que la salida del proveedor equivale a un pago aprobado.
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-  }
+  // TODO(TRA-26): Registrar POST /api/membresias cuando contratar() tenga implementación completa.
+  // Debe responder 201 con Location y crear la membresía en PENDIENTE_PAGO.
 
-  @GetMapping("/{membresiaId}")
-  public ResponseEntity<MembresiaResponse> obtener(@PathVariable UUID membresiaId) {
-    // TODO(TRA-26): Delegar en MembresiaService y mapear membresía inexistente a 404.
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-  }
+  // TODO(TRA-26): Registrar GET /api/membresias/{id} cuando consultar el estado sea un caso de uso
+  // funcional y los recursos inexistentes se traduzcan a 404.
 
-  @PostMapping("/{membresiaId}/cancelacion")
-  public ResponseEntity<MembresiaResponse> cancelar(
-      @PathVariable UUID membresiaId, @Valid @RequestBody CancelarMembresiaRequest request) {
-    // TODO(TRA-27): Delegar en MembresiaService. La UI debe pedir confirmación antes de llamar a
-    // esta ruta, pero Control debe validar el estado aunque el cliente omita esa confirmación.
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-  }
+  // TODO(TRA-27): Registrar POST /api/membresias/{id}/cancelacion después de implementar y probar
+  // las transiciones de estado. El cliente confirma la acción, pero Control protege la regla.
 }

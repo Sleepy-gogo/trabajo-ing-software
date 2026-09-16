@@ -5,8 +5,8 @@ La rama se llama `feat/SERA-25-socios-membresias`, pero la tarea correspondiente
 rutas de sus tareas hermanas para que el equipo pueda implementar sin volver a traducir CU-05 a
 CU-09.
 
-Las clases y rutas ya existen, pero todavía no implementan negocio ni persistencia. Mientras tanto,
-los endpoints responden `501 Not Implemented`.
+Las clases y los contratos están definidos, pero todavía no implementan negocio ni persistencia. Los
+controllers no son beans de Spring y las rutas no se publican hasta completar su caso de uso.
 
 ## Reparto según Linear
 
@@ -55,7 +55,7 @@ Un nivel deshabilitado y una tarifa vencida deben conservarse para consultar mem
 históricos. La regla de una sola membresía vigente debe resolverse en Control y reforzarse en
 PostgreSQL si el modelo final lo permite.
 
-## Rutas preparadas
+## Rutas planificadas
 
 | Método | Ruta | Dueño | Resultado esperado al implementar |
 | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ guardar el agregado y su auditoría en una sola transacción.
 
 Cada paso debe completar las anotaciones y comportamiento de sus entidades, extender los
 repositories necesarios con `JpaRepository`, inyectar los services por constructor y reemplazar las
-respuestas `501` de sus rutas.
+marcas TODO de su controller por un boundary funcional y registrado en Spring.
 
 ## Decisiones que todavía necesita el equipo
 
