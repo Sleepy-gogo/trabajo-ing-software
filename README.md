@@ -159,4 +159,7 @@ Antes de modificar la estructura del repositorio o agregar una dependencia impor
 
 Para implementar una feature de punta a punta, usar como guía el [CRUD vertical de espacios](docs/CRUD_REFERENCE.md).
 
+La definición previa del incremento de [socios y membresías](docs/SOCIOS_MEMBRESIAS.md) reparte los
+pendientes entre las tareas de Linear TRA-25 a TRA-29.
+
 Los agentes de código también deben leer `AGENTS.md`.
