@@ -3,11 +3,20 @@ package edu.unse.sera.socio.control;
 import edu.unse.sera.membresia.entity.EstadoMembresia;
 import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
+import edu.unse.sera.socio.persistence.SocioRepository;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
 
 /** Casos de uso administrativos para socios y sus membresías. */
+@Service
 public class SocioService {
+
+  private final SocioRepository socioRepository;
+
+  public SocioService(SocioRepository socioRepository) {
+    this.socioRepository=socioRepository;
+  }
 
   // TODO(TRA-26): Convertir en @Service e inyectar repositories por constructor. Registrar el
   // socio
@@ -45,5 +54,9 @@ public class SocioService {
   private UnsupportedOperationException pendiente() {
     return new UnsupportedOperationException(
         "El incremento de socios todavía no está implementado.");
+  }
+
+  public SocioDetalle toResponse() {
+    return new SocioDetalle();
   }
 }

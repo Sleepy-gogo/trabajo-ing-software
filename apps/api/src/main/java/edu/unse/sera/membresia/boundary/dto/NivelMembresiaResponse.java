@@ -13,6 +13,4 @@ public record NivelMembresiaResponse(
     Map<RelacionUnse, BigDecimal> preciosPorRelacion,
     String moneda,
     List<String> beneficios,
-    List<String> serviciosIncluidos,
-    List<String> condiciones,
     boolean disponibleParaContratar) {}

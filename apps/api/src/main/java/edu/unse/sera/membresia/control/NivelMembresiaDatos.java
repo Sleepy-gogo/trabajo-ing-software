@@ -11,6 +11,4 @@ public record NivelMembresiaDatos(
     String descripcion,
     Map<RelacionUnse, BigDecimal> preciosPorRelacion,
     List<String> beneficios,
-    List<String> serviciosIncluidos,
-    List<String> condiciones,
     boolean disponibleParaContratar) {}

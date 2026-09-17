@@ -1,5 +1,6 @@
 package edu.unse.sera.socio.entity;
 
+import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.usuario.entity.Usuario;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -43,6 +44,9 @@ public class Socio {
 
   @Column(unique = true, name = "identificador_unse")
   private String identificadorUnse;
+
+  @OneToOne(optional = true, mappedBy = "socio")
+  private Membresia membresia;
 
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
@@ -105,5 +109,13 @@ public class Socio {
       return null;
     }
     return valor.trim().toLowerCase(Locale.ROOT);
+  }
+
+  public Membresia getMembresia() {
+    return membresia;
+  }
+
+  public void setMembresia(Membresia membresia) {
+    this.membresia = membresia;
   }
 }

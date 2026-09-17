@@ -19,8 +19,6 @@ public record GuardarNivelMembresiaRequest(
         @Size(max = 500, message = "La descripción no puede superar los 500 caracteres.")
         String descripcion,
     @NotEmpty(message = "Debe indicar al menos un beneficio.") List<@NotBlank String> beneficios,
-    List<@NotBlank String> serviciosIncluidos,
-    List<@NotBlank String> condiciones,
     boolean disponibleParaContratar,
     @NotEmpty(message = "Debe indicar al menos un precio por relación.")
         Map<
