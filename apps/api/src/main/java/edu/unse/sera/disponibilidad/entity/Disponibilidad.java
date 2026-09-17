@@ -25,11 +25,10 @@ public class Disponibilidad {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
-  UUID id;
+  private UUID id;
 
-  // Esta es la forma correcta de definir una Foreign Key en Spring JPA
-  @ManyToOne
-  @JoinColumn(name = "id_espacio", referencedColumnName = "id")
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "id_espacio", nullable = false)
   private Espacio espacio;
 
   @Enumerated(EnumType.STRING)
@@ -50,9 +49,17 @@ public class Disponibilidad {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
-  public Disponibilidad(DiaSemana diaSemana, LocalTime horaDesde, LocalTime horaHasta) {
-    this.diaSemana=diaSemana;
+  protected Disponibilidad() {}
+
+  public Disponibilidad(
+      Espacio espacio, DiaSemana diaSemana, LocalTime horaDesde, LocalTime horaHasta) {
+    this.espacio = Objects.requireNonNull(espacio, "El espacio es obligatorio.");
+    this.diaSemana = Objects.requireNonNull(diaSemana, "El día es obligatorio.");
     actualizarDatos(horaDesde, horaHasta);
+  }
+
+  public UUID getId() {
+    return id;
   }
 
   public DiaSemana getDiaSemana() {
@@ -72,15 +79,12 @@ public class Disponibilidad {
   }
 
   public void actualizarDatos(LocalTime horaDesde, LocalTime horaHasta) {
-    this.diaSemana = diaSemana;
-    this.horaDesde = Objects.requireNonNull(horaDesde, "La hora inicial es obligatoria");
-    this.horaHasta = Objects.requireNonNull(horaHasta, "La hora final es obligatoria");
+    LocalTime desde = Objects.requireNonNull(horaDesde, "La hora inicial es obligatoria.");
+    LocalTime hasta = Objects.requireNonNull(horaHasta, "La hora final es obligatoria.");
+    if (!desde.isBefore(hasta)) {
+      throw new IllegalArgumentException("La hora inicial debe ser anterior a la hora final.");
+    }
+    this.horaDesde = desde;
+    this.horaHasta = hasta;
   }
-
-  /*+actualizarDisponibilidad(datos)
-   *+buscarDisponibilidadEspacio(idEspacio)
-   *+buscarHorariosDisponibles(fecha,espacio)
-   *+consultarHorariosDisponibles(fecha,espacio)
-   *+guardarDisponibilidadEspacio(datos)
-   *+obtenerDisponibilidadActual(idEspacio)*/
 }

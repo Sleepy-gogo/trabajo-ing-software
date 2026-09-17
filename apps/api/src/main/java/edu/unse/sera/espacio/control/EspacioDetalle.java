@@ -1,6 +1,6 @@
 package edu.unse.sera.espacio.control;
 
-import edu.unse.sera.disponibilidad.entity.Disponibilidad;
+import edu.unse.sera.disponibilidad.control.DisponibilidadDetalle;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -14,6 +14,6 @@ public record EspacioDetalle(
     BigDecimal tarifaHora,
     String tipo,
     String rutaImagen,
-    List<Disponibilidad> disponibilidadList,
+    List<DisponibilidadDetalle> disponibilidades,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

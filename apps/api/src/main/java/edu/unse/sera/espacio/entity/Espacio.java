@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -77,13 +77,21 @@ public class Espacio {
       String rutaImagen) {
     String nombreNormalizado = normalizarNombre(nombre);
     String descripcionNormalizada = normalizarDescripcion(descripcion);
-    String tipoNormalizado = normalizarNombre(tipo);
-    this.tarifaHora = tarifaHora;
+    String tipoNormalizado = normalizarTipo(tipo);
+    if (capacidad <= 0) {
+      throw new IllegalArgumentException("La capacidad debe ser mayor que cero.");
+    }
+    BigDecimal tarifaNormalizada =
+        Objects.requireNonNull(tarifaHora, "La tarifa por hora es obligatoria.");
+    if (tarifaNormalizada.signum() < 0) {
+      throw new IllegalArgumentException("La tarifa por hora no puede ser negativa.");
+    }
     this.nombre = nombreNormalizado;
     this.descripcion = descripcionNormalizada;
     this.capacidad = capacidad;
+    this.tarifaHora = tarifaNormalizada;
     this.tipo = tipoNormalizado;
-    this.rutaImagen = rutaImagen;
+    this.rutaImagen = normalizarRutaImagen(rutaImagen);
   }
 
   public UUID getId() {
@@ -122,16 +130,46 @@ public class Espacio {
     return descripcionNormalizada;
   }
 
+  private String normalizarTipo(String valor) {
+    if (valor == null || valor.isBlank()) {
+      throw new IllegalArgumentException("El tipo es obligatorio.");
+    }
+    String tipoNormalizado = valor.trim();
+    if (tipoNormalizado.length() > 100) {
+      throw new IllegalArgumentException("El tipo no puede superar los 100 caracteres.");
+    }
+    return tipoNormalizado;
+  }
+
+  private String normalizarRutaImagen(String valor) {
+    if (valor == null || valor.isBlank()) {
+      return null;
+    }
+    String rutaNormalizada = valor.trim();
+    if (rutaNormalizada.length() > 255) {
+      throw new IllegalArgumentException("La ruta de imagen no puede superar los 255 caracteres.");
+    }
+    return rutaNormalizada;
+  }
+
   public String getTipo() {
     return tipo;
   }
 
   public void agregarDisponibilidad(Disponibilidad nuevaDisponibilidad) {
-    if (disponibilidad.stream()
-        .noneMatch(d -> d.getDiaSemana().equals(nuevaDisponibilidad.getDiaSemana()))) {
-
-      disponibilidad.add(nuevaDisponibilidad);
+    Objects.requireNonNull(nuevaDisponibilidad, "La disponibilidad es obligatoria.");
+    if (nuevaDisponibilidad.getEspacio() != this) {
+      throw new IllegalArgumentException("La disponibilidad pertenece a otro espacio.");
     }
+    if (disponibilidad.stream()
+        .anyMatch(
+            existente ->
+                existente.getDiaSemana().equals(nuevaDisponibilidad.getDiaSemana())
+                    && existente.getHoraDesde().isBefore(nuevaDisponibilidad.getHoraHasta())
+                    && existente.getHoraHasta().isAfter(nuevaDisponibilidad.getHoraDesde()))) {
+      throw new IllegalArgumentException("El rango horario se superpone con otro existente.");
+    }
+    disponibilidad.add(nuevaDisponibilidad);
   }
 
   public BigDecimal getTarifaHora() {
@@ -139,7 +177,7 @@ public class Espacio {
   }
 
   public List<Disponibilidad> getDisponibilidad() {
-    return disponibilidad;
+    return List.copyOf(disponibilidad);
   }
 
   public int getCapacidad() {
@@ -156,18 +194,5 @@ public class Espacio {
 
   public OffsetDateTime getUpdatedAt() {
     return updatedAt;
-  }
-
-  public void actualizarDisponibilidad(Disponibilidad nuevaDisponibilidad) {
-    Optional<Disponibilidad> resultado =
-        disponibilidad.stream()
-            .filter(d -> d.getDiaSemana().equals(nuevaDisponibilidad.getDiaSemana()))
-            .findFirst();
-
-    resultado.ifPresentOrElse(
-        (viejaDisp) ->
-            viejaDisp.actualizarDatos(
-                nuevaDisponibilidad.getHoraDesde(), nuevaDisponibilidad.getHoraHasta()),
-        () -> agregarDisponibilidad(nuevaDisponibilidad));
   }
 }

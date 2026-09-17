@@ -7,16 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface EspacioRepository extends JpaRepository<Espacio, UUID> {
 
-  // @Override
-  // Optional<Espacio> findById(UUID id);
-
-  List<Espacio> findAllByTipoContainingIgnoreCaseOrderByNombreAsc(String tipo);
-
   List<Espacio> findAllByOrderByNombreAsc();
 
-  List<Espacio> findAllByNombreContainingIgnoreCase(String nombre);
-
-  Espacio findByTipoContainingIgnoreCase(String tipo);
+  List<Espacio> findAllByNombreContainingIgnoreCaseOrderByNombreAsc(String nombre);
 
   boolean existsByNombreIgnoreCase(String nombre);
+
+  boolean existsByNombreIgnoreCaseAndIdNot(String nombre, UUID id);
 }

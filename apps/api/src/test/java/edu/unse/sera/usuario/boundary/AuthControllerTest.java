@@ -14,12 +14,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import edu.unse.sera.disponibilidad.boundary.DisponibilidadController;
+import edu.unse.sera.disponibilidad.control.DisponibilidadService;
+import edu.unse.sera.espacio.boundary.EspacioController;
+import edu.unse.sera.espacio.control.EspacioService;
 import edu.unse.sera.shared.config.SecurityConfig;
 import edu.unse.sera.usuario.control.UsuarioDetalle;
 import edu.unse.sera.usuario.control.UsuarioService;
 import edu.unse.sera.usuario.entity.EstadoUsuario;
 import edu.unse.sera.usuario.entity.RolUsuario;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -31,7 +36,12 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest({AuthController.class, UsuarioController.class})
+@WebMvcTest({
+  AuthController.class,
+  UsuarioController.class,
+  EspacioController.class,
+  DisponibilidadController.class
+})
 @Import(SecurityConfig.class)
 class AuthControllerTest {
   private final MockMvc mvc;
@@ -42,6 +52,8 @@ class AuthControllerTest {
   }
 
   @MockitoBean private UsuarioService usuarios;
+  @MockitoBean private EspacioService espacios;
+  @MockitoBean private DisponibilidadService disponibilidades;
 
   @Test
   void exigeSesionParaConsultarUsuarios() throws Exception {
@@ -141,6 +153,24 @@ class AuthControllerTest {
     when(usuarios.consultarActivo(usuario.id())).thenReturn(Optional.empty());
     mvc.perform(get("/api/usuarios").session(session)).andExpect(status().isUnauthorized());
     org.junit.jupiter.api.Assertions.assertTrue(session.isInvalid());
+  }
+
+  @Test
+  void usuarioPuedeConsultarEspaciosPeroNoAdministrarlos() throws Exception {
+    var usuario = detalle(RolUsuario.USUARIO);
+    var session = sesion(usuario);
+    when(espacios.listar(null)).thenReturn(List.of());
+
+    mvc.perform(get("/api/espacios").session(session)).andExpect(status().isOk());
+    mvc.perform(
+            post("/api/espacios")
+                .session(session)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+        .andExpect(status().isForbidden());
+
+    verify(espacios).listar(null);
   }
 
   @Test

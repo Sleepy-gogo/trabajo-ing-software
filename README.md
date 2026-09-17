@@ -158,5 +158,6 @@ Antes de modificar la estructura del repositorio o agregar una dependencia impor
 - `docs/DEVELOPMENT.md`
 
 Para implementar una feature de punta a punta, usar como guía el [CRUD vertical de espacios](docs/CRUD_REFERENCE.md).
+El [estado actual y plan de implementación](docs/IMPLEMENTATION_PLAN.md) enumera los contratos ya declarados y el orden sugerido para conectar el frontend.
 
 Los agentes de código también deben leer `AGENTS.md`.

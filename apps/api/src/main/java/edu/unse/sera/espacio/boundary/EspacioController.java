@@ -1,5 +1,6 @@
 package edu.unse.sera.espacio.boundary;
 
+import edu.unse.sera.disponibilidad.boundary.dto.DisponibilidadResponse;
 import edu.unse.sera.espacio.boundary.dto.EspacioResponse;
 import edu.unse.sera.espacio.boundary.dto.GuardarEspacioRequest;
 import edu.unse.sera.espacio.control.EspacioDetalle;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -43,8 +45,9 @@ public class EspacioController {
   }
 
   @GetMapping
-  public List<EspacioResponse> listar() {
-    return espacioService.listar().stream().map(this::toResponse).toList();
+  public List<EspacioResponse> listar(
+      @RequestParam(name = "buscar", required = false) String criterio) {
+    return espacioService.listar(criterio).stream().map(this::toResponse).toList();
   }
 
   @GetMapping("/{id}")
@@ -81,6 +84,17 @@ public class EspacioController {
         espacio.tarifaHora(),
         espacio.tipo(),
         espacio.rutaImagen(),
-        espacio.disponibilidadList());
+        espacio.disponibilidades().stream()
+            .map(
+                disponibilidad ->
+                    new DisponibilidadResponse(
+                        disponibilidad.id(),
+                        disponibilidad.espacioId(),
+                        disponibilidad.diaSemana(),
+                        disponibilidad.horaDesde(),
+                        disponibilidad.horaHasta()))
+            .toList(),
+        espacio.createdAt(),
+        espacio.updatedAt());
   }
 }

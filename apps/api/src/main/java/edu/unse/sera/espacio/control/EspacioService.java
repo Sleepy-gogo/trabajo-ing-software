@@ -1,6 +1,6 @@
 package edu.unse.sera.espacio.control;
 
-import edu.unse.sera.disponibilidad.entity.Disponibilidad;
+import edu.unse.sera.disponibilidad.control.DisponibilidadDetalle;
 import edu.unse.sera.espacio.entity.Espacio;
 import edu.unse.sera.espacio.persistence.EspacioRepository;
 import java.math.BigDecimal;
@@ -26,16 +26,11 @@ public class EspacioService {
       BigDecimal tarifaHora,
       String tipo,
       String rutaImagen) {
-    if (espacioRepository.existsByNombreIgnoreCase(nombre)) {
-      throw new EspacioDuplicadoException(nombre);
-    }
     Espacio espacio = new Espacio(nombre, descripcion, capacidad, tarifaHora, tipo, rutaImagen);
+    if (espacioRepository.existsByNombreIgnoreCase(espacio.getNombre())) {
+      throw new EspacioDuplicadoException(espacio.getNombre());
+    }
     return toResponse(espacioRepository.save(espacio));
-  }
-
-  @Transactional(readOnly = true)
-  public List<EspacioDetalle> listar() {
-    return espacioRepository.findAll().stream().map(this::toResponse).toList();
   }
 
   @Transactional(readOnly = true)
@@ -52,6 +47,10 @@ public class EspacioService {
       String tipo,
       String rutaImagen) {
     Espacio espacio = buscar(id);
+    String nombreNormalizado = nombre == null ? null : nombre.trim();
+    if (espacioRepository.existsByNombreIgnoreCaseAndIdNot(nombreNormalizado, id)) {
+      throw new EspacioDuplicadoException(nombreNormalizado);
+    }
     espacio.actualizar(nombre, descripcion, capacidad, tarifaHora, tipo, rutaImagen);
     return toResponse(espacio);
   }
@@ -64,20 +63,6 @@ public class EspacioService {
     return espacioRepository.findById(id).orElseThrow(() -> new EspacioNoEncontradoException(id));
   }
 
-  public EspacioDetalle crearDisponibilidad(UUID id, Disponibilidad nuevaDisponibilidad) {
-    Espacio espacio = buscar(id);
-    espacio.agregarDisponibilidad(nuevaDisponibilidad);
-    return toResponse(espacio);
-  }
-
-  public EspacioDetalle actualizarDisponibilidad(UUID id, Disponibilidad nuevaDisponibilidad) {
-    Espacio espacio = buscar(id);
-    espacio.actualizarDisponibilidad(nuevaDisponibilidad);
-    return toResponse(espacio);
-  }
-
-
-
   /** Reúne el listado administrativo y su búsqueda en un único caso de uso. */
   @Transactional(readOnly = true)
   public List<EspacioDetalle> listar(String criterio) {
@@ -86,8 +71,7 @@ public class EspacioService {
       espacios = espacioRepository.findAllByOrderByNombreAsc();
     } else {
       String valor = criterio.trim();
-      espacios = espacioRepository.findAllByNombreContainingIgnoreCase(valor);
-      // espacios = espacioRepository.findAllByTipoContainingIgnoreCaseOrderByNombreAsc(valor);
+      espacios = espacioRepository.findAllByNombreContainingIgnoreCaseOrderByNombreAsc(valor);
     }
     return espacios.stream().map(this::toResponse).toList();
   }
@@ -101,7 +85,16 @@ public class EspacioService {
         espacio.getTarifaHora(),
         espacio.getTipo(),
         espacio.getRutaImagen(),
-        espacio.getDisponibilidad(),
+        espacio.getDisponibilidad().stream()
+            .map(
+                disponibilidad ->
+                    new DisponibilidadDetalle(
+                        disponibilidad.getId(),
+                        espacio.getId(),
+                        disponibilidad.getDiaSemana(),
+                        disponibilidad.getHoraDesde(),
+                        disponibilidad.getHoraHasta()))
+            .toList(),
         espacio.getCreatedAt(),
         espacio.getUpdatedAt());
   }
