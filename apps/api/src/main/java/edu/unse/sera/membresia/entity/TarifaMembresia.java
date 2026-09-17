@@ -18,7 +18,7 @@ public class TarifaMembresia {
   private LocalDate vigenciaDesde;
   private LocalDate vigenciaHasta;
 
-  // TODO(TRA-25): Agregar constructor, getters y reglas para importes positivos y rangos de
-  // vigencia
-  // válidos. Conservar tarifas anteriores para explicar importes históricos.
+  /** TODO(TRA-25): Agregar constructor, getters y reglas para importes positivos y rangos de
+  * vigencia
+  * válidos. Conservar tarifas anteriores para explicar importes históricos.*/
 }
