@@ -1,7 +1,7 @@
 # Socios y membresías: definición del Incremento 2
 
 La rama se llama `feat/SERA-25-socios-membresias`, pero la tarea correspondiente en Linear es
-`TRA-25: I2.1 — Niveles, tarifas y relación con UNSE`. Este documento también prepara las clases y
+`TRA-25: I2.1 — Niveles, precios y relación con UNSE`. Este documento también prepara las clases y
 rutas de sus tareas hermanas para que el equipo pueda implementar sin volver a traducir CU-05 a
 CU-09.
 
@@ -12,7 +12,7 @@ controllers no son beans de Spring y las rutas no se publican hasta completar su
 
 | Tarea | Responsabilidad preparada |
 | --- | --- |
-| `TRA-25` | Nivel de membresía, tarifa por relación UNSE, vigencia, persistence y consultas |
+| `TRA-25` | Nivel de membresía, precios por relación UNSE, persistence y consultas |
 | `TRA-26` | Alta de socio, contratación y consulta del estado de membresía |
 | `TRA-27` | Cambio de nivel o estado, baja y transiciones válidas |
 | `TRA-28` | CRUD de niveles, filtros, validaciones, errores y tests |
@@ -25,7 +25,7 @@ deja el mapeo JPA pendiente hasta integrar el trabajo de usuarios.
 
 El incremento prepara estos casos de uso:
 
-- consultar y administrar niveles de membresía y sus tarifas;
+- consultar y administrar niveles de membresía y sus precios;
 - registrar un socio desde administración;
 - contratar una membresía;
 - consultar el estado de un socio o una membresía;
@@ -41,28 +41,26 @@ un resultado aprobado.
 `Socio` complementa a `Usuario`. Guarda solo la relación con la UNSE y su verificación. Nombre, DNI,
 email, contraseña, rol y estado de cuenta siguen perteneciendo a `Usuario`.
 
-`NivelMembresia` describe el plan que puede contratarse. `TarifaMembresia` mantiene el precio del
-nivel para una relación UNSE durante una vigencia. `Membresia` registra la contratación de un nivel
-por un socio.
+`NivelMembresia` describe el plan que puede contratarse y mantiene el precio vigente para cada
+relación UNSE en `preciosPorRelacion`. `Membresia` registra la contratación de un nivel por un socio.
+No guarda importes. Cuando se genera una cuota, el módulo de pagos copia allí el importe del período.
 
 ```text
 Usuario 1 --- 0..1 Socio 1 --- 0..* Membresia * --- 1 NivelMembresia
-                                                        |
-                                                        +--- 1..* TarifaMembresia
 ```
 
-Un nivel deshabilitado y una tarifa vencida deben conservarse para consultar membresías e importes
-históricos. La regla de una sola membresía vigente debe resolverse en Control y reforzarse en
-PostgreSQL si el modelo final lo permite.
+Un nivel deshabilitado debe conservarse para consultar membresías anteriores. Los importes históricos
+se conservan en las cuotas y pagos, no en `Membresia`. La regla de una sola membresía vigente debe
+resolverse en Control y reforzarse en PostgreSQL si el modelo final lo permite.
 
 ## Rutas planificadas
 
 | Método | Ruta | Dueño | Resultado esperado al implementar |
 | --- | --- | --- | --- |
-| `GET` | `/api/niveles-membresia?soloDisponibles=true` | `TRA-25` | Lista niveles y tarifas vigentes |
-| `GET` | `/api/niveles-membresia/{id}` | `TRA-25` | Muestra tarifas, beneficios y condiciones |
-| `POST` | `/api/niveles-membresia` | `TRA-28` | Crea un nivel con sus tarifas |
-| `PUT` | `/api/niveles-membresia/{id}` | `TRA-28` | Actualiza el nivel sin perder historial |
+| `GET` | `/api/niveles-membresia?soloDisponibles=true` | `TRA-25` | Lista niveles y precios vigentes |
+| `GET` | `/api/niveles-membresia/{id}` | `TRA-25` | Muestra precios, beneficios y condiciones |
+| `POST` | `/api/niveles-membresia` | `TRA-28` | Crea un nivel con sus precios |
+| `PUT` | `/api/niveles-membresia/{id}` | `TRA-28` | Actualiza el nivel sin borrar cuotas ni pagos |
 | `DELETE` | `/api/niveles-membresia/{id}` | `TRA-28` | Deshabilita el nivel, no lo borra físicamente |
 | `POST` | `/api/socios` | `TRA-26` | Crea socio y membresía pendiente en una transacción |
 | `GET` | `/api/socios` | `TRA-28` | Busca y filtra socios |
@@ -80,7 +78,7 @@ guardar el agregado y su auditoría en una sola transacción.
 
 1. Integrar o esperar el modelo de `Usuario` del Incremento 1.
 2. Confirmar la lista de relaciones UNSE y las reglas de vigencia de tarifas.
-3. Implementar `TRA-25`: mapeos JPA, migraciones y consultas de nivel y tarifa. Elegir el número de
+3. Implementar `TRA-25`: mapeos JPA, migraciones y consultas de nivel y precios. Elegir el número de
    migración después de integrar usuarios para evitar una colisión.
 4. Implementar `TRA-26`: socio, membresía, alta y consulta de estado.
 5. Implementar `TRA-27`: cambios y transiciones, con motivo, responsable y fecha.
@@ -96,8 +94,7 @@ marcas TODO de su controller por un boundary funcional y registrado en Spring.
 - Si `VISITANTE` forma parte de la relación UNSE o solo representa a una persona sin relación.
 - Si la verificación UNSE pertenece a `Usuario` o al perfil `Socio`. El diseño provisional la deja en
   `Socio` porque el modelo actual de usuarios no la contiene.
-- Cómo se detectan vigencias superpuestas y si cada nivel necesita una tarifa base además de las
-  tarifas por relación.
+- Si todas las relaciones necesitan un precio explícito o si alguna puede quedar sin acceso al nivel.
 - Qué combinaciones de membresías se consideran incompatibles.
 - Qué estados permiten cancelación y desde qué fecha se hace efectiva.
 - Cómo se guardan beneficios y condiciones. Una tabla hija permite consultarlos; JSON simplifica el

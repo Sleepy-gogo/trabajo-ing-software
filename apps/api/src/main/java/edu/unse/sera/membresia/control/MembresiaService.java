@@ -12,18 +12,17 @@ public class MembresiaService {
     throw pendiente();
   }
 
-  // TODO(TRA-25): Resolver el precio según la relación UNSE ya verificada del usuario.
+  // TODO(TRA-25): Devolver el plan y sus precios por relación UNSE.
   public NivelMembresiaDetalle obtenerNivel(UUID nivelMembresiaId) {
     throw pendiente();
   }
 
-  // TODO(TRA-28): Crear el nivel y sus tarifas en una transacción; rechazar nombres repetidos y
-  // vigencias superpuestas.
+  // TODO(TRA-28): Crear el nivel y sus precios en una transacción; rechazar nombres repetidos.
   public NivelMembresiaDetalle crearNivel(NivelMembresiaDatos datos) {
     throw pendiente();
   }
 
-  // TODO(TRA-28): Actualizar nivel y tarifas sin alterar membresías ni precios históricos.
+  // TODO(TRA-28): Actualizar el nivel sin alterar membresías existentes.
   public NivelMembresiaDetalle actualizarNivel(UUID nivelMembresiaId, NivelMembresiaDatos datos) {
     throw pendiente();
   }
@@ -34,18 +33,19 @@ public class MembresiaService {
   }
 
   // TODO(TRA-26): Rechazar niveles inactivos y membresías incompatibles. Crear la membresía en
-  // PENDIENTE_PAGO; el módulo de pagos la activará cuando reciba un resultado aprobado.
+  // PENDIENTE_PAGO; el módulo de pagos resolverá el precio y la activará cuando reciba un
+  // resultado aprobado.
   public MembresiaDetalle contratar(UUID socioId, UUID nivelMembresiaId) {
     throw pendiente();
   }
 
-  // TODO(TRA-26): Consultar por id y devolver nivel, estado, fechas y cargo mensual acordado.
+  // TODO(TRA-26): Consultar por id y devolver nivel, estado y fechas. El importe viene de Cuota.
   public MembresiaDetalle obtener(UUID membresiaId) {
     throw pendiente();
   }
 
-  // TODO(TRA-27): Validar transiciones, recalcular el próximo cargo si cambia el nivel y guardar
-  // motivo, responsable y fecha para auditoría.
+  // TODO(TRA-27): Validar transiciones y guardar motivo, responsable y fecha para auditoría. El
+  // módulo de pagos resolverá el precio de la próxima cuota según el nivel actualizado.
   public MembresiaDetalle actualizar(
       UUID membresiaId, UUID nivelMembresiaId, EstadoMembresia estado, String motivo) {
     throw pendiente();

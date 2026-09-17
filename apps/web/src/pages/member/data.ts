@@ -62,10 +62,5 @@ export function getPlanPrice(
   relationship = currentUser.relacionUnse
 ) {
   const plan = membershipPlans.find((candidate) => candidate.id === planId)
-  return (
-    plan?.preciosPorRelacion.find((price) => price.relacion === relationship)
-      ?.importeMensual ??
-    plan?.importeMensual ??
-    0
-  )
+  return plan?.preciosPorRelacion[relationship] ?? 0
 }

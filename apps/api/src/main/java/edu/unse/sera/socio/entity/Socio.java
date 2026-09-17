@@ -44,8 +44,6 @@ public class Socio {
   @Column(unique = true, name = "identificador_unse")
   private String identificadorUnse;
 
-
-
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private OffsetDateTime createdAt;
@@ -54,15 +52,16 @@ public class Socio {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
-  protected Socio() {  }
+  protected Socio() {}
 
-  public Socio(Usuario usuario, RelacionUnse relacionUnse,
-              EstadoVerificacionUnse estadoVerificacionUnse, String identificadorUnse) {
+  public Socio(
+      Usuario usuario,
+      RelacionUnse relacionUnse,
+      EstadoVerificacionUnse estadoVerificacionUnse,
+      String identificadorUnse) {
     this.usuario = usuario;
-    actualizarDatos(relacionUnse,estadoVerificacionUnse,identificadorUnse);
+    actualizarDatos(relacionUnse, estadoVerificacionUnse, identificadorUnse);
   }
-
-
 
   public UUID getId() {
     return id;
@@ -92,8 +91,10 @@ public class Socio {
     return updatedAt;
   }
 
-  public void actualizarDatos(RelacionUnse relacionUnse,
-    EstadoVerificacionUnse estadoVerificacionUnse, String identificadorUnse) {
+  public void actualizarDatos(
+      RelacionUnse relacionUnse,
+      EstadoVerificacionUnse estadoVerificacionUnse,
+      String identificadorUnse) {
     this.relacionUnse = relacionUnse;
     this.estadoVerificacionUnse = estadoVerificacionUnse;
     this.identificadorUnse = normalizarIdentificador(identificadorUnse);
@@ -105,5 +106,4 @@ public class Socio {
     }
     return valor.trim().toLowerCase(Locale.ROOT);
   }
-
 }
