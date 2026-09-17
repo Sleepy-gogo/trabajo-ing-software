@@ -1,6 +1,8 @@
 package edu.unse.sera.membresia.persistence;
 
 import edu.unse.sera.membresia.entity.NivelMembresia;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -8,4 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface NivelMembresiaRepository extends JpaRepository<NivelMembresia, UUID> {
   // TODO(TRA-25): Extender JpaRepository<NivelMembresia, UUID> después de agregar entidad y
   // migración. El listado público debe poder filtrar por disponibleParaContratar.
+  Optional<NivelMembresia> findByNombreContainingIgnoreCase(String nombre);
+
+  List<NivelMembresia> findAllByDisponibleParaContratar(boolean disponibleParaContratar);
 }

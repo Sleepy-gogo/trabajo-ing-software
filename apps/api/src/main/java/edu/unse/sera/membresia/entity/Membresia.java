@@ -159,5 +159,4 @@ public class Membresia {
   public void setNivelMembresia(NivelMembresia nivelMembresia) {
     this.nivelMembresia = nivelMembresia;
   }
-
 }

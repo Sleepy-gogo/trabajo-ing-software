@@ -1,6 +1,7 @@
 package edu.unse.sera.membresia.control;
 
 import edu.unse.sera.membresia.entity.EstadoMembresia;
+import edu.unse.sera.membresia.entity.Membresia;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,5 +61,17 @@ public class MembresiaService {
   private UnsupportedOperationException pendiente() {
     return new UnsupportedOperationException(
         "El incremento de membresías todavía no está implementado.");
+  }
+
+  private MembresiaDetalle toResponse(Membresia membresia) {
+    return new MembresiaDetalle(
+        membresia.getId(),
+        membresia.getSocio().getId(),
+        membresia.getNivelMembresia().getId(),
+        membresia.getNivelMembresia().getNombre(),
+        membresia.getEstado(),
+        membresia.getFechaAlta(),
+        membresia.getFechaBaja(),
+        membresia.getProximoVencimiento());
   }
 }

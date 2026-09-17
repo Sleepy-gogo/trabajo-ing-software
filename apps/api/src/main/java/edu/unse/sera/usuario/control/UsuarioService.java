@@ -139,7 +139,7 @@ public class UsuarioService {
     usuario.cambiarPasswordHash(passwordEncoder.encode(rawPassword));
   }
 
-  private Usuario buscar(UUID id) {
+  public Usuario buscar(UUID id) {
     return usuarioRepository.findById(id).orElseThrow(() -> new UsuarioNoEncontradoException(id));
   }
 
@@ -172,7 +172,7 @@ public class UsuarioService {
     return email.trim().toLowerCase(Locale.ROOT);
   }
 
-  private Optional<Integer> convertirDni(String valor) {
+  public Optional<Integer> convertirDni(String valor) {
     try {
       return Optional.of(Integer.valueOf(valor));
     } catch (NumberFormatException exception) {

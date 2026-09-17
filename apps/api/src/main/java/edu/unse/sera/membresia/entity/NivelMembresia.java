@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.MapKeyEnumerated;
+import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.EnumMap;
@@ -23,11 +24,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 /** Plan contratable con precios por relación UNSE, beneficios y condiciones. */
 @Entity
+@Table(name = "nivel_membresias")
 public class NivelMembresia {
-
-  // TODO(TRA-25): Mapear como entidad JPA. Los precios pueden persistirse como una colección de
-  // elementos con relación UNSE como clave, sin crear una entidad de tarifa.
-  // Definir la relación con servicios cuando exista ese modelo.
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -42,9 +40,8 @@ public class NivelMembresia {
 
   @ElementCollection
   @CollectionTable(
-    name = "nivel_membresia_precio_relacion",
-    joinColumns = @JoinColumn(name = "nivel_membresia_id")
-  )
+      name = "nivel_membresia_precio_relacion",
+      joinColumns = @JoinColumn(name = "nivel_membresia_id"))
   @MapKeyEnumerated(EnumType.STRING)
   @MapKeyColumn(name = "relacion")
   @Column(name = "precio")
@@ -52,13 +49,12 @@ public class NivelMembresia {
 
   @ElementCollection
   @CollectionTable(
-    name = "nivel_membresia_beneficios",
-    joinColumns = @JoinColumn(name = "nivel_membresia_id")
-  )
+      name = "nivel_membresia_beneficios",
+      joinColumns = @JoinColumn(name = "nivel_membresia_id"))
   @Column(name = "beneficio")
   private List<String> beneficios;
 
-  @Column(name="disponible")
+  @Column(name = "disponible")
   private boolean disponibleParaContratar;
 
   @CreationTimestamp
@@ -106,6 +102,6 @@ public class NivelMembresia {
     return id;
   }
 
-  // TODO(TRA-25): Agregar constructor, getters y validaciones. Los importes deben ser positivos y
+  // TODO(TRA-25): Agregar validaciones. Los importes deben ser positivos y
   // un nivel histórico puede quedar inactivo sin borrar membresías anteriores.
 }

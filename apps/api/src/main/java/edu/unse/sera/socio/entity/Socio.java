@@ -118,4 +118,8 @@ public class Socio {
   public void setMembresia(Membresia membresia) {
     this.membresia = membresia;
   }
+
+  public void setEstadoVerificacionUnse(EstadoVerificacionUnse estadoVerificacionUnse) {
+    this.estadoVerificacionUnse = estadoVerificacionUnse;
+  }
 }
