@@ -13,6 +13,48 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+  @ExceptionHandler(edu.unse.sera.shared.exception.OperacionNoPermitidaException.class)
+  public ResponseEntity<ApiError> prohibido(RuntimeException exception) {
+    return ResponseEntity.status(403)
+        .body(new ApiError("acceso_denegado", exception.getMessage(), Map.of()));
+  }
+
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ApiError> datosInvalidos(IllegalArgumentException exception) {
+    return ResponseEntity.badRequest()
+        .body(new ApiError("datos_invalidos", exception.getMessage(), Map.of()));
+  }
+
+  @ExceptionHandler({
+    IllegalStateException.class,
+    org.springframework.orm.ObjectOptimisticLockingFailureException.class
+  })
+  public ResponseEntity<ApiError> conflicto(RuntimeException exception) {
+    return ResponseEntity.status(409)
+        .body(new ApiError("conflicto", exception.getMessage(), Map.of()));
+  }
+
+  @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+  public ResponseEntity<ApiError> integridad(RuntimeException exception) {
+    return ResponseEntity.status(409)
+        .body(
+            new ApiError(
+                "conflicto",
+                "Los datos se duplican o están relacionados con otro registro.",
+                Map.of()));
+  }
+
+  @ExceptionHandler({
+    org.springframework.http.converter.HttpMessageNotReadableException.class,
+    org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class
+  })
+  public ResponseEntity<ApiError> formato(RuntimeException exception) {
+    return ResponseEntity.badRequest()
+        .body(
+            new ApiError(
+                "datos_invalidos", "Revisá los tipos, fechas y valores enviados.", Map.of()));
+  }
+
   @ExceptionHandler(RecursoNoEncontradoException.class)
   public ResponseEntity<ApiError> handleRecursoNoEncontrado(
       RecursoNoEncontradoException exception) {

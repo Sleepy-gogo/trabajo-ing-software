@@ -1,5 +1,6 @@
 package edu.unse.sera.usuario.entity;
 
+import edu.unse.sera.socio.entity.Socio;
 import io.github.thibaultmeyer.cuid.CUID;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.Locale;
@@ -47,6 +49,9 @@ public class Usuario {
 
   @Column(name = "password_hash", nullable = false, length = 255)
   private String passwordHash;
+
+  @OneToOne(mappedBy = "usuario")
+  private Socio socio;
 
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)

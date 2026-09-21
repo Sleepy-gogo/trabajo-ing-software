@@ -1,3 +1,5 @@
+import { SelectField, Field } from "@/components/shared/real-data"
+import { relationships, label, type Relationship } from "@/lib/members-api"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ApiError, usersApi } from "@/lib/users-api"
 import { homeFor } from "@/hooks/use-session"
@@ -9,14 +11,13 @@ import {
   CalendarDays,
   Eye,
   EyeOff,
-  Landmark,
   LockKeyhole,
   Mail,
   QrCode,
   Users,
 } from "lucide-react"
 import { SeraBrand } from "@/components/layout/app-shell"
-import { FeedbackState, ImagePlaceholder } from "@/components/shared"
+import { FeedbackState } from "@/components/shared"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -36,50 +37,97 @@ function AuthLayout({
       </a>
       <div className="mx-auto grid min-h-[calc(100svh-2rem)] max-w-[1600px] overflow-hidden bg-white sm:rounded-2xl lg:grid-cols-[0.95fr_1fr]">
         <aside className="relative hidden min-h-[760px] flex-col justify-between overflow-hidden bg-sidebar p-12 text-white lg:flex">
-          <ImagePlaceholder
-            asset="polideportivo-exterior"
-            label="Polideportivo de la UNSE"
-            className="absolute inset-0 aspect-auto! bg-[#193b52] text-white/15"
-          />
-          <div className="absolute inset-0 bg-linear-to-b from-[#10243a]/30 to-[#10243a]/95" />
-          <div className="relative">
-            <SeraBrand light />
-            <div className="mt-24">
+          {/* COLLAGE VERTICAL: Las 3 imágenes una debajo de otra ocupando el 100% de la altura */}
+          <div className="absolute inset-0 grid h-full w-full grid-rows-3">
+            <img
+              src="/poli1.jpg"
+              alt="Cancha Polideportivo"
+              className="h-full w-full object-cover object-center"
+            />
+            <img
+              src="/poli2.jpg"
+              alt="Pileta Polideportivo"
+              className="h-full w-full object-cover object-center"
+            />
+            <img
+              src="/poli3.jpg"
+              alt="Instalaciones Polideportivo"
+              className="h-full w-full object-cover object-center"
+            />
+          </div>
+
+          {/* GRADIENTE OSCURO: para fundir las fotos y permitir leer el texto */}
+          <div className="absolute inset-0 bg-[#10243a]/75 backdrop-contrast-125" />
+
+          {/* Contenido superior */}
+          <div className="relative z-10 flex flex-col items-center text-center">
+            {/* NUEVO LOGO SERA (Reemplaza al SeraBrand de shadcn) */}
+            <div className="flex flex-col items-center justify-center">
+              <span className="text-5xl font-black tracking-tighter text-white">
+                SERA<span className="text-blue-500">.</span>
+              </span>
+              <span className="mt-1.5 text-xs font-semibold tracking-widest text-slate-300 uppercase">
+                Polideportivo UNSE
+              </span>
+            </div>
+
+            {/* Títulos también centrados */}
+            <div className="mt-16">
               <p className="text-6xl leading-none font-extrabold tracking-[-0.055em] xl:text-7xl">
                 Tu lugar
                 <br />
                 para moverte.
               </p>
-              <p className="mt-7 max-w-sm text-lg leading-relaxed text-slate-200">
+              <p className="mx-auto mt-7 max-w-sm text-lg leading-relaxed text-slate-200">
                 Reservá espacios, gestioná tu membresía y disfrutá del deporte
                 en la UNSE.
               </p>
             </div>
           </div>
-          <div className="relative">
-            <div className="mb-12 grid grid-cols-3 gap-5">
+
+          {/* Contenido inferior */}
+          <div className="relative z-10">
+            <div className="mb-12 flex justify-center gap-10">
               {[
                 { icon: Users, label: "Comunidad UNSE" },
                 { icon: CalendarDays, label: "Reservas de espacios" },
                 { icon: QrCode, label: "Carnet digital" },
               ].map(({ icon: Icon, label }) => (
-                <div key={label}>
-                  <div className="mb-3 flex size-11 items-center justify-center rounded-xl border border-white/20 bg-white/5">
-                    <Icon aria-hidden="true" className="size-5" />
+                <div
+                  key={label}
+                  className="flex w-28 flex-col items-center text-center"
+                >
+                  <div className="mb-3 flex size-14 items-center justify-center rounded-xl border border-white/20 bg-white/5">
+                    <Icon aria-hidden="true" className="size-6" />
                   </div>
-                  <span className="text-xs leading-relaxed text-slate-200">
+
+                  <span className="text-sm leading-relaxed text-slate-200">
                     {label}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-3 border-t border-white/15 pt-6">
-              <Landmark className="size-8 text-slate-300" aria-hidden="true" />
-              <span className="text-xs leading-relaxed text-slate-300">
-                Universidad Nacional
-                <br />
-                de Santiago del Estero
-              </span>
+            <div className="relative z-10">
+              <div className="mb-12 grid grid-cols-3 gap-5">
+                {/* ... (el código de Comunidad UNSE, Reservas y Carnet queda igual) ... */}
+              </div>
+
+              {/* ACÁ ESTÁ EL CAMBIO: Mantenemos la línea divisoria superior y agregamos tu logo */}
+              <div className="flex items-center justify-between border-t border-white/15 pt-6">
+                {/* Logo UNSE a la izquierda */}
+                <img
+                  src="/logo-unse_2.png"
+                  alt="Universidad Nacional de Santiago del Estero"
+                  className="h-[114px] w-auto object-contain"
+                />
+
+                {/* Logo Bienestar a la derecha */}
+                <img
+                  src="/bienestar-transparente.png"
+                  alt="Bienestar Estar Bien"
+                  className="h-[114px] w-auto object-contain"
+                />
+              </div>
             </div>
           </div>
         </aside>
@@ -280,6 +328,8 @@ export function RegisterPage() {
     setError("")
     if (registration.isPending) return
     registration.mutate({
+      relacionUnse: String(data.get("relacionUnse")) as Relationship,
+      identificadorUnse: String(data.get("identificadorUnse") || ""),
       nombreCompleto: `${String(data.get("first-name")).trim()} ${String(data.get("last-name")).trim()}`,
       email: String(data.get("email")).trim(),
       dni: Number(data.get("dni")),
@@ -371,6 +421,28 @@ export function RegisterPage() {
                 className="h-11"
               />
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectField
+                label="Relación con la UNSE"
+                name="relacionUnse"
+                defaultValue="EXTERNO"
+              >
+                {relationships.map((r) => (
+                  <option key={r} value={r}>
+                    {label(r)}
+                  </option>
+                ))}
+              </SelectField>
+              <Field
+                label="Legajo o identificador, si corresponde"
+                name="identificadorUnse"
+                maxLength={50}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tu relación con la UNSE quedará pendiente de verificación por
+              administración.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <PasswordInput id="password" autoComplete="new-password" />
               <PasswordInput

@@ -286,7 +286,6 @@ export const membershipPlans: readonly MembershipPlan[] = [
     nombre: "Plan Estudiante",
     descripcion:
       "Acceso flexible al polideportivo para estudiantes de la UNSE.",
-    importeMensual: 6000,
     moneda: "ARS",
     beneficios: [
       "Tarifas preferenciales",
@@ -299,25 +298,16 @@ export const membershipPlans: readonly MembershipPlan[] = [
       "Pago mensual por adelantado",
     ],
     disponibleParaContratar: true,
-    preciosPorRelacion: [
-      {
-        relacion: "estudiante",
-        relacionLabel: "Estudiante",
-        importeMensual: 6000,
-      },
-      { relacion: "docente", relacionLabel: "Docente", importeMensual: 7500 },
-      {
-        relacion: "nodocente",
-        relacionLabel: "No docente",
-        importeMensual: 7000,
-      },
-    ],
+    preciosPorRelacion: {
+      estudiante: 6000,
+      docente: 7500,
+      nodocente: 7000,
+    },
   },
   {
     id: "plan-comunidad",
     nombre: "Plan Comunidad",
     descripcion: "Una membresía para disfrutar los espacios de la UNSE.",
-    importeMensual: 12000,
     moneda: "ARS",
     beneficios: [
       "Acceso a espacios habilitados",
@@ -327,27 +317,22 @@ export const membershipPlans: readonly MembershipPlan[] = [
     serviciosIncluidos: ["Canchas", "Quinchos", "Asadores", "SUM"],
     condiciones: ["Documento vigente", "Pago mensual por adelantado"],
     disponibleParaContratar: true,
-    preciosPorRelacion: [
-      { relacion: "externo", relacionLabel: "Externo", importeMensual: 12000 },
-      {
-        relacion: "graduado",
-        relacionLabel: "Graduado",
-        importeMensual: 10500,
-      },
-    ],
+    preciosPorRelacion: {
+      externo: 12000,
+      graduado: 10500,
+    },
   },
   {
     id: "plan-legacy",
     nombre: "Plan Deportivo",
     descripcion:
       "Plan histórico conservado para consultar una membresía anterior.",
-    importeMensual: 9000,
     moneda: "ARS",
     beneficios: ["Acceso a espacios habilitados"],
     serviciosIncluidos: ["Canchas", "SUM"],
     condiciones: ["No disponible para nuevas contrataciones"],
     disponibleParaContratar: false,
-    preciosPorRelacion: [],
+    preciosPorRelacion: {},
   },
 ]
 
@@ -361,7 +346,6 @@ export const memberships: readonly Membership[] = [
     estadoLabel: "Activa",
     fechaAlta: "2026-03-12",
     proximoVencimiento: "2026-09-01",
-    cargoMensual: 6000,
     estadoCargo: "al_dia",
     estadoCargoLabel: "Al día",
     pagoRecurrente: "inactivo",
@@ -377,7 +361,6 @@ export const memberships: readonly Membership[] = [
     estadoLabel: "Activa",
     fechaAlta: "2025-03-12",
     proximoVencimiento: "2026-09-01",
-    cargoMensual: 6000,
     estadoCargo: "proxima_a_vencer",
     estadoCargoLabel: "Próxima a vencer",
     pagoRecurrente: "activo",
@@ -393,7 +376,6 @@ export const memberships: readonly Membership[] = [
     estadoLabel: "Suspendida",
     fechaAlta: "2024-08-18",
     proximoVencimiento: "2026-08-01",
-    cargoMensual: 12000,
     estadoCargo: "vencida",
     estadoCargoLabel: "Cuota vencida",
     pagoRecurrente: "inactivo",
@@ -409,7 +391,6 @@ export const memberships: readonly Membership[] = [
     estadoLabel: "Vencida",
     fechaAlta: "2023-04-05",
     proximoVencimiento: "2026-07-01",
-    cargoMensual: 9000,
     estadoCargo: "vencida",
     estadoCargoLabel: "Cuota vencida",
     pagoRecurrente: "pendiente",
@@ -426,7 +407,6 @@ export const memberships: readonly Membership[] = [
     fechaAlta: "2025-01-20",
     fechaBaja: "2026-06-30",
     proximoVencimiento: "2026-07-01",
-    cargoMensual: 12000,
     estadoCargo: "sin_cargo",
     estadoCargoLabel: "Sin cargo activo",
     pagoRecurrente: "inactivo",

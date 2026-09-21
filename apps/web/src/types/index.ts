@@ -15,7 +15,6 @@ export type {
   Membership,
   MembershipChargeStatus,
   MembershipPlan,
-  MembershipPlanPricing,
   MembershipState,
   Payment,
   PaymentConcept,

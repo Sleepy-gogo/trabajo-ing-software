@@ -19,4 +19,6 @@ public record RegistroRequest(
         int dni,
     @NotBlank(message = "La contraseña es obligatoria.")
         @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres.")
-        String password) {}
+        String password,
+    edu.unse.sera.socio.entity.RelacionUnse relacionUnse,
+    @Size(max = 50) String identificadorUnse) {}

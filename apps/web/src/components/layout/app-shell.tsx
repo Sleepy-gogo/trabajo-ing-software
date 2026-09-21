@@ -49,6 +49,7 @@ export type DemoRole = "admin" | "member" | "staff"
 const adminNav = [
   { label: "Inicio", path: "/admin", icon: House },
   { label: "Socios", path: "/admin/members", icon: Users },
+  { label: "Niveles y precios", path: "/admin/levels", icon: ShieldCheck },
   { label: "Reservas", path: "/admin/reservations", icon: CalendarDays },
   { label: "Espacios", path: "/admin/spaces", icon: Landmark },
   { label: "Pagos", path: "/admin/payments", icon: CreditCard },
@@ -321,10 +322,6 @@ export function AppShell({
                 <h2 className="mb-4 text-sm font-bold">
                   Avisos del polideportivo
                 </h2>
-                <p className="text-xs font-semibold">Mantenimiento de pileta</p>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  La pileta permanecerá cerrada el lunes por mantenimiento.
-                </p>
                 <p className="mt-4 text-xs font-semibold">
                   Verificación de datos UNSE
                 </p>
@@ -355,13 +352,19 @@ export function AppShell({
             role === "member" && "pb-28 lg:pb-10"
           )}
         >
-          {!location.pathname.startsWith("/admin/users") &&
-            location.pathname !== "/app/profile" && (
-              <p className="mb-5 rounded-lg border bg-muted p-3 text-sm">
-                Esta sección muestra datos de demostración. Se conectará en los
-                próximos incrementos.
-              </p>
-            )}
+          {/\/(payments|reservations|access|reports|surveys|settings)(\/|$)/.test(
+            location.pathname
+          ) && (
+            <div
+              role="note"
+              className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+            >
+              <strong>Vista previa de próximos incrementos.</strong> Esta
+              sección usa datos de ejemplo y sus cambios no se guardan. La
+              entrega actual incluye usuarios, socios, membresías, espacios y
+              disponibilidad.
+            </div>
+          )}
           {children ?? <Outlet />}
         </main>
         <footer

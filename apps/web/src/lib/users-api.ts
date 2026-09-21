@@ -77,7 +77,13 @@ export const usersApi = {
   me: (signal?: AbortSignal) => api<User>("/usuarios/me", { signal }),
   login: (data: { email: string; password: string }) =>
     api<User>("/auth/login", { method: "POST", body: JSON.stringify(data) }),
-  register: (data: Profile & { password: string }) =>
+  register: (
+    data: Profile & {
+      password: string
+      relacionUnse?: import("./members-api").Relationship
+      identificadorUnse?: string
+    }
+  ) =>
     api<User>("/auth/registro", { method: "POST", body: JSON.stringify(data) }),
   logout: () => api<void>("/auth/logout", { method: "POST" }),
   profile: (data: Profile) =>

@@ -394,7 +394,7 @@ export function MembershipStatusPage() {
               {suspended ? "Cuota vencida" : "Próximo período"}
             </p>
             <p className="my-4 text-3xl font-bold tabular-nums">
-              {money(membership?.cargoMensual ?? 0)}
+              {money(getPlanPrice(membership?.planId ?? ""))}
             </p>
             <Go className="w-full" to="/app/payments?view=checkout">
               Pagar cuota
@@ -552,7 +552,8 @@ export function MemberPaymentsPage() {
                   htmlFor="recurring-consent"
                 >
                   Autorizo el cobro mensual de{" "}
-                  {money(membership?.cargoMensual ?? 0)} para mi membresía.
+                  {money(getPlanPrice(membership?.planId ?? ""))} para mi
+                  membresía.
                 </Label>
               </div>
             )}
@@ -587,7 +588,7 @@ export function MemberPaymentsPage() {
             <div className="my-6 flex justify-between border-t pt-5 font-semibold">
               <span>Total</span>
               <span className="text-xl tabular-nums">
-                {money(membership?.cargoMensual ?? 0)}
+                {money(getPlanPrice(membership?.planId ?? ""))}
               </span>
             </div>
             <Button
@@ -608,7 +609,8 @@ export function MemberPaymentsPage() {
             >
               {recurring
                 ? "Autorizar pago recurrente"
-                : "Confirmar pago de " + money(membership?.cargoMensual ?? 0)}
+                : "Confirmar pago de " +
+                  money(getPlanPrice(membership?.planId ?? ""))}
             </Button>
             <div className="mt-3">
               <Go className="w-full" secondary to="/app/payments">
@@ -671,7 +673,7 @@ export function MemberPaymentsPage() {
             <div>
               <p className="text-sm text-muted-foreground">Próxima cuota</p>
               <p className="mt-2 text-2xl font-bold tabular-nums">
-                {money(membership?.cargoMensual ?? 0)}
+                {money(getPlanPrice(membership?.planId ?? ""))}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 Vence el{" "}

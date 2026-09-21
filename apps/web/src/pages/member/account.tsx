@@ -106,7 +106,7 @@ export function MemberHomePage() {
           },
           {
             label: "Próximo vencimiento",
-            value: money(membership?.cargoMensual ?? 0),
+            value: money(getPlanPrice(membership?.planId ?? "")),
             text:
               "Cuota mensual · " +
               formatDate(membership?.proximoVencimiento ?? "2026-09-01"),

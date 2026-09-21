@@ -28,12 +28,13 @@ class UsuarioServiceTest {
 
   @Mock private UsuarioRepository usuarioRepository;
   @Mock private PasswordEncoder passwordEncoder;
+  @Mock private edu.unse.sera.socio.persistence.SocioRepository socios;
 
   private UsuarioService usuarioService;
 
   @BeforeEach
   void setUp() {
-    usuarioService = new UsuarioService(usuarioRepository, passwordEncoder);
+    usuarioService = new UsuarioService(usuarioRepository, passwordEncoder, socios);
   }
 
   @Test
@@ -54,6 +55,7 @@ class UsuarioServiceTest {
     assertThat(detalle.email()).isEqualTo("ada@example.com");
     assertThat(detalle.estadoCuenta()).isEqualTo(EstadoUsuario.ACTIVO);
     verify(passwordEncoder).encode("password-seguro");
+    verify(socios).save(any(edu.unse.sera.socio.entity.Socio.class));
     verify(usuarioRepository).saveAndFlush(any(Usuario.class));
   }
 

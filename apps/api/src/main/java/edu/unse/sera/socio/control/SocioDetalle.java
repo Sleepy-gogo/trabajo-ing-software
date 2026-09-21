@@ -3,7 +3,6 @@ package edu.unse.sera.socio.control;
 import edu.unse.sera.membresia.entity.EstadoMembresia;
 import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -21,5 +20,4 @@ public record SocioDetalle(
     UUID nivelMembresiaId,
     String nivelMembresiaNombre,
     EstadoMembresia estadoMembresia,
-    LocalDate proximoVencimiento,
-    BigDecimal cargoMensual) {}
+    LocalDate proximoVencimiento) {}

@@ -1,108 +1,71 @@
-# Socios y membresías: definición del Incremento 2
+# Socios y membresías
 
-La rama se llama `feat/SERA-25-socios-membresias`, pero la tarea correspondiente en Linear es
-`TRA-25: I2.1 — Niveles, tarifas y relación con UNSE`. Este documento también prepara las clases y
-rutas de sus tareas hermanas para que el equipo pueda implementar sin volver a traducir CU-05 a
-CU-09.
+## Modelo definitivo
 
-Las clases y los contratos están definidos, pero todavía no implementan negocio ni persistencia. Los
-controllers no son beans de Spring y las rutas no se publican hasta completar su caso de uso.
-
-## Reparto según Linear
-
-| Tarea | Responsabilidad preparada |
-| --- | --- |
-| `TRA-25` | Nivel de membresía, tarifa por relación UNSE, vigencia, persistence y consultas |
-| `TRA-26` | Alta de socio, contratación y consulta del estado de membresía |
-| `TRA-27` | Cambio de nivel o estado, baja y transiciones válidas |
-| `TRA-28` | CRUD de niveles, filtros, validaciones, errores y tests |
-| `TRA-29` | Reemplazo de mocks del frontend por estas rutas |
-
-El padre `TRA-7` depende del Incremento 1. Por eso `Socio` referencia a `Usuario` por identificador y
-deja el mapeo JPA pendiente hasta integrar el trabajo de usuarios.
-
-## Alcance funcional
-
-El incremento prepara estos casos de uso:
-
-- consultar y administrar niveles de membresía y sus tarifas;
-- registrar un socio desde administración;
-- contratar una membresía;
-- consultar el estado de un socio o una membresía;
-- modificar la relación UNSE, el nivel y el estado de membresía;
-- cancelar una membresía con confirmación previa en el cliente.
-
-Los pagos, las cuotas mensuales, el pago recurrente y la reacción a webhooks pertenecen a los flujos
-CU-10, CU-11 y CU-13. La membresía debe quedar `PENDIENTE_PAGO` hasta que el módulo de pagos informe
-un resultado aprobado.
-
-## Modelo propuesto
-
-`Socio` complementa a `Usuario`. Guarda solo la relación con la UNSE y su verificación. Nombre, DNI,
-email, contraseña, rol y estado de cuenta siguen perteneciendo a `Usuario`.
-
-`NivelMembresia` describe el plan que puede contratarse. `TarifaMembresia` mantiene el precio del
-nivel para una relación UNSE durante una vigencia. `Membresia` registra la contratación de un nivel
-por un socio.
+Cada usuario tiene un socio, creado en la misma transacción que su cuenta. La relación con la UNSE
+queda `PENDIENTE` hasta su verificación manual por un administrador. Las cuentas anteriores reciben
+su socio mediante `V12`, con relación `EXTERNO` pendiente de confirmar.
 
 ```text
-Usuario 1 --- 0..1 Socio 1 --- 0..* Membresia * --- 1 NivelMembresia
-                                                        |
-                                                        +--- 1..* TarifaMembresia
+Usuario 1 --- 1 Socio 1 --- 0..1 Membresia * --- 1 NivelMembresia
 ```
 
-Un nivel deshabilitado y una tarifa vencida deben conservarse para consultar membresías e importes
-históricos. La regla de una sola membresía vigente debe resolverse en Control y reforzarse en
-PostgreSQL si el modelo final lo permite.
+Hay una sola membresía por socio. No se modelan múltiples membresías ni rangos `vigenciaDesde` y
+`vigenciaHasta`. La contratación crea `PENDIENTE_PAGO`; una nueva contratación tras la cancelación
+reutiliza la misma fila. La restricción única sobre `socio_id` refuerza esta regla.
 
-## Rutas planificadas
+`fechaAlta` y `fechaBaja` registran la solicitud y su cancelación. `proximoVencimiento` pertenece al
+seguimiento de la próxima cuota y puede ser nulo. No define un intervalo de vigencia.
 
-| Método | Ruta | Dueño | Resultado esperado al implementar |
-| --- | --- | --- | --- |
-| `GET` | `/api/niveles-membresia?soloDisponibles=true` | `TRA-25` | Lista niveles y tarifas vigentes |
-| `GET` | `/api/niveles-membresia/{id}` | `TRA-25` | Muestra tarifas, beneficios y condiciones |
-| `POST` | `/api/niveles-membresia` | `TRA-28` | Crea un nivel con sus tarifas |
-| `PUT` | `/api/niveles-membresia/{id}` | `TRA-28` | Actualiza el nivel sin perder historial |
-| `DELETE` | `/api/niveles-membresia/{id}` | `TRA-28` | Deshabilita el nivel, no lo borra físicamente |
-| `POST` | `/api/socios` | `TRA-26` | Crea socio y membresía pendiente en una transacción |
-| `GET` | `/api/socios` | `TRA-28` | Busca y filtra socios |
-| `GET` | `/api/socios/{id}` | `TRA-26` | Combina usuario, socio y membresía vigente |
-| `PUT` | `/api/socios/{id}` | `TRA-27` | Actualiza datos administrativos y deja auditoría |
-| `POST` | `/api/membresias` | `TRA-26` | Crea una contratación pendiente de pago |
-| `GET` | `/api/membresias/{id}` | `TRA-26` | Devuelve el estado de la membresía |
-| `POST` | `/api/membresias/{id}/cancelacion` | `TRA-27` | Cancela o registra la solicitud de cancelación |
+La activación requiere la aprobación de un pago mediante el webhook del incremento 4. No existe
+una ruta administrativa que permita saltarse ese requisito. Tampoco se simula un pago aprobado.
 
-No se agregó `DELETE /api/membresias/{id}`: cancelar una membresía cambia su estado y conserva el
-historial. Los cambios administrativos de nivel y estado pasan por `PUT /api/socios/{id}` para
-guardar el agregado y su auditoría en una sola transacción.
+## Estados y auditoría
 
-## Orden sugerido de implementación
+- Una solicitud pendiente puede cancelarse inmediatamente.
+- Una membresía activa puede pasar a vencida, suspendida o cancelada.
+- Una vencida puede suspenderse o cancelarse; una suspendida puede cancelarse.
+- Una cancelada puede volver a solicitarse, con estado pendiente de pago.
+- Las transiciones no permitidas devuelven 409.
 
-1. Integrar o esperar el modelo de `Usuario` del Incremento 1.
-2. Confirmar la lista de relaciones UNSE y las reglas de vigencia de tarifas.
-3. Implementar `TRA-25`: mapeos JPA, migraciones y consultas de nivel y tarifa. Elegir el número de
-   migración después de integrar usuarios para evitar una colisión.
-4. Implementar `TRA-26`: socio, membresía, alta y consulta de estado.
-5. Implementar `TRA-27`: cambios y transiciones, con motivo, responsable y fecha.
-6. Implementar `TRA-28`: CRUD de niveles, validaciones, errores y tests.
-7. Implementar `TRA-29`: adaptar los DTO del frontend y reemplazar mocks con TanStack Query.
+Las altas, cambios administrativos, cancelaciones y nuevas contrataciones guardan motivo,
+responsable, fecha y detalle en `cambios_socios`. Los cambios de socio y membresía son
+transaccionales. Las versiones de JPA detectan ediciones concurrentes.
 
-Cada paso debe completar las anotaciones y comportamiento de sus entidades, extender los
-repositories necesarios con `JpaRepository`, inyectar los services por constructor y reemplazar las
-marcas TODO de su controller por un boundary funcional y registrado en Spring.
+## Niveles y precios
 
-## Decisiones que todavía necesita el equipo
+Cada nivel contiene nombre, descripción, beneficios, disponibilidad y precios por relación UNSE.
+Los importes deben ser positivos, con hasta 8 enteros y 2 decimales. Una relación sin precio no
+puede contratar ese nivel. Deshabilitar un nivel conserva las membresías existentes.
 
-- Si `VISITANTE` forma parte de la relación UNSE o solo representa a una persona sin relación.
-- Si la verificación UNSE pertenece a `Usuario` o al perfil `Socio`. El diseño provisional la deja en
-  `Socio` porque el modelo actual de usuarios no la contiene.
-- Cómo se detectan vigencias superpuestas y si cada nivel necesita una tarifa base además de las
-  tarifas por relación.
-- Qué combinaciones de membresías se consideran incompatibles.
-- Qué estados permiten cancelación y desde qué fecha se hace efectiva.
-- Cómo se guardan beneficios y condiciones. Una tabla hija permite consultarlos; JSON simplifica el
-  prototipo, pero debe acordarse antes de crear la migración.
-- Cómo serializar los enums para el frontend. El prototipo usa valores en minúscula como `activa` y
-  `no_docente`; los enums Java usan constantes en mayúscula.
-- Qué actor autenticado se registra como responsable de una modificación. La identidad depende del
-  trabajo de autenticación.
+La tarifa de espacios se calcula en backend según la relación UNSE verificada. Para una relación
+pendiente o rechazada se usa `EXTERNO`; si no existe tarifa específica, se usa la tarifa general.
+El futuro módulo de pagos debe aplicar la misma verificación antes de emitir una cuota.
+
+## API
+
+| Método | Ruta | Acceso |
+| --- | --- | --- |
+| GET | `/api/niveles-membresia?soloDisponibles=true` | Autenticado |
+| GET | `/api/niveles-membresia/{id}` | Autenticado |
+| POST, PUT, DELETE | `/api/niveles-membresia` y `/{id}` | Administrador |
+| GET | `/api/socios/me` | Socio de la sesión, 204 si no existe |
+| GET | `/api/socios?buscar=&estadoMembresia=&relacionUnse=` | Administrador |
+| GET, PUT | `/api/socios/{id}` | Administrador |
+| GET | `/api/socios/{id}/historial` | Administrador |
+| POST | `/api/membresias` | Titular del socio o administrador |
+| GET | `/api/membresias/{id}` | Titular o administrador |
+| POST | `/api/membresias/{id}/cancelacion` | Titular o administrador |
+
+`POST /api/socios` se conserva para compatibilidad, pero normalmente no es necesario: el alta del
+usuario ya crea el socio. Rechaza un segundo socio del mismo usuario.
+
+## Consultas
+
+`SocioRepository.buscar` aplica búsqueda y filtros en SQL. Trae usuario, membresía opcional y nivel
+con `JOIN FETCH` y `LEFT JOIN FETCH`. Las consultas por identificador usan `EntityGraph` para el
+mismo recorrido. Esto evita cargar las relaciones una por una para construir el listado.
+
+No se agregó una referencia inversa `Usuario.socio`: la sesión consulta usuarios en cada request y
+no necesita cargar el socio. `mappedBy` define el propietario de la relación, pero no resuelve por
+sí solo el problema de consultas N+1. El DTO de socios ya reúne los datos que necesita la pantalla.

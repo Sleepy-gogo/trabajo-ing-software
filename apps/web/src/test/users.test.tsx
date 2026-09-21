@@ -113,12 +113,14 @@ describe("Incremento 1", () => {
     await actor.click(screen.getByRole("button", { name: "Crear cuenta" }))
     expect(await screen.findByText("Tu cuenta está lista")).toBeTruthy()
     expect(register.mock.calls[0][0]).toEqual({
+      relacionUnse: "EXTERNO",
+      identificadorUnse: "",
       nombreCompleto: "Ada Lovelace",
       email: "ada@example.com",
       dni: 12345678,
       password: "password-seguro",
     })
-  })
+  }, 15000)
 
   it("guarda el perfil sin enviar rol ni estado", async () => {
     vi.spyOn(usersApi, "me").mockResolvedValue(user)

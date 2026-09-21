@@ -113,23 +113,16 @@ export interface User {
   membershipId?: string
 }
 
-export interface MembershipPlanPricing {
-  relacion: UnseRelationship
-  relacionLabel: string
-  importeMensual: number
-}
-
 export interface MembershipPlan {
   id: string
   nombre: string
   descripcion: string
-  importeMensual: number
   moneda: "ARS"
   beneficios: string[]
   serviciosIncluidos: string[]
   condiciones: string[]
   disponibleParaContratar: boolean
-  preciosPorRelacion: MembershipPlanPricing[]
+  preciosPorRelacion: Partial<Record<UnseRelationship, number>>
 }
 
 export interface Membership {
@@ -142,7 +135,6 @@ export interface Membership {
   fechaAlta: IsoDate
   fechaBaja?: IsoDate
   proximoVencimiento: IsoDate
-  cargoMensual: number
   estadoCargo: MembershipChargeStatus
   estadoCargoLabel: string
   pagoRecurrente: RecurringPaymentStatus
