@@ -1,0 +1,16 @@
+ALTER TABLE espacios
+    ADD COLUMN capacidad INTEGER NOT NULL DEFAULT 1,
+    ADD COLUMN tarifa_hora NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    ADD COLUMN tipo VARCHAR(100) NOT NULL DEFAULT 'SIN_CLASIFICAR',
+    ADD COLUMN ruta_imagen VARCHAR(255),
+    ADD COLUMN created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ADD CONSTRAINT ck_espacios_capacidad_positiva CHECK (capacidad > 0),
+    ADD CONSTRAINT ck_espacios_tarifa_no_negativa CHECK (tarifa_hora >= 0);
+
+ALTER TABLE espacios
+    ALTER COLUMN capacidad DROP DEFAULT,
+    ALTER COLUMN tarifa_hora DROP DEFAULT,
+    ALTER COLUMN tipo DROP DEFAULT;
+
+CREATE UNIQUE INDEX uk_espacios_nombre_normalizado ON espacios (LOWER(nombre));

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import edu.unse.sera.espacio.entity.Espacio;
 import edu.unse.sera.espacio.persistence.EspacioRepository;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +34,14 @@ class EspacioServiceTest {
     when(espacioRepository.save(any(Espacio.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
-    EspacioDetalle response = espacioService.crear("  Cancha cubierta  ", "  Piso de parquet  ");
+    EspacioDetalle response =
+        espacioService.registrarEspacio(
+            "  Cancha cubierta  ",
+            "  Piso de parquet  ",
+            20,
+            new BigDecimal("1500.00"),
+            "futsal",
+            null);
 
     assertThat(response.nombre()).isEqualTo("Cancha cubierta");
     assertThat(response.descripcion()).isEqualTo("Piso de parquet");
@@ -43,10 +51,14 @@ class EspacioServiceTest {
   @Test
   void actualizaUnEspacioExistente() {
     UUID id = UUID.randomUUID();
-    Espacio espacio = new Espacio("Cancha cubierta", "Piso de parquet");
+    Espacio espacio =
+        new Espacio(
+            "Cancha cubierta", "Piso de parquet", 20, new BigDecimal("1500.00"), "futsal", null);
     when(espacioRepository.findById(id)).thenReturn(Optional.of(espacio));
 
-    EspacioDetalle response = espacioService.actualizar(id, "Cancha norte", "Piso renovado");
+    EspacioDetalle response =
+        espacioService.actualizar(
+            id, "Cancha norte", "Piso renovado", 20, new BigDecimal("1800.00"), "futsal", null);
 
     assertThat(response.nombre()).isEqualTo("Cancha norte");
     assertThat(response.descripcion()).isEqualTo("Piso renovado");
@@ -55,7 +67,8 @@ class EspacioServiceTest {
   @Test
   void eliminaUnEspacioExistente() {
     UUID id = UUID.randomUUID();
-    Espacio espacio = new Espacio("Cancha cubierta", null);
+    Espacio espacio =
+        new Espacio("Cancha cubierta", null, 20, new BigDecimal("1500.00"), "futsal", null);
     when(espacioRepository.findById(id)).thenReturn(Optional.of(espacio));
 
     espacioService.eliminar(id);
@@ -68,7 +81,7 @@ class EspacioServiceTest {
     UUID id = UUID.randomUUID();
     when(espacioRepository.findById(id)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> espacioService.obtener(id))
+    assertThatThrownBy(() -> espacioService.consultarDetalle(id))
         .isInstanceOf(EspacioNoEncontradoException.class)
         .hasMessageContaining(id.toString());
   }

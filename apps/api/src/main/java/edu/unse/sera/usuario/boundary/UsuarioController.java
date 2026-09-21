@@ -3,6 +3,7 @@ package edu.unse.sera.usuario.boundary;
 import edu.unse.sera.usuario.boundary.dto.ActualizarUsuarioRequest;
 import edu.unse.sera.usuario.boundary.dto.CambiarPasswordRequest;
 import edu.unse.sera.usuario.boundary.dto.CrearUsuarioRequest;
+import edu.unse.sera.usuario.boundary.dto.PerfilRequest;
 import edu.unse.sera.usuario.boundary.dto.UsuarioResponse;
 import edu.unse.sera.usuario.control.UsuarioDetalle;
 import edu.unse.sera.usuario.control.UsuarioService;
@@ -38,8 +39,7 @@ public class UsuarioController {
 
   @PutMapping("/me")
   public UsuarioResponse perfil(
-      java.security.Principal principal,
-      @Valid @RequestBody edu.unse.sera.usuario.boundary.dto.PerfilRequest request) {
+      java.security.Principal principal, @Valid @RequestBody PerfilRequest request) {
     return toResponse(
         usuarioService.actualizarPerfil(
             UUID.fromString(principal.getName()),

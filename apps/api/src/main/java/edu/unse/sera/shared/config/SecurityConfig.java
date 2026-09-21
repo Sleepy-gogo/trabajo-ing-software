@@ -27,6 +27,8 @@ public class SecurityConfig {
                     .hasRole("ADMIN")
                     .requestMatchers("/api/auth/logout")
                     .authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/espacios", "/api/espacios/**")
+                    .authenticated()
                     .requestMatchers("/api/espacios", "/api/espacios/**")
                     .hasRole("ADMIN")
                     .anyRequest()

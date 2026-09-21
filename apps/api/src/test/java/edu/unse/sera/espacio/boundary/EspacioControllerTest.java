@@ -1,7 +1,5 @@
 package edu.unse.sera.espacio.boundary;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -15,6 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import edu.unse.sera.espacio.control.EspacioDetalle;
 import edu.unse.sera.espacio.control.EspacioNoEncontradoException;
 import edu.unse.sera.espacio.control.EspacioService;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -39,8 +39,9 @@ class EspacioControllerTest {
   @Test
   void creaUnEspacio() throws Exception {
     UUID id = UUID.randomUUID();
-    when(espacioService.crear(eq("Cancha cubierta"), any()))
-        .thenReturn(new EspacioDetalle(id, "Cancha cubierta", null));
+    when(espacioService.registrarEspacio(
+            "Cancha cubierta", null, 20, new BigDecimal("1500.00"), "FUTSAL", null))
+        .thenReturn(detalle(id, "Cancha cubierta", null));
 
     mockMvc
         .perform(
@@ -48,8 +49,15 @@ class EspacioControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
-                    {"nombre":"Cancha cubierta","descripcion":null}
-                    """))
+              {
+                "nombre":"Cancha cubierta",
+                "descripcion":null,
+                "capacidad":20,
+                "tarifaHora":1500.00,
+                "tipo":"FUTSAL",
+                "rutaImagen":null
+              }
+              """))
         .andExpect(status().isCreated())
         .andExpect(header().string("Location", "/api/espacios/" + id))
         .andExpect(jsonPath("$.id").value(id.toString()))
@@ -64,8 +72,14 @@ class EspacioControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
-                    {"nombre":" ","descripcion":null}
-                    """))
+              {
+                "nombre":" ",
+                "descripcion":null,
+                "capacidad":20,
+                "tarifaHora":1500.00,
+                "tipo":"FUTSAL"
+              }
+              """))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.codigo").value("datos_invalidos"))
         .andExpect(jsonPath("$.campos.nombre").value("El nombre es obligatorio."));
@@ -74,8 +88,7 @@ class EspacioControllerTest {
   @Test
   void listaLosEspacios() throws Exception {
     UUID id = UUID.randomUUID();
-    when(espacioService.listar())
-        .thenReturn(List.of(new EspacioDetalle(id, "Cancha cubierta", null)));
+    when(espacioService.listar(null)).thenReturn(List.of(detalle(id, "Cancha cubierta", null)));
 
     mockMvc
         .perform(get("/api/espacios"))
@@ -87,7 +100,7 @@ class EspacioControllerTest {
   @Test
   void respondeNotFoundCuandoElEspacioNoExiste() throws Exception {
     UUID id = UUID.randomUUID();
-    when(espacioService.obtener(id)).thenThrow(new EspacioNoEncontradoException(id));
+    when(espacioService.consultarDetalle(id)).thenThrow(new EspacioNoEncontradoException(id));
 
     mockMvc
         .perform(get("/api/espacios/{id}", id))
@@ -99,8 +112,9 @@ class EspacioControllerTest {
   @Test
   void actualizaUnEspacio() throws Exception {
     UUID id = UUID.randomUUID();
-    when(espacioService.actualizar(id, "Cancha norte", "Piso renovado"))
-        .thenReturn(new EspacioDetalle(id, "Cancha norte", "Piso renovado"));
+    when(espacioService.actualizar(
+            id, "Cancha norte", "Piso renovado", 20, new BigDecimal("1800.00"), "FUTSAL", null))
+        .thenReturn(detalle(id, "Cancha norte", "Piso renovado"));
 
     mockMvc
         .perform(
@@ -108,8 +122,15 @@ class EspacioControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
-                    {"nombre":"Cancha norte","descripcion":"Piso renovado"}
-                    """))
+              {
+                "nombre":"Cancha norte",
+                "descripcion":"Piso renovado",
+                "capacidad":20,
+                "tarifaHora":1800.00,
+                "tipo":"FUTSAL",
+                "rutaImagen":null
+              }
+              """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(id.toString()))
         .andExpect(jsonPath("$.nombre").value("Cancha norte"))
@@ -123,5 +144,20 @@ class EspacioControllerTest {
     mockMvc.perform(delete("/api/espacios/{id}", id)).andExpect(status().isNoContent());
 
     verify(espacioService).eliminar(id);
+  }
+
+  private EspacioDetalle detalle(UUID id, String nombre, String descripcion) {
+    OffsetDateTime ahora = OffsetDateTime.parse("2026-09-17T12:00:00Z");
+    return new EspacioDetalle(
+        id,
+        nombre,
+        descripcion,
+        20,
+        new BigDecimal("1500.00"),
+        "FUTSAL",
+        null,
+        List.of(),
+        ahora,
+        ahora);
   }
 }

@@ -1,6 +1,6 @@
 # CRUD vertical de referencia
 
-La funcionalidad `espacio` muestra una operación desde HTTP hasta PostgreSQL. Este recorte sólo cubre nombre y descripción. No define estados, imágenes, tarifas ni horarios. Esas decisiones quedan para las tareas del incremento 3.
+La funcionalidad `espacio` muestra una operación desde HTTP hasta PostgreSQL. Cubre nombre, descripción, capacidad, tarifa por hora, tipo, una ruta de imagen y disponibilidad semanal. El estado operativo, varias imágenes y las tarifas por categoría siguen pendientes.
 
 ## Recorrido
 
@@ -66,11 +66,15 @@ Content-Type: application/json
 
 {
   "nombre": "Cancha cubierta",
-  "descripcion": "Piso de parquet"
+  "descripcion": "Piso de parquet",
+  "capacidad": 20,
+  "tarifaHora": 1500.00,
+  "tipo": "FUTSAL",
+  "rutaImagen": null
 }
 ```
 
-`nombre` es obligatorio y admite hasta 100 caracteres. `descripcion` es opcional y admite hasta 500.
+`nombre` y `tipo` son obligatorios y admiten hasta 100 caracteres. `descripcion` es opcional y admite hasta 500. `capacidad` debe ser mayor que cero, `tarifaHora` no puede ser negativa y `rutaImagen` admite hasta 255 caracteres.
 
 ## Cómo repetir el patrón
 
@@ -99,13 +103,13 @@ En otra terminal:
 ```powershell
 $espacio = Invoke-RestMethod -Method Post -Uri http://localhost:4500/api/espacios `
   -ContentType "application/json" `
-  -Body '{"nombre":"Cancha cubierta","descripcion":"Piso de parquet"}'
+  -Body '{"nombre":"Cancha cubierta","descripcion":"Piso de parquet","capacidad":20,"tarifaHora":1500.00,"tipo":"FUTSAL","rutaImagen":null}'
 
 Invoke-RestMethod http://localhost:4500/api/espacios
 
 Invoke-RestMethod -Method Put -Uri "http://localhost:4500/api/espacios/$($espacio.id)" `
   -ContentType "application/json" `
-  -Body '{"nombre":"Cancha norte","descripcion":"Piso renovado"}'
+  -Body '{"nombre":"Cancha norte","descripcion":"Piso renovado","capacidad":20,"tarifaHora":1800.00,"tipo":"FUTSAL","rutaImagen":null}'
 
 Invoke-RestMethod -Method Delete -Uri "http://localhost:4500/api/espacios/$($espacio.id)"
 ```
