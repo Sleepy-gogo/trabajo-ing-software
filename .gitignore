@@ -36,3 +36,7 @@ Thumbs.db
 
 # ngrok
 .ngrok2/
+
+# Python demo helpers
+__pycache__/
+*.pyc

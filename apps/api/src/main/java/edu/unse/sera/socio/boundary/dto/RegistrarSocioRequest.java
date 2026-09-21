@@ -10,4 +10,4 @@ public record RegistrarSocioRequest(
     @NotNull(message = "La relación con la UNSE es obligatoria.") RelacionUnse relacionUnse,
     @Size(max = 50, message = "El identificador UNSE no puede superar los 50 caracteres.")
         String identificadorUnse,
-    @NotNull(message = "El nivel de membresía es obligatorio.") UUID nivelMembresiaId) {}
+    UUID nivelMembresiaId) {}

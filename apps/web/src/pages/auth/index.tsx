@@ -1,3 +1,5 @@
+import { SelectField, Field } from "@/components/shared/real-data"
+import { relationships, label, type Relationship } from "@/lib/members-api"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ApiError, usersApi } from "@/lib/users-api"
 import { homeFor } from "@/hooks/use-session"
@@ -326,6 +328,8 @@ export function RegisterPage() {
     setError("")
     if (registration.isPending) return
     registration.mutate({
+      relacionUnse: String(data.get("relacionUnse")) as Relationship,
+      identificadorUnse: String(data.get("identificadorUnse") || ""),
       nombreCompleto: `${String(data.get("first-name")).trim()} ${String(data.get("last-name")).trim()}`,
       email: String(data.get("email")).trim(),
       dni: Number(data.get("dni")),
@@ -417,6 +421,28 @@ export function RegisterPage() {
                 className="h-11"
               />
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectField
+                label="Relación con la UNSE"
+                name="relacionUnse"
+                defaultValue="EXTERNO"
+              >
+                {relationships.map((r) => (
+                  <option key={r} value={r}>
+                    {label(r)}
+                  </option>
+                ))}
+              </SelectField>
+              <Field
+                label="Legajo o identificador, si corresponde"
+                name="identificadorUnse"
+                maxLength={50}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tu relación con la UNSE quedará pendiente de verificación por
+              administración.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <PasswordInput id="password" autoComplete="new-password" />
               <PasswordInput

@@ -12,6 +12,8 @@ export type Availability = {
 }
 
 export type SpaceResponse = {
+  estado: "HABILITADO" | "MANTENIMIENTO" | "INUTILIZABLE" | "EN_USO"
+  tarifas: Partial<Record<import("./members-api").Relationship, number>>
   id: string
   nombre: string
   descripcion: string | null
@@ -43,13 +45,7 @@ export type UpdateAvailabilityInput = Pick<
   "horaDesde" | "horaHasta"
 >
 
-/**
- * HTTP contract ready for the spaces screens.
- *
- * TODO(web-wiring): replace the fixtures in the admin and member space pages
- * with TanStack Query hooks that call these functions. Keep the mapping from
- * SpaceResponse to the richer visual Space type next to those hooks.
- */
+/** Contrato HTTP de espacios y horarios. */
 export const spacesApi = {
   list: (search = "", signal?: AbortSignal) => {
     const query = search.trim()
@@ -93,4 +89,44 @@ export const spacesApi = {
       `/espacios/${encodeURIComponent(spaceId)}/disponibilidades/${encodeURIComponent(availabilityId)}`,
       { method: "DELETE" }
     ),
+}
+
+export type CalendarResponse = {
+  fecha: string
+  estado: SpaceResponse["estado"]
+  tarifaHora: number
+  relacionAplicada: string
+  franjas: { desde: string; hasta: string }[]
+}
+export type Block = {
+  id: string
+  fecha: string
+  desde: string
+  hasta: string
+  motivo: string
+}
+export const calendarApi = {
+  get: (id: string, date: string, signal?: AbortSignal) =>
+    api<CalendarResponse>(`/espacios/${id}/calendario?fecha=${date}`, {
+      signal,
+    }),
+  blocks: (id: string, date: string, signal?: AbortSignal) =>
+    api<Block[]>(`/espacios/${id}/bloqueos?fecha=${date}`, { signal }),
+  block: (id: string, data: Omit<Block, "id">) =>
+    api<Block>(`/espacios/${id}/bloqueos`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  unblock: (id: string, blockId: string) =>
+    api<void>(`/espacios/${id}/bloqueos/${blockId}`, { method: "DELETE" }),
+  state: (id: string, estado: SpaceResponse["estado"]) =>
+    api<SpaceResponse>(`/espacios/${id}/estado`, {
+      method: "PUT",
+      body: JSON.stringify({ estado }),
+    }),
+  rates: (id: string, tarifas: SpaceResponse["tarifas"]) =>
+    api<SpaceResponse>(`/espacios/${id}/tarifas`, {
+      method: "PUT",
+      body: JSON.stringify({ tarifas }),
+    }),
 }

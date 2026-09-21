@@ -18,7 +18,8 @@ public record GuardarNivelMembresiaRequest(
     @NotBlank(message = "La descripción es obligatoria.")
         @Size(max = 500, message = "La descripción no puede superar los 500 caracteres.")
         String descripcion,
-    @NotEmpty(message = "Debe indicar al menos un beneficio.") List<@NotBlank String> beneficios,
+    @NotEmpty(message = "Debe indicar al menos un beneficio.")
+        List<@NotBlank @Size(max = 255) String> beneficios,
     boolean disponibleParaContratar,
     @NotEmpty(message = "Debe indicar al menos un precio por relación.")
         Map<
@@ -26,8 +27,8 @@ public record GuardarNivelMembresiaRequest(
                 @NotNull(message = "El importe mensual es obligatorio.")
                 @DecimalMin(value = "0.01", message = "El importe mensual debe ser mayor que cero.")
                 @Digits(
-                    integer = 10,
+                    integer = 8,
                     fraction = 2,
-                    message = "El importe mensual admite hasta 10 enteros y 2 decimales.")
+                    message = "El importe mensual admite hasta 8 enteros y 2 decimales.")
                 BigDecimal>
             preciosPorRelacion) {}

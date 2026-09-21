@@ -1,16 +1,13 @@
-export { MemberCardPage, MemberHomePage } from "./account"
-export {
-  MemberPaymentsPage,
-  MembershipStatusPage,
-  MembershipsPage,
-} from "./membership-payments"
+export { MemberCardPage, MemberHomePage } from "../overview-live"
+export { MemberPaymentsPage } from "./membership-payments"
 export {
   BookingPage,
   MemberReservationDetailPage,
   MemberReservationsPage,
-  MemberServiceDetailPage,
-  MemberServicesPage,
 } from "./reservations"
 export { MemberSurveysPage } from "./surveys"
 
 export { MemberProfilePage } from "./profile"
+
+export { MembershipStatusPage, MembershipsPage } from "./memberships"
+export { MemberServiceDetailPage, MemberServicesPage } from "../spaces-live"

@@ -35,12 +35,21 @@ public class AuthController {
   @PostMapping("/registro")
   public ResponseEntity<UsuarioResponse> registrar(@Valid @RequestBody RegistroRequest request) {
     var usuario =
-        usuarios.registrarUsuario(
-            request.nombreCompleto(),
-            request.email(),
-            request.dni(),
-            RolUsuario.USUARIO,
-            request.password());
+        request.relacionUnse() == null
+            ? usuarios.registrarUsuario(
+                request.nombreCompleto(),
+                request.email(),
+                request.dni(),
+                RolUsuario.USUARIO,
+                request.password())
+            : usuarios.registrarUsuario(
+                request.nombreCompleto(),
+                request.email(),
+                request.dni(),
+                RolUsuario.USUARIO,
+                request.password(),
+                request.relacionUnse(),
+                request.identificadorUnse());
     return ResponseEntity.created(URI.create("/api/usuarios/" + usuario.id()))
         .body(UsuarioResponse.from(usuario));
   }

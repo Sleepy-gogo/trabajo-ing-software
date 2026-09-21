@@ -16,4 +16,32 @@ public record EspacioResponse(
     String rutaImagen,
     List<DisponibilidadResponse> disponibilidades,
     OffsetDateTime creadoEn,
-    OffsetDateTime actualizadoEn) {}
+    OffsetDateTime actualizadoEn,
+    edu.unse.sera.espacio.entity.EstadoEspacio estado,
+    java.util.Map<edu.unse.sera.socio.entity.RelacionUnse, BigDecimal> tarifas) {
+  public EspacioResponse(
+      UUID id,
+      String nombre,
+      String descripcion,
+      int capacidad,
+      BigDecimal tarifaHora,
+      String tipo,
+      String rutaImagen,
+      List<DisponibilidadResponse> disponibilidades,
+      OffsetDateTime creadoEn,
+      OffsetDateTime actualizadoEn) {
+    this(
+        id,
+        nombre,
+        descripcion,
+        capacidad,
+        tarifaHora,
+        tipo,
+        rutaImagen,
+        disponibilidades,
+        creadoEn,
+        actualizadoEn,
+        edu.unse.sera.espacio.entity.EstadoEspacio.HABILITADO,
+        java.util.Map.of());
+  }
+}

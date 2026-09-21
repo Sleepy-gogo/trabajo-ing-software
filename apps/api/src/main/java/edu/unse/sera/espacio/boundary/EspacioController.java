@@ -75,6 +75,23 @@ public class EspacioController {
     return ResponseEntity.noContent().build();
   }
 
+  public record EstadoRequest(
+      @jakarta.validation.constraints.NotNull edu.unse.sera.espacio.entity.EstadoEspacio estado) {}
+
+  public record TarifasRequest(
+      @jakarta.validation.constraints.NotNull
+          java.util.Map<edu.unse.sera.socio.entity.RelacionUnse, java.math.BigDecimal> tarifas) {}
+
+  @PutMapping("/{id}/estado")
+  public EspacioResponse estado(@PathVariable UUID id, @Valid @RequestBody EstadoRequest r) {
+    return toResponse(espacioService.cambiarEstado(id, r.estado()));
+  }
+
+  @PutMapping("/{id}/tarifas")
+  public EspacioResponse tarifas(@PathVariable UUID id, @Valid @RequestBody TarifasRequest r) {
+    return toResponse(espacioService.tarifas(id, r.tarifas()));
+  }
+
   private EspacioResponse toResponse(EspacioDetalle espacio) {
     return new EspacioResponse(
         espacio.id(),
@@ -95,6 +112,8 @@ public class EspacioController {
                         disponibilidad.horaHasta()))
             .toList(),
         espacio.createdAt(),
-        espacio.updatedAt());
+        espacio.updatedAt(),
+        espacio.estado(),
+        espacio.tarifas());
   }
 }

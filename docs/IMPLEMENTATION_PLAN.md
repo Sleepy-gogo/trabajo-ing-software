@@ -1,3 +1,5 @@
+> Documento histórico de preparación. El estado actual está en [ENTREGA_INCREMENTO_3.md](ENTREGA_INCREMENTO_3.md).
+
 # Estado actual y próximos pasos
 
 Este documento resume el código que existe al 17 de septiembre de 2026 y propone un orden de trabajo. No reemplaza `SPEC.md`. Su objetivo es que cada integrante pueda tomar un método o un test sin tener que rediseñar el flujo completo.

@@ -27,7 +27,10 @@ public class DisponibilidadService {
 
   public DisponibilidadDetalle registrarDisponibilidad(
       UUID espacioId, DiaSemana diaSemana, LocalTime horaDesde, LocalTime horaHasta) {
-    Espacio espacio = buscarEspacio(espacioId);
+    Espacio espacio =
+        espacioRepository
+            .bloquearPorId(espacioId)
+            .orElseThrow(() -> new EspacioNoEncontradoException(espacioId));
     if (disponibilidadRepository
         .existsByEspacioIdAndDiaSemanaAndHoraDesdeLessThanAndHoraHastaGreaterThan(
             espacioId, diaSemana, horaHasta, horaDesde)) {
@@ -52,6 +55,9 @@ public class DisponibilidadService {
 
   public DisponibilidadDetalle actualizar(
       UUID espacioId, UUID disponibilidadId, LocalTime horaDesde, LocalTime horaHasta) {
+    espacioRepository
+        .bloquearPorId(espacioId)
+        .orElseThrow(() -> new EspacioNoEncontradoException(espacioId));
     Disponibilidad disponibilidad = buscar(espacioId, disponibilidadId);
     if (disponibilidadRepository
         .existsByEspacioIdAndDiaSemanaAndHoraDesdeLessThanAndHoraHastaGreaterThanAndIdNot(

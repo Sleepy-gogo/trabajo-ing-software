@@ -65,7 +65,7 @@ class EspacioServiceTest {
   }
 
   @Test
-  void eliminaUnEspacioExistente() {
+  void inhabilitaUnEspacioSinBorrarSuHistorial() {
     UUID id = UUID.randomUUID();
     Espacio espacio =
         new Espacio("Cancha cubierta", null, 20, new BigDecimal("1500.00"), "futsal", null);
@@ -73,7 +73,8 @@ class EspacioServiceTest {
 
     espacioService.eliminar(id);
 
-    verify(espacioRepository).delete(espacio);
+    assertThat(espacio.getEstado())
+        .isEqualTo(edu.unse.sera.espacio.entity.EstadoEspacio.INUTILIZABLE);
   }
 
   @Test

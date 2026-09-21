@@ -27,9 +27,24 @@ public class SecurityConfig {
                     .hasRole("ADMIN")
                     .requestMatchers("/api/auth/logout")
                     .authenticated()
+                    .requestMatchers("/api/espacios/*/bloqueos", "/api/espacios/*/bloqueos/**")
+                    .hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/espacios", "/api/espacios/**")
                     .authenticated()
                     .requestMatchers("/api/espacios", "/api/espacios/**")
+                    .hasRole("ADMIN")
+                    .requestMatchers("/api/socios/me", "/api/membresias", "/api/membresias/**")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/socios")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.GET, "/api/niveles-membresia", "/api/niveles-membresia/**")
+                    .authenticated()
+                    .requestMatchers(
+                        "/api/socios",
+                        "/api/socios/**",
+                        "/api/niveles-membresia",
+                        "/api/niveles-membresia/**")
                     .hasRole("ADMIN")
                     .anyRequest()
                     .denyAll())

@@ -164,3 +164,7 @@ La definición previa del incremento de [socios y membresías](docs/SOCIOS_MEMBR
 pendientes entre las tareas de Linear TRA-25 a TRA-29.
 
 Los agentes de código también deben leer `AGENTS.md`.
+
+## Adelanto hasta el incremento 3
+
+Ver [guía de entrega y demo](docs/ENTREGA_INCREMENTO_3.md) y [modelo definitivo de socios y membresías](docs/SOCIOS_MEMBRESIAS.md).

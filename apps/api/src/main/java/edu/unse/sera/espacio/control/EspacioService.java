@@ -56,7 +56,20 @@ public class EspacioService {
   }
 
   public void eliminar(UUID id) {
-    espacioRepository.delete(buscar(id));
+    buscar(id).cambiarEstado(edu.unse.sera.espacio.entity.EstadoEspacio.INUTILIZABLE);
+  }
+
+  public EspacioDetalle cambiarEstado(UUID id, edu.unse.sera.espacio.entity.EstadoEspacio estado) {
+    Espacio espacio = buscar(id);
+    espacio.cambiarEstado(estado);
+    return toResponse(espacio);
+  }
+
+  public EspacioDetalle tarifas(
+      UUID id, java.util.Map<edu.unse.sera.socio.entity.RelacionUnse, BigDecimal> tarifas) {
+    Espacio espacio = buscar(id);
+    espacio.configurarTarifas(tarifas);
+    return toResponse(espacio);
   }
 
   private Espacio buscar(UUID id) {
@@ -96,6 +109,8 @@ public class EspacioService {
                         disponibilidad.getHoraHasta()))
             .toList(),
         espacio.getCreatedAt(),
-        espacio.getUpdatedAt());
+        espacio.getUpdatedAt(),
+        espacio.getEstado(),
+        espacio.getTarifas());
   }
 }

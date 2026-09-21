@@ -1,7 +1,6 @@
 package edu.unse.sera.membresia.entity;
 
 import edu.unse.sera.socio.entity.Socio;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -30,7 +29,7 @@ public class Membresia {
   @Column(nullable = false, updatable = false)
   private UUID id;
 
-  @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = false)
+  @OneToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "socio_id", nullable = false)
   private Socio socio;
 
@@ -48,7 +47,7 @@ public class Membresia {
   @Column(name = "fecha_baja")
   private LocalDate fechaBaja;
 
-  @Column(name = "proximo_vencimiento", nullable = false)
+  @Column(name = "proximo_vencimiento")
   private LocalDate proximoVencimiento;
 
   @CreationTimestamp
@@ -59,10 +58,15 @@ public class Membresia {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
+  @jakarta.persistence.Version private long version;
+
+  protected Membresia() {}
+
   public Membresia(Socio socio, NivelMembresia nivelMembresia) {
     this.socio = socio;
     this.nivelMembresia = nivelMembresia;
     this.estado = EstadoMembresia.PENDIENTE_PAGO;
+    this.fechaAlta = LocalDate.now();
   }
 
   public UUID getId() {
@@ -101,62 +105,57 @@ public class Membresia {
     return updatedAt;
   }
 
-  // Pendiente -> Activa
-  public void activar(LocalDate proximoVencimiento) {
-    if (this.estado != EstadoMembresia.PENDIENTE_PAGO && this.estado != EstadoMembresia.CANCELADA) {
-      // throw error de Estado.
+  public void cambiarEstado(EstadoMembresia nuevo) {
+    if (nuevo == null) {
+      throw new IllegalArgumentException("El estado es obligatorio.");
+    }
+    if (estado == nuevo) {
       return;
     }
-    this.fechaAlta = LocalDate.now();
-    this.estado = EstadoMembresia.ACTIVA;
-    setProximoVencimiento(proximoVencimiento);
+    boolean permitido =
+        switch (estado) {
+          case PENDIENTE_PAGO -> nuevo == EstadoMembresia.CANCELADA;
+          case ACTIVA ->
+              nuevo == EstadoMembresia.VENCIDA
+                  || nuevo == EstadoMembresia.SUSPENDIDA
+                  || nuevo == EstadoMembresia.CANCELADA;
+          case VENCIDA -> nuevo == EstadoMembresia.SUSPENDIDA || nuevo == EstadoMembresia.CANCELADA;
+          case SUSPENDIDA -> nuevo == EstadoMembresia.CANCELADA;
+          case CANCELADA -> false;
+        };
+    if (!permitido) {
+      throw new IllegalStateException(
+          "La transición de "
+              + estado
+              + " a "
+              + nuevo
+              + " no está permitida. La activación requiere un pago aprobado.");
+    }
+    estado = nuevo;
+    if (nuevo == EstadoMembresia.CANCELADA) {
+      fechaBaja = LocalDate.now();
+    }
   }
 
-  // Activa -> Cancelada
   public void cancelar() {
-    if (this.estado != EstadoMembresia.ACTIVA) {
-      // throw error de Estado.
-      return;
+    cambiarEstado(EstadoMembresia.CANCELADA);
+  }
+
+  public void renovarSolicitud(NivelMembresia nivel) {
+    if (estado != EstadoMembresia.CANCELADA) {
+      throw new IllegalStateException("Ya existe una membresía vigente o pendiente.");
     }
-    this.fechaBaja = LocalDate.now();
-    this.estado = EstadoMembresia.CANCELADA;
+    setNivelMembresia(nivel);
+    estado = EstadoMembresia.PENDIENTE_PAGO;
+    fechaAlta = LocalDate.now();
+    fechaBaja = null;
+    proximoVencimiento = null;
   }
 
-  // Activa -> Vencida
-  public void marcarVencimiento() {
-    if (this.estado != EstadoMembresia.ACTIVA) {
-      // throw error de Estado.
-      return;
+  public void setNivelMembresia(NivelMembresia nivel) {
+    if (nivel == null || !nivel.isDisponibleParaContratar()) {
+      throw new IllegalArgumentException("El nivel no está disponible para contratar.");
     }
-    this.estado = EstadoMembresia.VENCIDA;
-  }
-
-  // Vencida -> suspendida
-  public void suspender() {
-    if (this.estado != EstadoMembresia.VENCIDA) {
-      // throw error de Estado.
-      return;
-    }
-    this.fechaBaja = LocalDate.now();
-    this.estado = EstadoMembresia.SUSPENDIDA;
-  }
-
-  // Suspendida -> Activa
-  public void reactivar(LocalDate proximoVencimiento) {
-    if (this.estado != EstadoMembresia.SUSPENDIDA) {
-      // throw error de Estado.
-      return;
-    }
-    this.fechaAlta = LocalDate.now();
-    this.estado = EstadoMembresia.ACTIVA;
-    setProximoVencimiento(proximoVencimiento);
-  }
-
-  public void setProximoVencimiento(LocalDate proximoVencimiento) {
-    this.proximoVencimiento = proximoVencimiento;
-  }
-
-  public void setNivelMembresia(NivelMembresia nivelMembresia) {
-    this.nivelMembresia = nivelMembresia;
+    this.nivelMembresia = nivel;
   }
 }

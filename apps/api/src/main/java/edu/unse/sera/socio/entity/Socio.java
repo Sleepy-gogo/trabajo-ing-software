@@ -2,7 +2,6 @@ package edu.unse.sera.socio.entity;
 
 import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.usuario.entity.Usuario;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -30,7 +29,7 @@ public class Socio {
   @Column(nullable = false, updatable = false)
   private UUID id;
 
-  @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = false)
+  @OneToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "usuario_id", referencedColumnName = "id")
   private Usuario usuario;
 
@@ -55,6 +54,8 @@ public class Socio {
   @UpdateTimestamp
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
+
+  @jakarta.persistence.Version private long version;
 
   protected Socio() {}
 

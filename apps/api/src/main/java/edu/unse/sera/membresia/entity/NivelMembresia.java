@@ -65,6 +65,8 @@ public class NivelMembresia {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
+  protected NivelMembresia() {}
+
   public NivelMembresia(String nombre, String descripcion) {
     this.nombre = nombre;
     this.descripcion = descripcion;
@@ -102,6 +104,43 @@ public class NivelMembresia {
     return id;
   }
 
-  // TODO(TRA-25): Agregar validaciones. Los importes deben ser positivos y
-  // un nivel histórico puede quedar inactivo sin borrar membresías anteriores.
+  public void actualizar(
+      String nombre,
+      String descripcion,
+      Map<RelacionUnse, BigDecimal> precios,
+      List<String> beneficios,
+      boolean disponible) {
+    if (nombre == null || nombre.isBlank() || nombre.trim().length() > 100) {
+      throw new IllegalArgumentException(
+          "El nombre del nivel es obligatorio y admite 100 caracteres.");
+    }
+    if (precios == null
+        || precios.isEmpty()
+        || precios.entrySet().stream()
+            .anyMatch(
+                e ->
+                    e.getKey() == null
+                        || e.getValue() == null
+                        || e.getValue().signum() <= 0
+                        || e.getValue().scale() > 2
+                        || e.getValue().compareTo(new BigDecimal("99999999.99")) > 0)) {
+      throw new IllegalArgumentException(
+          "Indicá precios positivos de hasta 8 enteros y 2 decimales.");
+    }
+    if (beneficios == null
+        || beneficios.isEmpty()
+        || beneficios.stream().anyMatch(v -> v == null || v.isBlank() || v.length() > 255)) {
+      throw new IllegalArgumentException("Indicá al menos un beneficio de hasta 255 caracteres.");
+    }
+    this.nombre = nombre.trim();
+    this.descripcion = descripcion;
+    this.preciosPorRelacion.clear();
+    this.preciosPorRelacion.putAll(precios);
+    this.beneficios = new java.util.ArrayList<>(beneficios);
+    this.disponibleParaContratar = disponible;
+  }
+
+  public void deshabilitar() {
+    disponibleParaContratar = false;
+  }
 }

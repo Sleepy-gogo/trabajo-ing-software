@@ -38,7 +38,7 @@ class DisponibilidadServiceTest {
   void registraLaDisponibilidadEnElEspacio() {
     UUID espacioId = UUID.randomUUID();
     Espacio espacio = espacio();
-    when(espacioRepository.findById(espacioId)).thenReturn(Optional.of(espacio));
+    when(espacioRepository.bloquearPorId(espacioId)).thenReturn(Optional.of(espacio));
     when(disponibilidadRepository.save(any(Disponibilidad.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -54,7 +54,7 @@ class DisponibilidadServiceTest {
   @Test
   void rechazaRangosSuperpuestosParaElMismoDia() {
     UUID espacioId = UUID.randomUUID();
-    when(espacioRepository.findById(espacioId)).thenReturn(Optional.of(espacio()));
+    when(espacioRepository.bloquearPorId(espacioId)).thenReturn(Optional.of(espacio()));
     when(disponibilidadRepository
             .existsByEspacioIdAndDiaSemanaAndHoraDesdeLessThanAndHoraHastaGreaterThan(
                 espacioId, DiaSemana.LUNES, LocalTime.of(12, 0), LocalTime.of(8, 0)))
@@ -76,6 +76,7 @@ class DisponibilidadServiceTest {
     when(disponibilidadRepository.findByIdAndEspacioId(disponibilidadId, espacioId))
         .thenReturn(Optional.of(disponibilidad));
 
+    when(espacioRepository.bloquearPorId(espacioId)).thenReturn(Optional.of(espacio()));
     DisponibilidadDetalle detalle =
         service.actualizar(espacioId, disponibilidadId, LocalTime.of(9, 0), LocalTime.of(13, 0));
 

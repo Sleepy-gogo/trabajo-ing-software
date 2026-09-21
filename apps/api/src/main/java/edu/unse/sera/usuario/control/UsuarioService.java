@@ -23,22 +23,52 @@ public class UsuarioService {
 
   private final UsuarioRepository usuarioRepository;
   private final PasswordEncoder passwordEncoder;
+  private final edu.unse.sera.socio.persistence.SocioRepository socios;
 
-  public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
+  public UsuarioService(
+      UsuarioRepository usuarioRepository,
+      PasswordEncoder passwordEncoder,
+      edu.unse.sera.socio.persistence.SocioRepository socios) {
     this.usuarioRepository = usuarioRepository;
     this.passwordEncoder = passwordEncoder;
+    this.socios = socios;
   }
 
   /** Registra una cuenta activa y guarda solo el hash de su contraseña. */
   public UsuarioDetalle registrarUsuario(
       String nombreCompleto, String email, int dni, RolUsuario rol, String rawPassword) {
+    return registrarUsuario(
+        nombreCompleto,
+        email,
+        dni,
+        rol,
+        rawPassword,
+        edu.unse.sera.socio.entity.RelacionUnse.EXTERNO,
+        null);
+  }
+
+  public UsuarioDetalle registrarUsuario(
+      String nombreCompleto,
+      String email,
+      int dni,
+      RolUsuario rol,
+      String rawPassword,
+      edu.unse.sera.socio.entity.RelacionUnse relacion,
+      String identificador) {
     validarPassword(rawPassword);
     validarUnicidad(email, dni, null);
     String hashedPassword = passwordEncoder.encode(rawPassword);
     Usuario usuario =
         new Usuario(nombreCompleto, email, dni, EstadoUsuario.ACTIVO, rol, hashedPassword);
     try {
-      return toResponse(usuarioRepository.saveAndFlush(usuario));
+      usuarioRepository.saveAndFlush(usuario);
+      socios.save(
+          new edu.unse.sera.socio.entity.Socio(
+              usuario,
+              relacion == null ? edu.unse.sera.socio.entity.RelacionUnse.EXTERNO : relacion,
+              edu.unse.sera.socio.entity.EstadoVerificacionUnse.PENDIENTE,
+              identificador));
+      return toResponse(usuario);
     } catch (DataIntegrityViolationException exception) {
       throw traducirConflictoDeUnicidad(exception);
     }

@@ -56,6 +56,54 @@ public class Espacio {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
+  @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+  @Column(nullable = false)
+  private EstadoEspacio estado = EstadoEspacio.HABILITADO;
+
+  @jakarta.persistence.ElementCollection
+  @jakarta.persistence.CollectionTable(
+      name = "espacio_tarifas",
+      joinColumns = @jakarta.persistence.JoinColumn(name = "espacio_id"))
+  @jakarta.persistence.MapKeyEnumerated(jakarta.persistence.EnumType.STRING)
+  @jakarta.persistence.MapKeyColumn(name = "relacion")
+  @Column(name = "importe", precision = 12, scale = 2)
+  private java.util.Map<edu.unse.sera.socio.entity.RelacionUnse, BigDecimal> tarifas =
+      new java.util.EnumMap<>(edu.unse.sera.socio.entity.RelacionUnse.class);
+
+  public EstadoEspacio getEstado() {
+    return estado;
+  }
+
+  public void cambiarEstado(EstadoEspacio estado) {
+    this.estado = Objects.requireNonNull(estado);
+  }
+
+  public java.util.Map<edu.unse.sera.socio.entity.RelacionUnse, BigDecimal> getTarifas() {
+    return java.util.Map.copyOf(tarifas);
+  }
+
+  public void configurarTarifas(
+      java.util.Map<edu.unse.sera.socio.entity.RelacionUnse, BigDecimal> nuevas) {
+    if (nuevas == null
+        || nuevas.entrySet().stream()
+            .anyMatch(
+                e ->
+                    e.getKey() == null
+                        || e.getValue() == null
+                        || e.getValue().signum() < 0
+                        || e.getValue().scale() > 2
+                        || e.getValue().compareTo(new BigDecimal("9999999999.99")) > 0)) {
+      throw new IllegalArgumentException(
+          "Las tarifas deben ser importes no negativos de hasta 10 enteros y 2 decimales.");
+    }
+    tarifas.clear();
+    tarifas.putAll(nuevas);
+  }
+
+  public BigDecimal tarifaPara(edu.unse.sera.socio.entity.RelacionUnse relacion) {
+    return tarifas.getOrDefault(relacion, tarifaHora);
+  }
+
   protected Espacio() {}
 
   public Espacio(
