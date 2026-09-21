@@ -45,7 +45,7 @@ La baja es lógica. El registro permanece disponible para auditoría y relacione
 | Método | Ruta | Permiso y resultado |
 | --- | --- | --- |
 | `GET` | `/api/auth/csrf` | Público. Entrega `token` y `headerName`; conserva la cookie de sesión |
-| `POST` | `/api/auth/registro` | Público con CSRF. Recibe `nombreCompleto`, `email`, `dni`, `password`; crea siempre `USUARIO` y responde `201` |
+| `POST` | `/api/auth/registro` | Público con CSRF. Recibe `nombreCompleto`, `email`, `dni`, `password` y opcionalmente `relacionUnse` e `identificadorUnse`; crea siempre `USUARIO` y responde `201` |
 | `POST` | `/api/auth/login` | Público con CSRF. Recibe `email`, `password`; devuelve el usuario y una nueva sesión |
 | `POST` | `/api/auth/logout` | Sesión y CSRF. Invalida la sesión, responde `204` |
 | `GET` | `/api/usuarios/me` | Sesión. Devuelve el usuario actual |
@@ -82,3 +82,7 @@ Las pantallas de los incrementos siguientes conservan sus mocks y muestran un av
 La auditoría mínima de este incremento consiste en `created_at` y `updated_at`; la baja es lógica y el QR permanece estable. No se agrega un historial por responsable ni permisos granulares.
 
 Ejecutar `mvnw verify` en `apps/api` y `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm build` en `apps/web`. Los tests de seguridad cubren CSRF, permisos, sesión, baja y protección del perfil. Los tests de interacción del frontend usan Vitest, Testing Library y jsdom; no sustituyen una revisión visual en navegador.
+
+## Socio automático
+
+Crear una cuenta también crea su socio en la misma transacción. La verificación UNSE comienza pendiente, sin membresía. Si no se declara relación, se usa EXTERNO hasta que administración la actualice. Ver [modelo definitivo](SOCIOS_MEMBRESIAS.md).
