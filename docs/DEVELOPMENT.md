@@ -81,11 +81,31 @@ Para una base externa, activar un perfil distinto con `SPRING_PROFILES_ACTIVE` y
 
 Nunca commitear secretos.
 
-Frontend puede tener:
+Para configurar el proxy del frontend, copiar `apps/web/.env.example` a
+`apps/web/.env.local` y ajustar:
 
-```text
-apps/web/.env.example
+```dotenv
+API_PROXY_TARGET=https://mi-api.ngrok-free.app
+WEB_ALLOWED_HOSTS=mi-frontend.ngrok-free.app
 ```
+
+`API_PROXY_TARGET` es el origen del backend, sin `/api` al final; por defecto usa
+`http://localhost:4500`. Se aplica a `pnpm dev` y `pnpm preview`. El proxy conserva
+el prefijo `/api`, adapta el header `Host` al destino y omite la pantalla de aviso
+de ngrok. Reiniciar Vite después de cambiar estas variables.
+
+`WEB_ALLOWED_HOSTS` permite los dominios con los que se accede al frontend a través
+de ngrok o de otro reverse proxy. Usar nombres de host sin protocolo ni puerto,
+separados por comas. Para exponer la demo completa localmente, ejecutar
+`ngrok http 5173` y agregar el dominio asignado a esta variable; el destino de la
+API puede seguir siendo local.
+
+El navegador siempre consume `/api` en el mismo origen que la interfaz, conservando
+las cookies de sesión y CSRF. Al desplegar `dist` en un servidor estático, configurar
+el reverse proxy de ese servidor para reenviar `/api/*` al backend, conservando la
+ruta. La configuración del proxy de Vite no se incluye en `dist`; `pnpm preview`
+sirve para verificar el build localmente. El puerto de Spring se puede cambiar con
+la variable de entorno `SERVER_PORT`.
 
 Backend puede usar variables de entorno desde Spring:
 
