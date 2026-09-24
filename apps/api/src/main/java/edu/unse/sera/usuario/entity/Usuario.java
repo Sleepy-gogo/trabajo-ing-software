@@ -138,6 +138,10 @@ public class Usuario {
     return qrUsuario;
   }
 
+  public Socio getSocio() {
+    return socio;
+  }
+
   private String normalizarNombre(String valor) {
     if (valor == null || valor.isBlank()) {
       throw new IllegalArgumentException("El nombre completo es obligatorio.");
