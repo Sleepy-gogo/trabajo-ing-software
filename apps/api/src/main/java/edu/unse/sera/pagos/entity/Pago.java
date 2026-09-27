@@ -50,6 +50,9 @@ public class Pago {
 
   @Column() String comprobante;
 
+  @Column(name = "mercado_pago_payment_id", unique = true, length = 100)
+  private String mercadoPagoPaymentId;
+
   @ManyToOne(fetch = FetchType.LAZY, optional = true)
   @JoinColumn(name = "membresia_id", referencedColumnName = "id")
   Membresia membresia;
@@ -152,6 +155,20 @@ public class Pago {
 
   public String getComprobante() {
     return comprobante;
+  }
+
+  public String getMercadoPagoPaymentId() {
+    return mercadoPagoPaymentId;
+  }
+
+  public void vincularMercadoPagoPaymentId(String paymentId) {
+    if (medioPago != MedioPago.MERCADO_PAGO || paymentId == null || paymentId.isBlank()) {
+      throw new IllegalArgumentException("El identificador de Mercado Pago es inválido.");
+    }
+    if (mercadoPagoPaymentId != null && !mercadoPagoPaymentId.equals(paymentId)) {
+      throw new IllegalStateException("El pago ya está vinculado a otro cobro.");
+    }
+    mercadoPagoPaymentId = paymentId;
   }
 
   public void setComprobante(String comprobante) {

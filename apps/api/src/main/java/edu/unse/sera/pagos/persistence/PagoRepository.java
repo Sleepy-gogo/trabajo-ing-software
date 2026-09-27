@@ -4,6 +4,7 @@ import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.Pago;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -14,6 +15,8 @@ public interface PagoRepository extends JpaRepository<Pago, UUID> {
   List<Pago> findAllByMembresiaId(UUID membresiaId);
 
   boolean existsByMembresiaIdAndEstado(UUID membresiaId, EstadoPago estado);
+
+  Optional<Pago> findByMercadoPagoPaymentId(String paymentId);
 
   List<Pago> findAllByEstadoAndCreatedAtBefore(EstadoPago estado, OffsetDateTime fecha);
 }

@@ -82,6 +82,13 @@ public class PagoService {
   }
 
   public PagoDetalle confirmarPago(UUID id, String comprobante) {
+    return confirmarPago(id, comprobante, OffsetDateTime.now());
+  }
+
+  public PagoDetalle confirmarPago(UUID id, String comprobante, OffsetDateTime fechaPago) {
+    if (fechaPago == null) {
+      throw new IllegalArgumentException("La fecha de aprobación es obligatoria.");
+    }
     Pago pago = buscar(id);
     if (pago.getEstado() == EstadoPago.APROBADO) {
       return toResponse(pago);
@@ -94,7 +101,7 @@ public class PagoService {
         }
         pago.aprobar(comprobante);
         if (membresia != null) {
-          membresiaService.activarMembresia(pago, OffsetDateTime.now());
+          membresiaService.activarMembresia(pago, fechaPago);
         }
         break;
       case ConceptoPago.RESERVA:

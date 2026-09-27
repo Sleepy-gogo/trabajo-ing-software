@@ -12,6 +12,7 @@ import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.membresia.entity.NivelMembresia;
 import edu.unse.sera.membresia.persistence.MembresiaRepository;
 import edu.unse.sera.membresia.persistence.NivelMembresiaRepository;
+import edu.unse.sera.pagos.control.SuscripcionMercadoPagoService;
 import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
@@ -46,12 +47,15 @@ class SocioServiceTest {
   @Mock private CambioSocioRepository cambios;
   @Mock private UsuarioService usuarios;
   @Mock private PagoRepository pagos;
+  @Mock private SuscripcionMercadoPagoService suscripcionesMercadoPago;
 
   private SocioService service;
 
   @BeforeEach
   void setUp() {
-    service = new SocioService(socios, membresias, niveles, cambios, usuarios, pagos);
+    service =
+        new SocioService(
+            socios, membresias, niveles, cambios, usuarios, pagos, suscripcionesMercadoPago);
   }
 
   @Test

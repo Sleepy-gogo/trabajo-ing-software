@@ -7,6 +7,7 @@ import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.membresia.entity.NivelMembresia;
 import edu.unse.sera.membresia.persistence.MembresiaRepository;
 import edu.unse.sera.membresia.persistence.NivelMembresiaRepository;
+import edu.unse.sera.pagos.control.SuscripcionMercadoPagoService;
 import edu.unse.sera.pagos.entity.ConceptoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
@@ -36,6 +37,7 @@ public class SocioService {
   private final CambioSocioRepository cambios;
   private final UsuarioService usuarios;
   private final PagoRepository pagos;
+  private final SuscripcionMercadoPagoService suscripcionesMercadoPago;
 
   public SocioService(
       SocioRepository socios,
@@ -43,13 +45,15 @@ public class SocioService {
       NivelMembresiaRepository niveles,
       CambioSocioRepository cambios,
       UsuarioService usuarios,
-      PagoRepository pagos) {
+      PagoRepository pagos,
+      SuscripcionMercadoPagoService suscripcionesMercadoPago) {
     this.socios = socios;
     this.membresias = membresias;
     this.niveles = niveles;
     this.cambios = cambios;
     this.usuarios = usuarios;
     this.pagos = pagos;
+    this.suscripcionesMercadoPago = suscripcionesMercadoPago;
   }
 
   private Socio buscar(UUID id) {
@@ -136,7 +140,13 @@ public class SocioService {
           throw new IllegalStateException(
               "Cancelá la solicitud pendiente antes de elegir otro nivel.");
         }
+        suscripcionesMercadoPago.validarSinSuscripcionVigente(s.getMembresia().getId());
         s.getMembresia().setNivelMembresia(nivel(nivelId, relacion));
+      }
+      if (estado == EstadoMembresia.CANCELADA
+          && s.getMembresia().getEstado() != EstadoMembresia.CANCELADA) {
+        suscripcionesMercadoPago.cancelarVigente(s.getMembresia().getId());
+        pagos.findAllByMembresiaId(s.getMembresia().getId()).forEach(Pago::cancelarPendiente);
       }
       s.getMembresia().cambiarEstado(estado);
     } else if (nivelId != null || estado != null) {
@@ -183,6 +193,7 @@ public class SocioService {
   public MembresiaDetalle cancelar(UUID id, String motivo, UUID actor) {
     Membresia m = membresias.findById(id).orElseThrow(MembresiaNoEncontradaException::new);
     autorizar(m.getSocio(), actor);
+    suscripcionesMercadoPago.cancelarVigente(m.getId());
     m.cancelar();
     pagos.findAllByMembresiaId(m.getId()).forEach(Pago::cancelarPendiente);
     auditar(m.getSocio(), actor, motivo, "Cancelación de membresía");

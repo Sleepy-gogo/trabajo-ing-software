@@ -19,6 +19,8 @@ public class SecurityConfig {
             auth ->
                 auth.requestMatchers("/api/health", "/api/auth/csrf", "/error")
                     .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/webhooks/mercadopago")
+                    .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/registro")
                     .permitAll()
                     .requestMatchers("/api/usuarios/me")
@@ -35,6 +37,8 @@ public class SecurityConfig {
                     .hasRole("ADMIN")
                     .requestMatchers("/api/socios/me", "/api/membresias", "/api/membresias/**")
                     .authenticated()
+                    .requestMatchers("/api/pagos/membresias/**")
+                    .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/socios")
                     .authenticated()
                     .requestMatchers(
@@ -49,6 +53,7 @@ public class SecurityConfig {
                     .anyRequest()
                     .denyAll())
         .addFilterBefore(new SesionFilter(usuarios), AnonymousAuthenticationFilter.class)
+        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/webhooks/mercadopago"))
         .exceptionHandling(
             errors ->
                 errors
