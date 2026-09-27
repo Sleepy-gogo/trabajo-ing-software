@@ -97,6 +97,10 @@ public class Membresia {
     return proximoVencimiento;
   }
 
+  public void setProximoVencimiento(LocalDate nuevaFecha) {
+    this.proximoVencimiento = nuevaFecha;
+  }
+
   public OffsetDateTime getCreatedAt() {
     return createdAt;
   }
@@ -106,24 +110,17 @@ public class Membresia {
   }
 
   public void cambiarEstado(EstadoMembresia nuevo) {
+    transicionarA(nuevo, false, false);
+  }
+
+  private void transicionarA(EstadoMembresia nuevo, boolean pagoAprobado, boolean nuevaSolicitud) {
     if (nuevo == null) {
       throw new IllegalArgumentException("El estado es obligatorio.");
     }
     if (estado == nuevo) {
       return;
     }
-    boolean permitido =
-        switch (estado) {
-          case PENDIENTE_PAGO -> nuevo == EstadoMembresia.CANCELADA;
-          case ACTIVA ->
-              nuevo == EstadoMembresia.VENCIDA
-                  || nuevo == EstadoMembresia.SUSPENDIDA
-                  || nuevo == EstadoMembresia.CANCELADA;
-          case VENCIDA -> nuevo == EstadoMembresia.SUSPENDIDA || nuevo == EstadoMembresia.CANCELADA;
-          case SUSPENDIDA -> nuevo == EstadoMembresia.CANCELADA;
-          case CANCELADA -> false;
-        };
-    if (!permitido) {
+    if (!puedeTransicionarA(nuevo, pagoAprobado, nuevaSolicitud)) {
       throw new IllegalStateException(
           "La transición de "
               + estado
@@ -137,8 +134,56 @@ public class Membresia {
     }
   }
 
+  private boolean puedeTransicionarA(
+      EstadoMembresia nuevo, boolean pagoAprobado, boolean nuevaSolicitud) {
+    boolean permitido =
+        switch (estado) {
+          case PENDIENTE_PAGO ->
+              nuevo == EstadoMembresia.CANCELADA
+                  || (nuevo == EstadoMembresia.ACTIVA && pagoAprobado);
+          case ACTIVA ->
+              nuevo == EstadoMembresia.VENCIDA
+                  || nuevo == EstadoMembresia.SUSPENDIDA
+                  || nuevo == EstadoMembresia.CANCELADA;
+          case VENCIDA ->
+              nuevo == EstadoMembresia.SUSPENDIDA
+                  || nuevo == EstadoMembresia.CANCELADA
+                  || (nuevo == EstadoMembresia.ACTIVA && pagoAprobado);
+          case SUSPENDIDA ->
+              nuevo == EstadoMembresia.CANCELADA
+                  || (nuevo == EstadoMembresia.ACTIVA && pagoAprobado);
+          case CANCELADA -> nuevo == EstadoMembresia.PENDIENTE_PAGO && nuevaSolicitud;
+        };
+    return permitido;
+  }
+
+  public boolean admitePago() {
+    return estado == EstadoMembresia.ACTIVA
+        || puedeTransicionarA(EstadoMembresia.ACTIVA, true, false);
+  }
+
+  public boolean tieneBeneficios() {
+    return estado == EstadoMembresia.ACTIVA;
+  }
+
+  public void actualizarPorVencimiento(LocalDate hoy) {
+    if (proximoVencimiento == null || !proximoVencimiento.isBefore(hoy)) {
+      return;
+    }
+    if (estado == EstadoMembresia.ACTIVA) {
+      cambiarEstado(EstadoMembresia.VENCIDA);
+    }
+    if (estado == EstadoMembresia.VENCIDA && !proximoVencimiento.plusMonths(2).isAfter(hoy)) {
+      cambiarEstado(EstadoMembresia.SUSPENDIDA);
+    }
+  }
+
   public void cancelar() {
     cambiarEstado(EstadoMembresia.CANCELADA);
+  }
+
+  public void activarPorPago() {
+    transicionarA(EstadoMembresia.ACTIVA, true, false);
   }
 
   public void renovarSolicitud(NivelMembresia nivel) {
@@ -146,7 +191,7 @@ public class Membresia {
       throw new IllegalStateException("Ya existe una membresía vigente o pendiente.");
     }
     setNivelMembresia(nivel);
-    estado = EstadoMembresia.PENDIENTE_PAGO;
+    transicionarA(EstadoMembresia.PENDIENTE_PAGO, false, true);
     fechaAlta = LocalDate.now();
     fechaBaja = null;
     proximoVencimiento = null;

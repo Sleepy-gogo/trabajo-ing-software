@@ -7,6 +7,10 @@ import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.membresia.entity.NivelMembresia;
 import edu.unse.sera.membresia.persistence.MembresiaRepository;
 import edu.unse.sera.membresia.persistence.NivelMembresiaRepository;
+import edu.unse.sera.pagos.entity.ConceptoPago;
+import edu.unse.sera.pagos.entity.MedioPago;
+import edu.unse.sera.pagos.entity.Pago;
+import edu.unse.sera.pagos.persistence.PagoRepository;
 import edu.unse.sera.shared.exception.OperacionNoPermitidaException;
 import edu.unse.sera.socio.entity.CambioSocio;
 import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
@@ -25,23 +29,27 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class SocioService {
+
   private final SocioRepository socios;
   private final MembresiaRepository membresias;
   private final NivelMembresiaRepository niveles;
   private final CambioSocioRepository cambios;
   private final UsuarioService usuarios;
+  private final PagoRepository pagos;
 
   public SocioService(
       SocioRepository socios,
       MembresiaRepository membresias,
       NivelMembresiaRepository niveles,
       CambioSocioRepository cambios,
-      UsuarioService usuarios) {
+      UsuarioService usuarios,
+      PagoRepository pagos) {
     this.socios = socios;
     this.membresias = membresias;
     this.niveles = niveles;
     this.cambios = cambios;
     this.usuarios = usuarios;
+    this.pagos = pagos;
   }
 
   private Socio buscar(UUID id) {
@@ -66,6 +74,10 @@ public class SocioService {
 
   public SocioDetalle registrar(
       UUID usuarioId, RelacionUnse relacion, String identificador, UUID nivelId, UUID actor) {
+    if (nivelId != null) {
+      throw new IllegalArgumentException(
+          "Solicitá la membresía desde la contratación de un nivel.");
+    }
     if (!usuarioId.equals(actor) && usuarios.buscar(actor).getRol() != RolUsuario.ADMIN) {
       throw new OperacionNoPermitidaException();
     }
@@ -76,12 +88,9 @@ public class SocioService {
     if (socios.findByUsuarioId(usuarioId).isPresent()) {
       throw new IllegalStateException("La persona ya está registrada como socio.");
     }
-    NivelMembresia n = nivelId == null ? null : nivel(nivelId, relacion);
     Socio s = new Socio(usuario, relacion, EstadoVerificacionUnse.PENDIENTE, identificador);
     socios.save(s);
-    Membresia m = membresias.save(new Membresia(s, n));
-    s.setMembresia(m);
-    auditar(s, actor, "Alta de socio", "Contratación pendiente de pago: " + n.getNombre());
+    auditar(s, actor, "Alta de socio", "Sin membresía");
     return detalle(s);
   }
 
@@ -123,6 +132,10 @@ public class SocioService {
         throw new IllegalArgumentException("Indicá nivel y estado de la membresía existente.");
       }
       if (!s.getMembresia().getNivelMembresia().getId().equals(nivelId)) {
+        if (s.getMembresia().getEstado() == EstadoMembresia.PENDIENTE_PAGO) {
+          throw new IllegalStateException(
+              "Cancelá la solicitud pendiente antes de elegir otro nivel.");
+        }
         s.getMembresia().setNivelMembresia(nivel(nivelId, relacion));
       }
       s.getMembresia().cambiarEstado(estado);
@@ -133,15 +146,29 @@ public class SocioService {
     return detalle(s);
   }
 
-  public MembresiaDetalle contratar(UUID socioId, UUID nivelId, UUID actor) {
+  public MembresiaDetalle contratar(UUID socioId, UUID nivelId, MedioPago medioPago, UUID actor) {
     Socio s = buscar(socioId);
     autorizar(s, actor);
-    NivelMembresia n = nivel(nivelId, s.getRelacionUnse());
+    if (medioPago == null) {
+      throw new IllegalArgumentException("Elegí un medio de pago.");
+    }
+    RelacionUnse tarifaRelacion =
+        s.getEstadoVerificacionUnse() == EstadoVerificacionUnse.VERIFICADA
+            ? s.getRelacionUnse()
+            : RelacionUnse.EXTERNO;
+    NivelMembresia n = nivel(nivelId, tarifaRelacion);
     if (s.getMembresia() == null) {
       s.setMembresia(membresias.save(new Membresia(s, n)));
     } else {
       s.getMembresia().renovarSolicitud(n);
     }
+    pagos.save(
+        new Pago(
+            ConceptoPago.CUOTA_MENSUAL,
+            s.getUsuario(),
+            medioPago,
+            n.getPreciosPorRelacion().get(tarifaRelacion),
+            s.getMembresia()));
     auditar(s, actor, "Nueva contratación", resumen(s));
     return membresiaDetalle(s.getMembresia());
   }
@@ -157,6 +184,7 @@ public class SocioService {
     Membresia m = membresias.findById(id).orElseThrow(MembresiaNoEncontradaException::new);
     autorizar(m.getSocio(), actor);
     m.cancelar();
+    pagos.findAllByMembresiaId(m.getId()).forEach(Pago::cancelarPendiente);
     auditar(m.getSocio(), actor, motivo, "Cancelación de membresía");
     return membresiaDetalle(m);
   }

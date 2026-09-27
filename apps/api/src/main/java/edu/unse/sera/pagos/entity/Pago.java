@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -47,21 +48,11 @@ public class Pago {
   @Column(nullable = false)
   BigDecimal monto;
 
-  @Column()
-  String comprobante;
-
+  @Column() String comprobante;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = true)
   @JoinColumn(name = "membresia_id", referencedColumnName = "id")
   Membresia membresia;
-
-  // TODO: DESCOMENTAR CUANDO SE CREE LA CLASE RESERVA
-//  @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.LAZY, optional = true)
-//  @JoinColumn(name = "reserva_id", referencedColumnName = "id")
-//  Reserva reserva;
-
-  /*@Column()
-  *LocalDateTime fechaEmisionComprobante;*/
 
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
@@ -71,19 +62,28 @@ public class Pago {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
+  @Version private long version;
 
-  public Pago(ConceptoPago concepto, Usuario usuario, EstadoPago estado, MedioPago medioPago,
-    BigDecimal monto, Membresia membresia) {
+  protected Pago() {}
+
+  public Pago(
+      ConceptoPago concepto,
+      Usuario usuario,
+      MedioPago medioPago,
+      BigDecimal monto,
+      Membresia membresia) {
     this.concepto = concepto;
     this.usuario = usuario;
-    this.estado = estado;
+    this.estado = EstadoPago.PENDIENTE;
     this.medioPago = medioPago;
     this.monto = monto;
     this.membresia = membresia;
   }
 
   public void aprobar(String comprobante) {
-    if (estado == EstadoPago.APROBADO) return;
+    if (estado == EstadoPago.APROBADO) {
+      return;
+    }
 
     if (estado != EstadoPago.PENDIENTE) {
       throw new EstadoPagoInvalidoException("El estado del pago es inválido para aprobar");
@@ -93,9 +93,17 @@ public class Pago {
   }
 
   public void rechazar() {
-    if (estado != EstadoPago.PENDIENTE) return;
+    if (estado != EstadoPago.PENDIENTE) {
+      return;
+    }
 
     setEstado(EstadoPago.RECHAZADO);
+  }
+
+  public void cancelarPendiente() {
+    if (estado == EstadoPago.PENDIENTE) {
+      estado = EstadoPago.CANCELADO;
+    }
   }
 
   public UUID getId() {
@@ -165,5 +173,4 @@ public class Pago {
   public OffsetDateTime getUpdatedAt() {
     return updatedAt;
   }
-
 }

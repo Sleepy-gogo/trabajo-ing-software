@@ -2,6 +2,8 @@ package edu.unse.sera.membresia.persistence;
 
 import edu.unse.sera.membresia.entity.EstadoMembresia;
 import edu.unse.sera.membresia.entity.Membresia;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,4 +37,11 @@ public interface MembresiaRepository extends JpaRepository<Membresia, UUID> {
 
   // 5. verificarMembresiaActivaOPendiente(idSocio)
   boolean existsBySocioIdAndEstadoIn(UUID socioId, List<EstadoMembresia> estados);
+
+  List<Membresia> findAllByEstadoAndProximoVencimientoBefore(
+      EstadoMembresia estado, LocalDate fecha);
+
+  List<Membresia> findAllByEstado(EstadoMembresia estado);
+
+  List<Membresia> findAllByEstadoAndUpdatedAtBefore(EstadoMembresia estado, OffsetDateTime fecha);
 }

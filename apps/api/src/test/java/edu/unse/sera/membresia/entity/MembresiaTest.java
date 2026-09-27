@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import edu.unse.sera.socio.entity.RelacionUnse;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -70,5 +71,38 @@ class MembresiaTest {
     }
     assertThat(n.getPreciosPorRelacion())
         .containsEntry(RelacionUnse.EXTERNO, new BigDecimal("1000.00"));
+  }
+
+  @Test
+  void venceDespuesDelDiaDePagoYPierdeBeneficios() {
+    var m = new Membresia(null, nivel());
+    m.activarPorPago();
+    LocalDate vencimiento = LocalDate.of(2026, 1, 31);
+    m.setProximoVencimiento(vencimiento);
+
+    m.actualizarPorVencimiento(vencimiento);
+    assertThat(m.getEstado()).isEqualTo(EstadoMembresia.ACTIVA);
+    assertThat(m.tieneBeneficios()).isTrue();
+
+    m.actualizarPorVencimiento(vencimiento.plusDays(1));
+    assertThat(m.getEstado()).isEqualTo(EstadoMembresia.VENCIDA);
+    assertThat(m.tieneBeneficios()).isFalse();
+
+    m.actualizarPorVencimiento(vencimiento.plusMonths(2).minusDays(1));
+    assertThat(m.getEstado()).isEqualTo(EstadoMembresia.VENCIDA);
+    m.actualizarPorVencimiento(vencimiento.plusMonths(2));
+    assertThat(m.getEstado()).isEqualTo(EstadoMembresia.SUSPENDIDA);
+  }
+
+  @Test
+  void recuperaEstadoCorrectoSiElProcesoDiarioNoCorrio() {
+    var m = new Membresia(null, nivel());
+    m.activarPorPago();
+    m.setProximoVencimiento(LocalDate.of(2026, 1, 31));
+
+    m.actualizarPorVencimiento(LocalDate.of(2026, 4, 1));
+
+    assertThat(m.getEstado()).isEqualTo(EstadoMembresia.SUSPENDIDA);
+    assertThat(m.tieneBeneficios()).isFalse();
   }
 }

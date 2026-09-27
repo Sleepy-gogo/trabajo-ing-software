@@ -7,5 +7,11 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record PagoDetalle(
-  UUID id, ConceptoPago conceptoPago, UUID idUsuario, EstadoPago estado, MedioPago medioPago, BigDecimal monto,
-  String comprobante, UUID idMembresia) {}
+    UUID id,
+    ConceptoPago conceptoPago,
+    UUID idUsuario,
+    EstadoPago estado,
+    MedioPago medioPago,
+    BigDecimal monto,
+    String comprobante,
+    UUID idMembresia) {}
