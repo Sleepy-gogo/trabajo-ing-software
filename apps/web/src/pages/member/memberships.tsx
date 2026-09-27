@@ -30,7 +30,6 @@ export function MembershipsPage() {
   const [relation, setRelation] = useState<Relationship>("EXTERNO")
   const [identifier, setIdentifier] = useState("")
   const [confirm, setConfirm] = useState<Level | null>(null)
-  const [notice, setNotice] = useState("")
   const member = useQuery({
     queryKey: ["my-member"],
     queryFn: ({ signal }) => membersApi.me(signal),
@@ -48,13 +47,16 @@ export function MembershipsPage() {
           relacionUnse: relation,
           identificadorUnse: identifier || null,
         }))
-      return membersApi.contract(socio.id, level.id, "MERCADO_PAGO")
-    },
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["my-member"] })
-      setNotice(
-        "La contratación quedó pendiente de pago. Podés consultar su estado en Mi membresía."
+      const membership = await membersApi.contract(
+        socio.id,
+        level.id,
+        "MERCADO_PAGO"
       )
+      return membersApi.startSubscription(membership.id)
+    },
+    onSuccess: async (subscription) => {
+      await client.invalidateQueries({ queryKey: ["my-member"] })
+      window.location.assign(subscription.checkoutUrl)
     },
   })
   const currentRelation: Relationship =
@@ -77,10 +79,16 @@ export function MembershipsPage() {
           </Link>
         }
       />
-      <p role="status" className="mb-4 text-sm text-emerald-800">
-        {notice}
-      </p>
       <ErrorMessage error={contract.error} />
+      {contract.error && (
+        <p className="mb-4 text-sm">
+          Si la solicitud quedó registrada, continuá desde{" "}
+          <Link to="/app/memberships/status" className="underline">
+            Mi membresía
+          </Link>
+          .
+        </p>
+      )}
       <QueryState
         pending={levels.isPending || member.isPending}
         error={levels.error ?? member.error}
@@ -175,8 +183,8 @@ export function MembershipsPage() {
           if (!v) setConfirm(null)
         }}
         title={`Solicitar ${confirm?.nombre ?? "membresía"}`}
-        description="Se registrará la membresía y un pago pendiente. Los beneficios se habilitan cuando se confirme el pago."
-        confirmLabel="Confirmar solicitud"
+        description="Se registrará la membresía y te llevaremos a Mercado Pago para autorizar el cobro mensual. Los beneficios se habilitan cuando se confirme el primer pago."
+        confirmLabel="Continuar a Mercado Pago"
         onConfirm={() => {
           if (confirm) contract.mutate(confirm)
         }}
@@ -199,6 +207,12 @@ export function MembershipStatusPage() {
       await client.invalidateQueries({ queryKey: ["my-member"] })
       setNotice("La membresía fue cancelada.")
       setReason("")
+    },
+  })
+  const subscribe = useMutation({
+    mutationFn: () => membersApi.startSubscription(member.data!.membresiaId!),
+    onSuccess: (subscription) => {
+      window.location.assign(subscription.checkoutUrl)
     },
   })
   return (
@@ -251,10 +265,20 @@ export function MembershipStatusPage() {
               </div>
             </dl>
             {member.data.estadoMembresia === "PENDIENTE_PAGO" && (
-              <Note>
-                Tu solicitud y el pago pendiente están registrados. Los
-                beneficios se habilitan cuando se apruebe el pago.
-              </Note>
+              <div className="mt-5 space-y-3">
+                <Note>
+                  Tu solicitud está pendiente. Autorizá el cobro mensual en
+                  Mercado Pago; los beneficios se habilitan cuando se confirme
+                  el primer pago.
+                </Note>
+                <Button
+                  disabled={subscribe.isPending}
+                  onClick={() => subscribe.mutate()}
+                >
+                  Continuar a Mercado Pago
+                </Button>
+                <ErrorMessage error={subscribe.error} />
+              </div>
             )}
             {member.data.estadoMembresia !== "CANCELADA" ? (
               <form
