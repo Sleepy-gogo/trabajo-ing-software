@@ -24,23 +24,24 @@ está en el futuro; si ya venció, el nuevo plazo se cuenta desde la fecha de ap
 
 La solicitud de un nivel crea en una sola transacción la membresía `PENDIENTE_PAGO` y un pago
 `PENDIENTE` con el precio de la relación UNSE verificada, o `EXTERNO` mientras no esté verificada.
-El alta del usuario y el alta del socio
-no crean ninguno de esos registros. El resultado del pago se procesa en backend: una aprobación
-activa la membresía y un rechazo deja la solicitud pendiente. La integración que recibe y verifica
-notificaciones de Mercado Pago todavía no está implementada; la interfaz no aprueba pagos.
+El alta del usuario y el alta del socio no crean ninguno de esos registros. El resultado del pago
+se procesa en backend: una aprobación activa la membresía. Para `MERCADO_PAGO`, SERA crea una
+suscripción mensual sin plan asociado y comprueba cada factura y cobro notificado por webhook antes
+de aprobar la cuota. La interfaz no aprueba pagos. Ver [MERCADO_PAGO.md](MERCADO_PAGO.md).
 
 ## Estados y auditoría
 
-Un proceso diario a las 00:05 UTC revisa los vencimientos. La membresía conserva `ACTIVA` durante
-todo el día de `proximoVencimiento`; al día siguiente pasa a `VENCIDA` y pierde los beneficios. Si
-no se regulariza, pasa a `SUSPENDIDA` al cumplirse dos meses calendario desde ese vencimiento. Un
-pago aprobado reactiva la membresía y fija un nuevo vencimiento según la regla anterior.
+Un proceso diario a las 00:05 de Buenos Aires revisa los vencimientos. La membresía conserva
+`ACTIVA` durante todo el día de `proximoVencimiento`; al día siguiente pasa a `VENCIDA` y pierde
+los beneficios. Si no se regulariza, pasa a `SUSPENDIDA` al cumplirse dos meses calendario desde
+ese vencimiento. Un pago aprobado reactiva la membresía y fija un nuevo vencimiento según la regla
+anterior.
 
 Un proceso horario cancela los pagos que siguen `PENDIENTE` después de una hora desde su creación.
 También cancela las solicitudes `PENDIENTE_PAGO` de más de una hora que ya no tienen un pago
 pendiente. Una nueva tentativa de pago aún pendiente mantiene viva la solicitud hasta que esa
-tentativa cumpla su propia hora. Ambos procesos usan UTC. La integración con notificaciones de
-Mercado Pago sigue pendiente; el proceso horario actúa sobre el estado persistido del pago.
+tentativa cumpla su propia hora. El proceso horario usa UTC para comparar instantes. Un pago inicial
+vinculado a una suscripción de Mercado Pago no vence mientras esa suscripción siga vigente.
 
 - Una solicitud pendiente puede cancelarse inmediatamente.
 - Una membresía activa puede pasar a vencida, suspendida o cancelada.

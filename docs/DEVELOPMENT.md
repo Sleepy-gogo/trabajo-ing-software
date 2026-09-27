@@ -253,6 +253,8 @@ Frontend debe mantener el formatter/linter definido por el proyecto.
 
 ## Demo con ngrok
 
+La configuración completa de Suscripciones y los tópicos del panel está en [MERCADO_PAGO.md](MERCADO_PAGO.md).
+
 Para exponer Spring Boot:
 
 ```bash
