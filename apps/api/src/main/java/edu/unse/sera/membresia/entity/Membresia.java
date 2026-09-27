@@ -182,6 +182,11 @@ public class Membresia {
     cambiarEstado(EstadoMembresia.CANCELADA);
   }
 
+  public void cancelar(LocalDate fecha) {
+    cancelar();
+    fechaBaja = fecha;
+  }
+
   public void activarPorPago() {
     transicionarA(EstadoMembresia.ACTIVA, true, false);
   }
