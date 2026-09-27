@@ -3,12 +3,15 @@ package edu.unse.sera.usuario.boundary;
 import edu.unse.sera.shared.boundary.dto.ApiError;
 import edu.unse.sera.usuario.control.UsuarioDuplicadoException;
 import java.util.Map;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class UsuarioExceptionHandler {
 
   @ExceptionHandler(edu.unse.sera.usuario.control.PasswordInvalidaException.class)

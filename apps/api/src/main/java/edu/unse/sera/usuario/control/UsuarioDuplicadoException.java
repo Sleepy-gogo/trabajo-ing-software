@@ -1,6 +1,6 @@
 package edu.unse.sera.usuario.control;
 
-public class UsuarioDuplicadoException extends RuntimeException {
+public class UsuarioDuplicadoException extends IllegalStateException {
 
   private final String campo;
 

@@ -4,12 +4,15 @@ import edu.unse.sera.disponibilidad.control.DisponibilidadSuperpuestaException;
 import edu.unse.sera.espacio.control.EspacioDuplicadoException;
 import edu.unse.sera.shared.boundary.dto.ApiError;
 import java.util.Map;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class EspacioExceptionHandler {
 
   @ExceptionHandler(EspacioDuplicadoException.class)
