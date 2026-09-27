@@ -49,7 +49,8 @@ export function MembersPage() {
     enabled: open && !selected,
   })
   const contract = useMutation({
-    mutationFn: (nivelId: string) => membersApi.contract(selected!.id, nivelId),
+    mutationFn: (nivelId: string) =>
+      membersApi.contract(selected!.id, nivelId, "EFECTIVO"),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["members"] })
       setOpen(false)
@@ -66,11 +67,12 @@ export function MembersPage() {
       const base = {
         relacionUnse: String(data.get("relacionUnse")) as Relationship,
         identificadorUnse: String(data.get("identificadorUnse") || "") || null,
-        nivelMembresiaId: String(data.get("nivelMembresiaId") || "") || null,
       }
       return selected
         ? membersApi.update(selected.id, {
             ...base,
+            nivelMembresiaId:
+              String(data.get("nivelMembresiaId") || "") || null,
             estadoVerificacionUnse: String(
               data.get("estadoVerificacionUnse")
             ) as MemberUpdate["estadoVerificacionUnse"],
@@ -278,7 +280,7 @@ export function MembersPage() {
               ))}
             </SelectField>
           )}
-          {(!selected || selected.membresiaId) && (
+          {selected?.membresiaId && (
             <>
               <ErrorMessage error={levels.error} />
               <SelectField
@@ -366,7 +368,11 @@ export function MembersPage() {
                   ?.filter(
                     (n) =>
                       n.disponibleParaContratar &&
-                      n.preciosPorRelacion[selected.relacionUnse] != null
+                      n.preciosPorRelacion[
+                        selected.estadoVerificacionUnse === "VERIFICADA"
+                          ? selected.relacionUnse
+                          : "EXTERNO"
+                      ] != null
                   )
                   .map((n) => (
                     <option key={n.id} value={n.id}>

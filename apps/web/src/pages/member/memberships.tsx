@@ -40,15 +40,16 @@ export function MembershipsPage() {
     queryFn: ({ signal }) => membersApi.levels(false, signal),
   })
   const contract = useMutation({
-    mutationFn: (level: Level) =>
-      member.data
-        ? membersApi.contract(member.data.id, level.id)
-        : membersApi.register({
-            usuarioId: session.data!.id,
-            relacionUnse: relation,
-            identificadorUnse: identifier || null,
-            nivelMembresiaId: level.id,
-          }),
+    mutationFn: async (level: Level) => {
+      const socio =
+        member.data ??
+        (await membersApi.register({
+          usuarioId: session.data!.id,
+          relacionUnse: relation,
+          identificadorUnse: identifier || null,
+        }))
+      return membersApi.contract(socio.id, level.id, "MERCADO_PAGO")
+    },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["my-member"] })
       setNotice(
@@ -56,7 +57,10 @@ export function MembershipsPage() {
       )
     },
   })
-  const currentRelation = member.data?.relacionUnse ?? relation
+  const currentRelation: Relationship =
+    member.data?.estadoVerificacionUnse === "VERIFICADA"
+      ? member.data.relacionUnse
+      : "EXTERNO"
   const incompatible =
     !!member.data?.membresiaId && member.data.estadoMembresia !== "CANCELADA"
   return (
@@ -133,8 +137,9 @@ export function MembershipsPage() {
                 </span>
               </p>
               <p className="mb-4 text-xs text-muted-foreground">
-                Precio para {label(currentRelation).toLowerCase()}. Sujeto a
-                verificación administrativa.
+                Precio para {label(currentRelation).toLowerCase()}.
+                {currentRelation === "EXTERNO" &&
+                  " Se aplica esta tarifa hasta verificar la relación con la UNSE."}
               </p>
               <ul className="mb-6 list-inside list-disc space-y-2 text-sm">
                 {n.beneficios.map((b) => (
@@ -170,7 +175,7 @@ export function MembershipsPage() {
           if (!v) setConfirm(null)
         }}
         title={`Solicitar ${confirm?.nombre ?? "membresía"}`}
-        description="La solicitud quedará pendiente de pago. Todavía no habilita beneficios ni genera un cobro."
+        description="Se registrará la membresía y un pago pendiente. Los beneficios se habilitan cuando se confirme el pago."
         confirmLabel="Confirmar solicitud"
         onConfirm={() => {
           if (confirm) contract.mutate(confirm)
@@ -247,9 +252,8 @@ export function MembershipStatusPage() {
             </dl>
             {member.data.estadoMembresia === "PENDIENTE_PAGO" && (
               <Note>
-                Tu solicitud está registrada. Los beneficios se habilitan cuando
-                se aprueba el pago. El cobro estará disponible en la próxima
-                entrega.
+                Tu solicitud y el pago pendiente están registrados. Los
+                beneficios se habilitan cuando se apruebe el pago.
               </Note>
             )}
             {member.data.estadoMembresia !== "CANCELADA" ? (

@@ -37,7 +37,7 @@ export type Member = {
 }
 export type MemberInput = Pick<
   Member,
-  "usuarioId" | "relacionUnse" | "identificadorUnse" | "nivelMembresiaId"
+  "usuarioId" | "relacionUnse" | "identificadorUnse"
 >
 export type MemberUpdate = Pick<
   Member,
@@ -80,10 +80,14 @@ export const membersApi = {
     api<Member>("/socios", { method: "POST", body: JSON.stringify(data) }),
   update: (id: string, data: MemberUpdate) =>
     api<Member>(`/socios/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  contract: (socioId: string, nivelMembresiaId: string) =>
+  contract: (
+    socioId: string,
+    nivelMembresiaId: string,
+    medioPago: "MERCADO_PAGO" | "EFECTIVO"
+  ) =>
     api("/membresias", {
       method: "POST",
-      body: JSON.stringify({ socioId, nivelMembresiaId }),
+      body: JSON.stringify({ socioId, nivelMembresiaId, medioPago }),
     }),
   cancel: (id: string, motivo: string) =>
     api(`/membresias/${id}/cancelacion`, {

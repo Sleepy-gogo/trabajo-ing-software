@@ -15,17 +15,43 @@ Hay una sola membresía por socio. No se modelan múltiples membresías ni rango
 reutiliza la misma fila. La restricción única sobre `socio_id` refuerza esta regla.
 
 `fechaAlta` y `fechaBaja` registran la solicitud y su cancelación. `proximoVencimiento` pertenece al
-seguimiento de la próxima cuota y puede ser nulo. No define un intervalo de vigencia.
+seguimiento de la próxima cuota y puede ser nulo mientras el pago está pendiente. No define un
+intervalo de vigencia.
 
-La activación requiere la aprobación de un pago mediante el webhook del incremento 4. No existe
-una ruta administrativa que permita saltarse ese requisito. Tampoco se simula un pago aprobado.
+Al aprobar el primer pago, el próximo vencimiento se fija un mes después de la fecha de
+aprobación. Cada pago posterior aprobado extiende un mes desde el vencimiento actual cuando aún
+está en el futuro; si ya venció, el nuevo plazo se cuenta desde la fecha de aprobación.
+
+La solicitud de un nivel crea en una sola transacción la membresía `PENDIENTE_PAGO` y un pago
+`PENDIENTE` con el precio de la relación UNSE verificada, o `EXTERNO` mientras no esté verificada.
+El alta del usuario y el alta del socio
+no crean ninguno de esos registros. El resultado del pago se procesa en backend: una aprobación
+activa la membresía y un rechazo deja la solicitud pendiente. La integración que recibe y verifica
+notificaciones de Mercado Pago todavía no está implementada; la interfaz no aprueba pagos.
 
 ## Estados y auditoría
 
+Un proceso diario a las 00:05 UTC revisa los vencimientos. La membresía conserva `ACTIVA` durante
+todo el día de `proximoVencimiento`; al día siguiente pasa a `VENCIDA` y pierde los beneficios. Si
+no se regulariza, pasa a `SUSPENDIDA` al cumplirse dos meses calendario desde ese vencimiento. Un
+pago aprobado reactiva la membresía y fija un nuevo vencimiento según la regla anterior.
+
+Un proceso horario cancela los pagos que siguen `PENDIENTE` después de una hora desde su creación.
+También cancela las solicitudes `PENDIENTE_PAGO` de más de una hora que ya no tienen un pago
+pendiente. Una nueva tentativa de pago aún pendiente mantiene viva la solicitud hasta que esa
+tentativa cumpla su propia hora. Ambos procesos usan UTC. La integración con notificaciones de
+Mercado Pago sigue pendiente; el proceso horario actúa sobre el estado persistido del pago.
+
 - Una solicitud pendiente puede cancelarse inmediatamente.
 - Una membresía activa puede pasar a vencida, suspendida o cancelada.
-- Una vencida puede suspenderse o cancelarse; una suspendida puede cancelarse.
+- Una vencida puede suspenderse, cancelarse o reactivarse con un pago aprobado; una suspendida
+  puede cancelarse o reactivarse con un pago aprobado.
+- Un pago aprobado mantiene activa la membresía activa y renueva su próximo vencimiento.
+- Una membresía cancelada no admite pagos; se debe crear una nueva solicitud para volver a
+  contratar.
 - Una cancelada puede volver a solicitarse, con estado pendiente de pago.
+- La activación o reactivación requiere un pago aprobado; una modificación administrativa no puede
+  activarla directamente.
 - Las transiciones no permitidas devuelven 409.
 
 Las altas, cambios administrativos, cancelaciones y nuevas contrataciones guardan motivo,
@@ -58,7 +84,8 @@ El futuro módulo de pagos debe aplicar la misma verificación antes de emitir u
 | POST | `/api/membresias/{id}/cancelacion` | Titular o administrador |
 
 `POST /api/socios` se conserva para compatibilidad, pero normalmente no es necesario: el alta del
-usuario ya crea el socio. Rechaza un segundo socio del mismo usuario.
+usuario ya crea el socio. Rechaza un segundo socio del mismo usuario y no admite un nivel de
+membresía. `POST /api/membresias` recibe `socioId`, `nivelMembresiaId` y `medioPago`.
 
 ## Consultas
 
