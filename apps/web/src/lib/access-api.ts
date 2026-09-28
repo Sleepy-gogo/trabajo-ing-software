@@ -1,5 +1,6 @@
 import { api } from "./users-api"
 export type AccessResult = {
+  consumidaEn?: string | null
   autorizado: boolean
   motivo: string
   tipo: "RESERVA" | "PERSONAL" | "DESCONOCIDO"
@@ -10,6 +11,11 @@ export type AccessResult = {
   hasta: string | null
 }
 export const accessApi = {
+  confirm: (codigo: string) =>
+    api<AccessResult>("/accesos/ingresos", {
+      method: "POST",
+      body: JSON.stringify({ codigo }),
+    }),
   validate: (codigo: string) =>
     api<AccessResult>("/accesos/validacion", {
       method: "POST",

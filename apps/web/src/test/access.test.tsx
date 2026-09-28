@@ -66,7 +66,7 @@ describe("Validación de acceso", () => {
     )
     await user.click(screen.getByRole("button", { name: "Validar código" }))
     expect(await screen.findByText("Acceso no habilitado")).toBeTruthy()
-    expect(validate).toHaveBeenCalledWith("SERA-cancelada", expect.anything())
+    expect(validate).toHaveBeenCalledWith("SERA-cancelada")
     await user.type(screen.getByLabelText("Código de reserva o carnet"), "x")
     expect(screen.queryByText("Acceso no habilitado")).toBeNull()
   })
@@ -103,9 +103,7 @@ describe("Validación de acceso", () => {
       screen.getByLabelText("Imagen del QR"),
       new File(["qr"], "qr.png", { type: "image/png" })
     )
-    await waitFor(() =>
-      expect(validate).toHaveBeenCalledWith("SERA-imagen", expect.anything())
-    )
+    await waitFor(() => expect(validate).toHaveBeenCalledWith("SERA-imagen"))
   })
   it("en HTTP ofrece alternativas y no solicita cámara", () => {
     vi.stubGlobal("isSecureContext", false)
@@ -119,5 +117,35 @@ describe("Validación de acceso", () => {
     ).toBe(true)
     expect(screen.getByLabelText("Imagen del QR")).toBeTruthy()
     expect(scanner.start).not.toHaveBeenCalled()
+  })
+  it("solo consume al confirmar el ingreso y no vuelve a ofrecer confirmación", async () => {
+    vi.spyOn(accessApi, "validate").mockResolvedValue({
+      ...denied,
+      autorizado: true,
+      motivo: "Reserva vigente.",
+    })
+    const confirm = vi.spyOn(accessApi, "confirm").mockResolvedValue({
+      ...denied,
+      consumidaEn: "2026-09-29T10:01:00-03:00",
+      motivo: "El ingreso ya está registrado.",
+    })
+    const { user } = mount()
+    await user.type(
+      screen.getByLabelText("Código de reserva o carnet"),
+      "SERA-reserva"
+    )
+    await user.click(screen.getByRole("button", { name: "Validar código" }))
+    const action = await screen.findByRole("button", {
+      name: "Confirmar ingreso y consumir reserva",
+    })
+    expect(confirm).not.toHaveBeenCalled()
+    await user.click(action)
+    expect(await screen.findByText("Reserva consumida")).toBeTruthy()
+    expect(confirm).toHaveBeenCalledWith("SERA-reserva")
+    expect(
+      screen.queryByRole("button", {
+        name: "Confirmar ingreso y consumir reserva",
+      })
+    ).toBeNull()
   })
 })

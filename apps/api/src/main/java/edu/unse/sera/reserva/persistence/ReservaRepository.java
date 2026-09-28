@@ -12,6 +12,10 @@ import org.springframework.data.jpa.repository.Query;
 public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
   Optional<Reserva> findByCodigo(String codigo);
 
+  @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+  @Query("select r from Reserva r where r.codigo = :codigo")
+  Optional<Reserva> bloquearPorCodigo(String codigo);
+
   @Query("select r.usuario.id from Reserva r where r.id = :id")
   Optional<UUID> titular(UUID id);
 

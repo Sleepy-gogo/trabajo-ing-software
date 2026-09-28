@@ -366,6 +366,7 @@ public class ReservaService {
                 .atTime(r.getDesde())
                 .atZone(Reserva.ZONA)
                 .toInstant()
-                .isAfter(ahora().toInstant()));
+                .isAfter(ahora().toInstant()),
+        r.getConsumidaEn());
   }
 }

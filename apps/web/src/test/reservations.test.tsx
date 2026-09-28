@@ -192,4 +192,37 @@ describe("Reservas conectadas", () => {
       })
     )
   })
+  it("muestra en curso con QR y consumida sin QR", () => {
+    const { unmount } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <ReservationDetails
+            reservation={{
+              ...pending,
+              estado: "EN_CURSO",
+              codigo: "SERA-real",
+              estadoPago: "APROBADO",
+            }}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+    expect(screen.getByText("En curso ahora")).toBeTruthy()
+    expect(screen.getByTitle("QR de la reserva")).toBeTruthy()
+    unmount()
+    mount(
+      <ReservationDetails
+        reservation={{
+          ...pending,
+          estado: "CONSUMIDA",
+          codigo: "SERA-real",
+          estadoPago: "APROBADO",
+          consumidaEn: "2026-09-29T10:01:00-03:00",
+        }}
+      />
+    )
+    expect(screen.getByText("Consumida")).toBeTruthy()
+    expect(screen.queryByTitle("QR de la reserva")).toBeNull()
+    expect(screen.getByText(/Ingreso registrado el/)).toBeTruthy()
+  })
 })

@@ -25,4 +25,10 @@ public class AccesoController {
   public AccesoResultado validar(@Valid @RequestBody ValidarRequest request) {
     return accesos.validar(request.codigo());
   }
+
+  @PostMapping("/ingresos")
+  public AccesoResultado ingresar(
+      @Valid @RequestBody ValidarRequest request, java.security.Principal actor) {
+    return accesos.registrarIngreso(request.codigo(), java.util.UUID.fromString(actor.getName()));
+  }
 }

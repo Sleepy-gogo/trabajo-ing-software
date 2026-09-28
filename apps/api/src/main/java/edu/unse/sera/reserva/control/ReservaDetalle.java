@@ -31,4 +31,5 @@ public record ReservaDetalle(
     MedioPago medioPago,
     String checkoutUrl,
     boolean requiereRevision,
-    boolean cancelable) {}
+    boolean cancelable,
+    OffsetDateTime consumidaEn) {}

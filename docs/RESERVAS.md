@@ -34,7 +34,11 @@ Suscripciones para membresías; las reservas usan Checkout Pro para un cobro ún
   contratar membresía: no hay servicios restringidos por nivel en el modelo
   actual. Se reutiliza la tarifa por relación UNSE verificada, sin inventar
   descuentos adicionales por membresía. Esto precisa el texto genérico de TRA-41.
-- El estado finalizado se calcula por fecha y hora; no requiere otro proceso.
+- Los estados visibles Próxima (`CONFIRMADA`), En curso ahora (`EN_CURSO`) y
+  Finalizada sin ingreso (`FINALIZADA`) se calculan por fecha y hora.
+- Consumida (`CONSUMIDA`) indica que el personal confirmó el ingreso. Se guardan
+  `consumida_en` y `consumida_por`; no se confunde el fin del horario con asistencia.
+  La reserva persiste como confirmada para conservar la exclusión de horarios.
 - El código se genera al confirmar y el frontend representa ese mismo código en
   un QR. El personal puede consultar su vigencia desde Validar ingreso.
 - Se mantienen las transacciones y el control de superposición. Simplificar el
@@ -137,6 +141,21 @@ Reglas implementadas:
   Habilita acceso general; no acredita una reserva de espacio.
 - Códigos desconocidos, cancelaciones y vencimientos se rechazan.
 
-La consulta no registra asistencia, no consume códigos ni impide reingresos.
-Se retiraron las acciones e historial ficticios de la pantalla anterior. Un registro
-persistente de ingresos o excepciones requiere definir esas reglas por separado.
+Escanear sigue siendo una consulta. Para una reserva habilitada, el operador pulsa
+**Confirmar ingreso y consumir reserva**: `POST /api/accesos/ingresos` recibe el
+código, vuelve a validar con la hora del servidor y registra el primer ingreso junto
+al operador autenticado. Un bloqueo de fila serializa confirmaciones concurrentes;
+reintentar devuelve el registro original. Una reserva consumida no habilita otro
+acceso y deja de mostrar un QR utilizable. Los carnets personales no se consumen.
+La migración V19 agrega ambos atributos sin modificar migraciones anteriores.
+Los listados y detalles de usuario y administración muestran estados con texto,
+iconos y colores distintos; se actualizan mediante las consultas periódicas existentes.
+
+
+Para probar ingreso simultáneo contra PostgreSQL, iniciar el JAR desde `apps/api`
+con `--server.port=4501 --spring.docker.compose.enabled=false` y
+`--spring.datasource.url=jdbc:postgresql://localhost:5432/sera_reservas_test`.
+Desde la raíz, ejecutar `python scripts/smoke_accesos.py` antes de las 23:00.
+El script comprueba la base aislada, crea sus propios datos, coloca su reserva
+ficticia en el horario actual y confirma dos ingresos concurrentes. Ambos deben
+conservar el mismo instante y operador; una validación posterior rechaza el QR.

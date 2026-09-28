@@ -105,4 +105,23 @@ class AccesoServiceTest {
     when(u.getEstadoCuenta()).thenReturn(EstadoUsuario.INACTIVO);
     assertThat(service.validar("SERA-U0123456789ab", AHORA).autorizado()).isFalse();
   }
+
+  @Test
+  void reservaConsumidaNoAutorizaOtroIngreso() {
+    Reserva r = reserva();
+    when(r.getConsumidaEn()).thenReturn(AHORA);
+    var resultado = service.validar(CODIGO, AHORA.plusMinutes(1));
+    assertThat(resultado.autorizado()).isFalse();
+    assertThat(resultado.consumidaEn()).isEqualTo(AHORA);
+  }
+
+  @Test
+  void reintentarIngresoDevuelveRegistroOriginalSinVolverAConsumir() {
+    Reserva r = reserva();
+    when(reservas.bloquearPorCodigo(CODIGO)).thenReturn(Optional.of(r));
+    when(r.getConsumidaEn()).thenReturn(AHORA);
+    assertThat(service.registrarIngreso(CODIGO, UUID.randomUUID()).consumidaEn()).isEqualTo(AHORA);
+    verify(r, never())
+        .consumir(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+  }
 }

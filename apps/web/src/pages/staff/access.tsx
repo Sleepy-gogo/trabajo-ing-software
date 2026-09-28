@@ -83,14 +83,22 @@ export function AccessPage() {
     },
     []
   )
-  const validation = useMutation({ mutationFn: accessApi.validate })
+  const validation = useMutation({
+    mutationFn: ({
+      codigo,
+      confirmar = false,
+    }: {
+      codigo: string
+      confirmar?: boolean
+    }) => (confirmar ? accessApi.confirm(codigo) : accessApi.validate(codigo)),
+  })
   const { mutate, reset } = validation
   const submitCode = useCallback(
     (value: string) => {
       setCamera(false)
       setCode(value)
       setImageError("")
-      mutate(value.trim())
+      mutate({ codigo: value.trim() })
     },
     [mutate]
   )
@@ -215,16 +223,18 @@ export function AccessPage() {
             ) : result ? (
               <div className="space-y-5">
                 <div
-                  className={`rounded-xl border p-5 ${result.autorizado ? "border-emerald-200 bg-emerald-50 text-emerald-950" : "border-red-200 bg-red-50 text-red-950"}`}
+                  className={`rounded-xl border p-5 ${result.autorizado || result.consumidaEn ? "border-emerald-200 bg-emerald-50 text-emerald-950" : "border-red-200 bg-red-50 text-red-950"}`}
                 >
-                  {result.autorizado ? (
+                  {result.autorizado || result.consumidaEn ? (
                     <CheckCircle2 className="mb-3 size-7" aria-hidden="true" />
                   ) : (
                     <ShieldX className="mb-3 size-7" aria-hidden="true" />
                   )}
                   <h2 className="text-xl font-semibold">
-                    {result.autorizado
-                      ? "Acceso habilitado"
+                    {result.autorizado || result.consumidaEn
+                      ? result.consumidaEn
+                        ? "Reserva consumida"
+                        : "Acceso habilitado"
                       : "Acceso no habilitado"}
                   </h2>
                   <p className="mt-2 text-sm">{result.motivo}</p>
@@ -262,10 +272,19 @@ export function AccessPage() {
               </p>
             )}
           </div>
+          {result?.autorizado && result.tipo === "RESERVA" && !busy && (
+            <Button
+              className="mt-5"
+              onClick={() => mutate({ codigo: code.trim(), confirmar: true })}
+            >
+              Confirmar ingreso y consumir reserva
+            </Button>
+          )}
           <ErrorMessage error={validation.error} />
           <p className="mt-6 border-t pt-4 text-xs text-muted-foreground">
-            Esta consulta no registra asistencia ni consume el QR. Las reservas
-            se validan desde su hora de inicio hasta antes de su hora de fin.
+            Escanear solo consulta la vigencia. Confirmar el ingreso consume la
+            reserva y evita un segundo uso del QR. Los carnets personales no se
+            consumen.
           </p>
         </SectionCard>
       </div>

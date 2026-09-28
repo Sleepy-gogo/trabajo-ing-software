@@ -53,7 +53,15 @@ public class AccesoService {
                             ? "Membresía vigente. Acceso general habilitado; no incluye una reserva de espacio."
                             : "Sin membresía vigente. Presentá el QR de una reserva confirmada.";
                 return new AccesoResultado(
-                    vigente, motivo, "PERSONAL", u.getNombreCompleto(), null, null, null, null);
+                    vigente,
+                    motivo,
+                    "PERSONAL",
+                    u.getNombreCompleto(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
               })
           .orElseGet(this::invalido);
     }
@@ -67,10 +75,29 @@ public class AccesoService {
         .orElseGet(this::invalido);
   }
 
+  @Transactional
+  public AccesoResultado registrarIngreso(String codigo, java.util.UUID operador) {
+    Reserva reserva =
+        reservas
+            .bloquearPorCodigo(codigo.trim())
+            .orElseThrow(() -> new IllegalArgumentException("Código de reserva no reconocido."));
+    var ahora = OffsetDateTime.now(Reserva.ZONA);
+    if (reserva.getConsumidaEn() == null) {
+      var resultado = validarReserva(reserva, ahora);
+      if (!resultado.autorizado()) {
+        throw new IllegalStateException(resultado.motivo());
+      }
+      reserva.consumir(ahora, operador);
+    }
+    return validarReserva(reserva, ahora);
+  }
+
   private AccesoResultado validarReserva(Reserva r, OffsetDateTime ahora) {
     String motivo = null;
     if (r.getUsuario().getEstadoCuenta() != EstadoUsuario.ACTIVO) {
       motivo = "La cuenta no está activa.";
+    } else if (r.getConsumidaEn() != null) {
+      motivo = "Esta reserva ya fue consumida. El ingreso ya está registrado.";
     } else if (r.getEstado() != EstadoReserva.CONFIRMADA) {
       motivo = "La reserva no está confirmada o fue cancelada.";
     } else if (r.getEspacio().getEstado() != EstadoEspacio.HABILITADO) {
@@ -93,7 +120,8 @@ public class AccesoService {
         r.getEspacio().getNombre(),
         r.getFecha(),
         r.getDesde(),
-        r.getHasta());
+        r.getHasta(),
+        r.getConsumidaEn());
   }
 
   private AccesoResultado invalido() {
@@ -101,6 +129,7 @@ public class AccesoService {
         false,
         "Código no reconocido. Usá un QR o código emitido por SERA.",
         "DESCONOCIDO",
+        null,
         null,
         null,
         null,

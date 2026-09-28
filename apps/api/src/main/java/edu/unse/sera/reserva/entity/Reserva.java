@@ -56,6 +56,8 @@ public class Reserva {
   private EstadoReserva estado = EstadoReserva.PENDIENTE_PAGO;
 
   private String codigo;
+  private OffsetDateTime consumidaEn;
+  private UUID consumidaPor;
   private OffsetDateTime venceEn;
   private OffsetDateTime creadaEn;
   private UUID ticketOrigenId;
@@ -170,11 +172,39 @@ public class Reserva {
     return total.subtract(creditoAplicado);
   }
 
+  public void consumir(OffsetDateTime ahora, UUID operador) {
+    if (consumidaEn != null) {
+      return;
+    }
+    if (operador == null || !"EN_CURSO".equals(estadoVisible(ahora))) {
+      throw new IllegalStateException(
+          "Solo se puede registrar el ingreso durante una reserva confirmada.");
+    }
+    consumidaEn = ahora.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+    consumidaPor = operador;
+  }
+
+  public OffsetDateTime getConsumidaEn() {
+    return consumidaEn;
+  }
+
+  public UUID getConsumidaPor() {
+    return consumidaPor;
+  }
+
   public String estadoVisible(OffsetDateTime ahora) {
-    return estado == EstadoReserva.CONFIRMADA
-            && !fecha.atTime(hasta).atZone(ZONA).toInstant().isAfter(ahora.toInstant())
-        ? "FINALIZADA"
-        : estado.name();
+    if (estado != EstadoReserva.CONFIRMADA) {
+      return estado.name();
+    }
+    if (consumidaEn != null) {
+      return "CONSUMIDA";
+    }
+    if (!fecha.atTime(hasta).atZone(ZONA).toInstant().isAfter(ahora.toInstant())) {
+      return "FINALIZADA";
+    }
+    return fecha.atTime(desde).atZone(ZONA).toInstant().isAfter(ahora.toInstant())
+        ? "CONFIRMADA"
+        : "EN_CURSO";
   }
 
   public UUID getId() {

@@ -126,4 +126,36 @@ class ReservaTest {
                     ahora))
         .isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  void distingueProximaEnCursoConsumidaYFinalizada() {
+    Reserva r = nueva(1);
+    r.confirmar(ahora);
+    var inicio = ahora.plusDays(1).withHour(12);
+    assertThat(r.estadoVisible(inicio.minusNanos(1))).isEqualTo("CONFIRMADA");
+    assertThat(r.estadoVisible(inicio)).isEqualTo("EN_CURSO");
+    assertThat(r.estadoVisible(inicio.plusHours(1))).isEqualTo("FINALIZADA");
+    assertThatThrownBy(() -> r.consumir(inicio.minusSeconds(1), UUID.randomUUID()))
+        .isInstanceOf(IllegalStateException.class);
+    UUID operador = UUID.randomUUID();
+    r.consumir(inicio, operador);
+    r.consumir(inicio.plusMinutes(1), UUID.randomUUID());
+    assertThat(r.getConsumidaEn()).isEqualTo(inicio);
+    assertThat(r.getConsumidaPor()).isEqualTo(operador);
+    assertThat(r.estadoVisible(inicio.plusDays(1))).isEqualTo("CONSUMIDA");
+  }
+
+  @Test
+  void noConsumePendientesCanceladasNiFinalizadas() {
+    Reserva r = nueva(1);
+    var inicio = ahora.plusDays(1).withHour(12);
+    assertThatThrownBy(() -> r.consumir(inicio, UUID.randomUUID()))
+        .isInstanceOf(IllegalStateException.class);
+    r.confirmar(ahora);
+    assertThatThrownBy(() -> r.consumir(inicio.plusHours(1), UUID.randomUUID()))
+        .isInstanceOf(IllegalStateException.class);
+    r.cancelar(ahora, false);
+    assertThatThrownBy(() -> r.consumir(inicio, UUID.randomUUID()))
+        .isInstanceOf(IllegalStateException.class);
+  }
 }

@@ -11,4 +11,5 @@ public record AccesoResultado(
     String espacio,
     LocalDate fecha,
     LocalTime desde,
-    LocalTime hasta) {}
+    LocalTime hasta,
+    java.time.OffsetDateTime consumidaEn) {}

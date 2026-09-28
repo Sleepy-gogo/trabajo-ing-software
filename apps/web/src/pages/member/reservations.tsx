@@ -1,5 +1,6 @@
 import { availableStarts } from "@/lib/booking-times"
 import { createRequestKey } from "@/lib/request-key"
+import { ReservationStatus } from "@/components/shared/reservation-status"
 import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -8,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import {
   PageHeader,
   SectionCard,
-  StatusBadge,
   ConfirmationDialog,
 } from "@/components/shared"
 import {
@@ -458,7 +458,7 @@ export function MemberReservationsPage() {
             <SectionCard
               key={r.id}
               title={r.espacioNombre}
-              action={<StatusBadge>{reservationState[r.estado]}</StatusBadge>}
+              action={<ReservationStatus state={r.estado} />}
             >
               <p className="text-sm">
                 {formatDate(r.fecha)} · {r.desde.slice(0, 5)} a{" "}
@@ -608,7 +608,7 @@ export function ReservationDetails({
     >
       <SectionCard
         title={r.espacioNombre}
-        action={<StatusBadge>{reservationState[r.estado]}</StatusBadge>}
+        action={<ReservationStatus state={r.estado} />}
       >
         <dl className="grid gap-5 text-sm sm:grid-cols-2">
           <div>
@@ -712,12 +712,12 @@ export function ReservationDetails({
       </SectionCard>
       <SectionCard
         title={
-          r.codigo && r.estado === "CONFIRMADA"
+          r.codigo && (r.estado === "CONFIRMADA" || r.estado === "EN_CURSO")
             ? "Código de reserva"
             : "Estado de la reserva"
         }
       >
-        {r.codigo && r.estado === "CONFIRMADA" ? (
+        {r.codigo && (r.estado === "CONFIRMADA" || r.estado === "EN_CURSO") ? (
           <>
             <div className="rounded-lg bg-white p-4">
               <QRCode
@@ -730,9 +730,11 @@ export function ReservationDetails({
           </>
         ) : (
           <p className="text-sm">
-            {pending
-              ? "El código y el QR aparecen al confirmar el pago completo."
-              : "Esta reserva no tiene un código de ingreso vigente."}
+            {r.consumidaEn
+              ? `Ingreso registrado el ${new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(r.consumidaEn))}. El QR ya fue utilizado.`
+              : pending
+                ? "El código y el QR aparecen al confirmar el pago completo."
+                : "Esta reserva no tiene un código de ingreso vigente."}
           </p>
         )}
         {r.saldoTicket > 0 && (

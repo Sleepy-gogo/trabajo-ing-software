@@ -17,7 +17,14 @@ export type Reservation = {
   creditoAplicado: number
   saldoTicket: number
   estado:
-    "PENDIENTE_PAGO" | "CONFIRMADA" | "CANCELADA" | "VENCIDA" | "FINALIZADA"
+    | "PENDIENTE_PAGO"
+    | "CONFIRMADA"
+    | "CANCELADA"
+    | "VENCIDA"
+    | "FINALIZADA"
+    | "EN_CURSO"
+    | "CONSUMIDA"
+  consumidaEn?: string | null
   codigo: string | null
   venceEn: string
   pagoId: string | null
@@ -46,10 +53,12 @@ export type Quote = {
 }
 export const reservationState: Record<Reservation["estado"], string> = {
   PENDIENTE_PAGO: "Pendiente de pago",
-  CONFIRMADA: "Confirmada",
+  CONFIRMADA: "Próxima",
   CANCELADA: "Cancelada",
   VENCIDA: "Vencida",
-  FINALIZADA: "Finalizada",
+  FINALIZADA: "Finalizada sin ingreso",
+  EN_CURSO: "En curso ahora",
+  CONSUMIDA: "Consumida",
 }
 export const reservationsApi = {
   list: (all = false, signal?: AbortSignal) =>

@@ -1,3 +1,4 @@
+import { ReservationStatus } from "@/components/shared/reservation-status"
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useSearchParams } from "react-router-dom"
@@ -69,9 +70,10 @@ export function AdminReservationsPage() {
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {formatDate(r.fecha)} · {r.desde.slice(0, 5)} a{" "}
-                    {r.hasta.slice(0, 5)} · {reservationState[r.estado]}
+                    {r.hasta.slice(0, 5)}
                   </p>
                 </div>
+                <ReservationStatus state={r.estado} />
                 <Button
                   variant="outline"
                   onClick={() => setParams({ id: r.id })}

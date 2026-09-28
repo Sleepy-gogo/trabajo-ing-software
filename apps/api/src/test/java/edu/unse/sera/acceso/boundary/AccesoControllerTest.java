@@ -55,7 +55,7 @@ class AccesoControllerTest {
     when(accesos.validar("SERA-x"))
         .thenReturn(
             new AccesoResultado(
-                false, "Código no reconocido.", "DESCONOCIDO", null, null, null, null, null));
+                false, "Código no reconocido.", "DESCONOCIDO", null, null, null, null, null, null));
     for (String rol : new String[] {"STAFF", "ADMIN"}) {
       mvc.perform(
               post("/api/accesos/validacion")
@@ -84,5 +84,27 @@ class AccesoControllerTest {
                 .content("{\"codigo\":\" \"}"))
         .andExpect(status().isBadRequest());
     verifyNoInteractions(accesos);
+  }
+
+  @Test
+  void confirmarIngresoRequiereOperadorYCapturaSuIdentidad() throws Exception {
+    String actor = "11111111-1111-4111-8111-111111111111";
+    mvc.perform(
+            post("/api/accesos/ingresos")
+                .with(csrf())
+                .with(user(actor).roles("USUARIO"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"codigo\":\"SERA-x\"}"))
+        .andExpect(status().isForbidden());
+    org.mockito.Mockito.verifyNoInteractions(accesos);
+    mvc.perform(
+            post("/api/accesos/ingresos")
+                .with(csrf())
+                .with(user(actor).roles("STAFF"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"codigo\":\"SERA-x\"}"))
+        .andExpect(status().isOk());
+    org.mockito.Mockito.verify(accesos)
+        .registrarIngreso("SERA-x", java.util.UUID.fromString(actor));
   }
 }
