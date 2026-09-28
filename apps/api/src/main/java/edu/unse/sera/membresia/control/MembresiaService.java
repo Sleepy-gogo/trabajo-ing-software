@@ -1,12 +1,7 @@
 package edu.unse.sera.membresia.control;
 
-import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.membresia.entity.NivelMembresia;
 import edu.unse.sera.membresia.persistence.NivelMembresiaRepository;
-import edu.unse.sera.pagos.entity.EstadoPago;
-import edu.unse.sera.pagos.entity.Pago;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -61,36 +56,6 @@ public class MembresiaService {
 
   private NivelMembresia buscar(UUID id) {
     return niveles.findById(id).orElseThrow(MembresiaNoEncontradaException::new);
-  }
-
-  public MembresiaDetalle activarMembresia(Pago pago, OffsetDateTime fechaPago) {
-    if (pago == null || fechaPago == null) {
-      throw new IllegalArgumentException("La fecha de aprobación es obligatoria.");
-    }
-    if (pago.getEstado() != EstadoPago.APROBADO || pago.getMembresia() == null) {
-      throw new IllegalStateException("La membresía requiere un pago aprobado.");
-    }
-    Membresia membresia = pago.getMembresia();
-    if (!membresia.getSocio().getUsuario().getId().equals(pago.getUsuario().getId())) {
-      throw new IllegalStateException("El pago no pertenece al titular de la membresía.");
-    }
-    LocalDate fechaNegocio =
-        fechaPago
-            .atZoneSameInstant(java.time.ZoneId.of("America/Argentina/Buenos_Aires"))
-            .toLocalDate();
-    membresia.renovarUnMes(
-        fechaNegocio, LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires")));
-
-    return new MembresiaDetalle(
-        membresia.getId(),
-        membresia.getSocio().getId(),
-        membresia.getNivelMembresia().getId(),
-        membresia.getNivelMembresia().getNombre(),
-        membresia.estadoEfectivo(
-            LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"))),
-        membresia.getFechaAlta(),
-        membresia.getFechaBaja(),
-        membresia.getProximoVencimiento());
   }
 
   private void aplicar(NivelMembresia n, NivelMembresiaDatos d) {

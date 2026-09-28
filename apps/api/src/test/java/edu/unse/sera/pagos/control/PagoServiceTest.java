@@ -16,6 +16,7 @@ import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
 import edu.unse.sera.pagos.persistence.PagoRepository;
+import edu.unse.sera.pagos.persistence.SuscripcionMercadoPagoRepository;
 import edu.unse.sera.shared.exception.OperacionNoPermitidaException;
 import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
@@ -43,6 +44,7 @@ class PagoServiceTest {
   @Mock private PagoRepository pagos;
   @Mock private MembresiaRepository membresias;
   @Mock private UsuarioRepository usuarios;
+  @Mock private SuscripcionMercadoPagoRepository suscripciones;
   private PagoService service;
   private Usuario titular;
   private Membresia membresia;
@@ -50,7 +52,7 @@ class PagoServiceTest {
 
   @BeforeEach
   void preparar() {
-    service = new PagoService(pagos, membresias, usuarios);
+    service = new PagoService(pagos, membresias, usuarios, suscripciones);
     titular = usuario(RolUsuario.USUARIO);
     var socio = new Socio(titular, RelacionUnse.ESTUDIANTE, EstadoVerificacionUnse.PENDIENTE, null);
     var nivel = new NivelMembresia("General", "Acceso");

@@ -8,6 +8,7 @@ import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
 import edu.unse.sera.pagos.persistence.PagoRepository;
+import edu.unse.sera.pagos.persistence.SuscripcionMercadoPagoRepository;
 import edu.unse.sera.shared.exception.OperacionNoPermitidaException;
 import edu.unse.sera.usuario.control.UsuarioNoEncontradoException;
 import edu.unse.sera.usuario.entity.EstadoUsuario;
@@ -32,12 +33,17 @@ public class PagoService {
   private final PagoRepository pagos;
   private final MembresiaRepository membresias;
   private final UsuarioRepository usuarios;
+  private final SuscripcionMercadoPagoRepository suscripciones;
 
   public PagoService(
-      PagoRepository pagos, MembresiaRepository membresias, UsuarioRepository usuarios) {
+      PagoRepository pagos,
+      MembresiaRepository membresias,
+      UsuarioRepository usuarios,
+      SuscripcionMercadoPagoRepository suscripciones) {
     this.pagos = pagos;
     this.membresias = membresias;
     this.usuarios = usuarios;
+    this.suscripciones = suscripciones;
   }
 
   public PagoDetalle iniciarPagoCuota(
@@ -51,6 +57,12 @@ public class PagoService {
     if (membresia.getSocio().getUsuario().getEstadoCuenta() != EstadoUsuario.ACTIVO
         || !membresia.admitePago()) {
       throw new IllegalStateException("La membresía no admite este pago.");
+    }
+    if (medio == MedioPago.EFECTIVO
+        && suscripciones.findAllByMembresiaIdOrderByCreatedAtDesc(membresiaId).stream()
+            .anyMatch(s -> !"canceled".equals(s.getEstado()))) {
+      throw new IllegalStateException(
+          "La membresía tiene un cobro mensual activo en Mercado Pago.");
     }
     var repetido =
         pagos.findByUsuarioIdAndClaveSolicitud(

@@ -180,6 +180,25 @@ class SuscripcionMercadoPagoServiceTest {
         .confirmarPago(pagoInicial.getId(), "456", pagoRemoto.getDateApproved());
   }
 
+  @Test
+  void segundoCobroDeLaMismaFacturaQuedaAprobadoParaRevision() {
+    prepararFacturaAprobada();
+    pagoInicial.aprobar("cobro-anterior", OffsetDateTime.parse("2026-09-27T11:00:00Z"));
+    when(pagos.findByMercadoPagoFacturaIdAndEstado(
+            123L, edu.unse.sera.pagos.entity.EstadoPago.APROBADO))
+        .thenReturn(Optional.of(pagoInicial));
+    when(pagos.saveAndFlush(any(Pago.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    var nuevo = org.mockito.ArgumentCaptor.forClass(Pago.class);
+
+    service.recibirFactura(123L);
+
+    verify(pagos).saveAndFlush(nuevo.capture());
+    assertThat(nuevo.getValue().isRequiereRevision()).isTrue();
+    assertThat(nuevo.getValue().getEstado())
+        .isEqualTo(edu.unse.sera.pagos.entity.EstadoPago.APROBADO);
+    verify(pagoService, never()).confirmarPago(any(), any(), any());
+  }
+
   private void prepararFacturaAprobada() {
     when(mercadoPago.obtenerFactura(123L))
         .thenReturn(
