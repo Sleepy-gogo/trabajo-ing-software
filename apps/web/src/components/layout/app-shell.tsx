@@ -352,7 +352,7 @@ export function AppShell({
             role === "member" && "pb-28 lg:pb-10"
           )}
         >
-          {/\/(payments|reservations|access|reports|surveys|settings)(\/|$)/.test(
+          {/\/(reservations|access|reports|surveys|settings)(\/|$)/.test(
             location.pathname
           ) && (
             <div
@@ -361,8 +361,8 @@ export function AppShell({
             >
               <strong>Vista previa de próximos incrementos.</strong> Esta
               sección usa datos de ejemplo y sus cambios no se guardan. La
-              entrega actual incluye usuarios, socios, membresías, espacios y
-              disponibilidad.
+              entrega actual incluye usuarios, socios, membresías, pagos,
+              espacios y disponibilidad.
             </div>
           )}
           {children ?? <Outlet />}
