@@ -123,9 +123,7 @@ public class MercadoPagoGateway {
         throw new MercadoPagoNoDisponibleException();
       }
       JsonNode json = mapper.readTree(response.body());
-      if (json.path("id").asLong() != id
-          || json.path("preapproval_id").asText().isBlank()
-          || json.path("payment").path("id").asLong() <= 0) {
+      if (json.path("id").asLong() != id || json.path("preapproval_id").asText().isBlank()) {
         throw new MercadoPagoNoDisponibleException();
       }
       return new FacturaMercadoPago(
@@ -143,7 +141,7 @@ public class MercadoPagoGateway {
     }
   }
 
-  public record PaginaFacturas(List<Long> ids, int total) {}
+  public record PaginaFacturas(List<Long> ids, int total, int resultados) {}
 
   public PaginaFacturas buscarFacturas(String preapprovalId, int offset) {
     requerirCredenciales();
@@ -169,14 +167,18 @@ public class MercadoPagoGateway {
         throw new MercadoPagoNoDisponibleException();
       }
       List<Long> ids = new ArrayList<>();
+      int resultados = 0;
       for (JsonNode item : json.path("results")) {
         if (item.path("id").asLong() <= 0
             || !preapprovalId.equals(item.path("preapproval_id").asText())) {
           throw new MercadoPagoNoDisponibleException();
         }
-        ids.add(item.path("id").asLong());
+        resultados++;
+        if (item.path("payment").path("id").asLong() > 0) {
+          ids.add(item.path("id").asLong());
+        }
       }
-      return new PaginaFacturas(ids, json.path("paging").path("total").asInt());
+      return new PaginaFacturas(ids, json.path("paging").path("total").asInt(), resultados);
     } catch (IOException e) {
       throw new MercadoPagoNoDisponibleException(e);
     } catch (InterruptedException e) {

@@ -46,9 +46,11 @@ class ConciliacionPagoServiceTest {
         .thenReturn(List.of(suscripcion));
     when(suscripcion.getPreapprovalId()).thenReturn("suscripcion-1");
     when(mercadoPago.buscarFacturas("suscripcion-1", 0))
-        .thenReturn(new MercadoPagoGateway.PaginaFacturas(List.of(11L, 12L), 3));
+        .thenReturn(new MercadoPagoGateway.PaginaFacturas(List.of(11L, 12L), 4, 2));
     when(mercadoPago.buscarFacturas("suscripcion-1", 2))
-        .thenReturn(new MercadoPagoGateway.PaginaFacturas(List.of(13L), 3));
+        .thenReturn(new MercadoPagoGateway.PaginaFacturas(List.of(), 4, 1));
+    when(mercadoPago.buscarFacturas("suscripcion-1", 3))
+        .thenReturn(new MercadoPagoGateway.PaginaFacturas(List.of(13L), 4, 1));
 
     assertThat(service.conciliar(membresia, actor)).isEqualTo(3);
     verify(procesador).recibirFactura(11L);

@@ -43,14 +43,14 @@ public class ConciliacionPagoService {
       do {
         var pagina = mercadoPago.buscarFacturas(suscripcion.getPreapprovalId(), offset);
         total = pagina.total();
-        if (pagina.ids().isEmpty() && offset < total) {
+        if (pagina.resultados() == 0 && offset < total) {
           throw new MercadoPagoNoDisponibleException();
         }
         for (long facturaId : pagina.ids()) {
           procesador.recibirFactura(facturaId);
           revisadas++;
         }
-        offset += pagina.ids().size();
+        offset += pagina.resultados();
       } while (offset < total);
     }
     return revisadas;
