@@ -13,6 +13,7 @@ import edu.unse.sera.membresia.entity.NivelMembresia;
 import edu.unse.sera.membresia.persistence.MembresiaRepository;
 import edu.unse.sera.membresia.persistence.NivelMembresiaRepository;
 import edu.unse.sera.pagos.control.SuscripcionMercadoPagoService;
+import edu.unse.sera.pagos.entity.ConceptoPago;
 import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
@@ -27,6 +28,7 @@ import edu.unse.sera.usuario.entity.EstadoUsuario;
 import edu.unse.sera.usuario.entity.RolUsuario;
 import edu.unse.sera.usuario.entity.Usuario;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -115,6 +117,41 @@ class SocioServiceTest {
                     usuarioId, RelacionUnse.EXTERNO, null, UUID.randomUUID(), usuarioId))
         .isInstanceOf(IllegalArgumentException.class);
     verify(socios, never()).save(any());
+  }
+
+  @Test
+  void cancelarConservaCobrosAprobadosYCancelaSoloPendientes() {
+    UUID actor = UUID.randomUUID();
+    UUID membresiaId = UUID.randomUUID();
+    Usuario titular = usuario(actor);
+    Socio socio = new Socio(titular, RelacionUnse.EXTERNO, EstadoVerificacionUnse.PENDIENTE, null);
+    ReflectionTestUtils.setField(socio, "id", UUID.randomUUID());
+    var membresia = new Membresia(socio, new NivelMembresia("General", "Acceso"));
+    ReflectionTestUtils.setField(membresia, "id", membresiaId);
+    var aprobado =
+        new Pago(
+            ConceptoPago.CUOTA_MENSUAL,
+            titular,
+            MedioPago.EFECTIVO,
+            new BigDecimal("1000.00"),
+            membresia);
+    aprobado.aprobar("SERA-1", OffsetDateTime.parse("2026-09-27T12:00:00Z"));
+    var pendiente =
+        new Pago(
+            ConceptoPago.CUOTA_MENSUAL,
+            titular,
+            MedioPago.EFECTIVO,
+            new BigDecimal("1000.00"),
+            membresia);
+    membresia.activarPorPago();
+    when(membresias.findById(membresiaId)).thenReturn(Optional.of(membresia));
+    when(pagos.findAllByMembresiaId(membresiaId)).thenReturn(List.of(aprobado, pendiente));
+
+    service.cancelar(membresiaId, "Solicitud del titular", actor);
+
+    assertThat(aprobado.getEstado()).isEqualTo(EstadoPago.APROBADO);
+    assertThat(pendiente.getEstado()).isEqualTo(EstadoPago.CANCELADO);
+    assertThat(membresia.getEstado()).isEqualTo(EstadoMembresia.CANCELADA);
   }
 
   private Usuario usuario(UUID id) {

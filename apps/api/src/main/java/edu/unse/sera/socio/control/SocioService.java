@@ -9,6 +9,7 @@ import edu.unse.sera.membresia.persistence.MembresiaRepository;
 import edu.unse.sera.membresia.persistence.NivelMembresiaRepository;
 import edu.unse.sera.pagos.control.SuscripcionMercadoPagoService;
 import edu.unse.sera.pagos.entity.ConceptoPago;
+import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
 import edu.unse.sera.pagos.persistence.PagoRepository;
@@ -146,7 +147,7 @@ public class SocioService {
       if (estado == EstadoMembresia.CANCELADA
           && s.getMembresia().getEstado() != EstadoMembresia.CANCELADA) {
         suscripcionesMercadoPago.cancelarVigente(s.getMembresia().getId());
-        pagos.findAllByMembresiaId(s.getMembresia().getId()).forEach(Pago::cancelarPendiente);
+        cancelarPagosPendientes(s.getMembresia().getId());
       }
       s.getMembresia().cambiarEstado(estado);
     } else if (nivelId != null || estado != null) {
@@ -192,7 +193,7 @@ public class SocioService {
     autorizar(m.getSocio(), actor);
     suscripcionesMercadoPago.cancelarVigente(m.getId());
     m.cancelar();
-    pagos.findAllByMembresiaId(m.getId()).forEach(Pago::cancelarPendiente);
+    cancelarPagosPendientes(m.getId());
     auditar(m.getSocio(), actor, motivo, "Cancelación de membresía");
     return membresiaDetalle(m);
   }
@@ -219,6 +220,12 @@ public class SocioService {
         + s.getMembresia().getNivelMembresia().getNombre()
         + " / "
         + s.getMembresia().getEstado();
+  }
+
+  private void cancelarPagosPendientes(UUID membresiaId) {
+    pagos.findAllByMembresiaId(membresiaId).stream()
+        .filter(pago -> pago.getEstado() == EstadoPago.PENDIENTE)
+        .forEach(Pago::cancelarPendiente);
   }
 
   private void auditar(Socio s, UUID actor, String motivo, String detalle) {
