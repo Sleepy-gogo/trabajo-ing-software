@@ -12,9 +12,13 @@ import edu.unse.sera.pagos.entity.SuscripcionMercadoPago;
 import edu.unse.sera.pagos.persistence.PagoRepository;
 import edu.unse.sera.pagos.persistence.SuscripcionMercadoPagoRepository;
 import edu.unse.sera.shared.exception.OperacionNoPermitidaException;
+import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional
@@ -24,24 +28,54 @@ public class SuscripcionMercadoPagoService {
   private final PagoRepository pagos;
   private final PagoService pagoService;
   private final MercadoPagoGateway mercadoPago;
+  private final TransactionTemplate transacciones;
 
   public SuscripcionMercadoPagoService(
       SuscripcionMercadoPagoRepository suscripciones,
       MembresiaRepository membresias,
       PagoRepository pagos,
       PagoService pagoService,
-      MercadoPagoGateway mercadoPago) {
+      MercadoPagoGateway mercadoPago,
+      TransactionTemplate transacciones) {
     this.suscripciones = suscripciones;
     this.membresias = membresias;
     this.pagos = pagos;
     this.pagoService = pagoService;
     this.mercadoPago = mercadoPago;
+    this.transacciones = transacciones;
   }
 
+  private record Inicio(
+      UUID id,
+      String email,
+      String nivel,
+      BigDecimal monto,
+      SuscripcionMercadoPagoDetalle existente) {}
+
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public SuscripcionMercadoPagoDetalle iniciar(UUID membresiaId, UUID actor) {
+    mercadoPago.validarConfiguracion();
+    Inicio inicio =
+        Objects.requireNonNull(transacciones.execute(status -> reservarInicio(membresiaId, actor)));
+    if (inicio.existente() != null) {
+      return inicio.existente();
+    }
+    Preapproval remota =
+        mercadoPago.crear(inicio.id(), inicio.email(), inicio.nivel(), inicio.monto());
+    return Objects.requireNonNull(
+        transacciones.execute(
+            status -> {
+              var suscripcion = suscripciones.findById(inicio.id()).orElseThrow();
+              validarSuscripcion(suscripcion, remota);
+              suscripcion.vincular(remota.getId(), remota.getInitPoint());
+              return detalle(suscripcion);
+            }));
+  }
+
+  private Inicio reservarInicio(UUID membresiaId, UUID actor) {
     Membresia membresia =
         membresias
-            .findById(membresiaId)
+            .bloquearPorId(membresiaId)
             .orElseThrow(() -> new IllegalArgumentException("Membresía inexistente."));
     if (!membresia.getSocio().getUsuario().getId().equals(actor)) {
       throw new OperacionNoPermitidaException();
@@ -53,6 +87,7 @@ public class SuscripcionMercadoPagoService {
         pagos.findAllByMembresiaId(membresiaId).stream()
             .filter(p -> p.getEstado() == EstadoPago.PENDIENTE)
             .filter(p -> p.getMedioPago() == MedioPago.MERCADO_PAGO)
+            .filter(p -> membresia.getContratacionId().equals(p.getContratacionId()))
             .findFirst()
             .orElseThrow(
                 () -> new IllegalStateException("No hay un pago de Mercado Pago pendiente."));
@@ -61,19 +96,20 @@ public class SuscripcionMercadoPagoService {
       if ("canceled".equals(existente.get().getEstado())) {
         throw new IllegalStateException("La suscripción fue cancelada. Contratá otra membresía.");
       }
-      return detalle(existente.get());
+      if (existente.get().getPreapprovalId() == null) {
+        throw new IllegalStateException(
+            "La solicitud a Mercado Pago tiene un resultado incierto. Consultá a administración.");
+      }
+      return new Inicio(null, null, null, null, detalle(existente.get()));
     }
     var suscripcion =
         suscripciones.saveAndFlush(new SuscripcionMercadoPago(membresia, pagoInicial));
-    Preapproval remota =
-        mercadoPago.crear(
-            suscripcion.getId(),
-            membresia.getSocio().getUsuario().getEmail(),
-            membresia.getNivelMembresia().getNombre(),
-            pagoInicial.getMonto());
-    validarSuscripcion(suscripcion, remota);
-    suscripcion.vincular(remota.getId(), remota.getInitPoint());
-    return detalle(suscripcion);
+    return new Inicio(
+        suscripcion.getId(),
+        membresia.getSocio().getUsuario().getEmail(),
+        membresia.getNivelMembresia().getNombre(),
+        pagoInicial.getMonto(),
+        null);
   }
 
   @Transactional(readOnly = true)
@@ -93,6 +129,10 @@ public class SuscripcionMercadoPagoService {
 
   public void cancelarVigente(UUID membresiaId) {
     for (var suscripcion : suscripciones.findAllByMembresiaIdOrderByCreatedAtDesc(membresiaId)) {
+      if (suscripcion.getPreapprovalId() == null && !"canceled".equals(suscripcion.getEstado())) {
+        throw new IllegalStateException(
+            "La suscripción tiene un resultado incierto. Revisala en Mercado Pago antes de cancelar.");
+      }
       if (suscripcion.getPreapprovalId() != null && !suscripcion.getEstado().equals("canceled")) {
         Preapproval remota = mercadoPago.obtenerSuscripcion(suscripcion.getPreapprovalId());
         validarSuscripcion(suscripcion, remota);
@@ -119,9 +159,20 @@ public class SuscripcionMercadoPagoService {
     var suscripcion = suscripciones.findByPreapprovalId(preapprovalId).orElse(null);
     if (suscripcion == null) {
       Preapproval remota = mercadoPago.obtenerSuscripcion(preapprovalId);
-      if (referenciaSera(remota.getExternalReference())) {
+      if (remota == null || !preapprovalId.equals(remota.getId())) {
         throw new MercadoPagoNoDisponibleException();
       }
+      UUID referencia = referenciaSera(remota.getExternalReference());
+      if (referencia == null) {
+        return;
+      }
+      suscripcion = suscripciones.findById(referencia).orElse(null);
+      if (suscripcion == null) {
+        throw new MercadoPagoNoDisponibleException();
+      }
+      validarSuscripcion(suscripcion, remota);
+      suscripcion.vincular(preapprovalId, remota.getInitPoint());
+      suscripcion.actualizarEstado(remota.getStatus());
       return;
     }
     Preapproval remota = mercadoPago.obtenerSuscripcion(preapprovalId);
@@ -136,10 +187,11 @@ public class SuscripcionMercadoPagoService {
     }
     var suscripcion = suscripciones.findByPreapprovalId(factura.preapprovalId()).orElse(null);
     if (suscripcion == null) {
-      if (referenciaSera(factura.referencia())) {
-        throw new MercadoPagoNoDisponibleException();
+      recibirSuscripcion(factura.preapprovalId());
+      suscripcion = suscripciones.findByPreapprovalId(factura.preapprovalId()).orElse(null);
+      if (suscripcion == null) {
+        return;
       }
-      return;
     }
     if (!suscripcion.getId().toString().equals(factura.referencia())
         || !"ARS".equals(factura.moneda())
@@ -215,15 +267,14 @@ public class SuscripcionMercadoPagoService {
         suscripcion.getCheckoutUrl());
   }
 
-  private boolean referenciaSera(String referencia) {
+  private UUID referenciaSera(String referencia) {
     if (referencia == null) {
-      return false;
+      return null;
     }
     try {
-      UUID.fromString(referencia);
-      return true;
+      return UUID.fromString(referencia);
     } catch (IllegalArgumentException e) {
-      return false;
+      return null;
     }
   }
 }

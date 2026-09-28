@@ -39,6 +39,13 @@ verificada del webhook. Puede repetirse: el identificador único del cobro evita
 veces una renovación. La pantalla administrativa ofrece «Conciliar cobros» para los pagos de
 Mercado Pago. La consulta puede tardar si la suscripción tiene muchas facturas.
 
+Al iniciar una suscripción, SERA confirma primero una referencia local y después llama a
+Mercado Pago fuera de esa transacción. Si se pierde la respuesta remota, la solicitud queda
+marcada como incierta y un reintento del navegador no crea otra suscripción. Un webhook de
+`subscription_preapproval` puede vincular la suscripción usando `external_reference`. Si ese
+webhook tampoco llega, administración debe contrastar la referencia en Mercado Pago antes de
+resolver el caso; no se debe repetir el alta a ciegas.
+
 La cancelación de una membresía cancela también su suscripción remota antes de cerrar la membresía local. Un fallo de Mercado Pago impide completar la cancelación para evitar que continúen los débitos mientras SERA muestra la membresía como cancelada. El importe se fija al crear la suscripción. Para cambiar de nivel, primero hay que cancelar la suscripción y contratar de nuevo.
 
 ## Prueba manual con credenciales

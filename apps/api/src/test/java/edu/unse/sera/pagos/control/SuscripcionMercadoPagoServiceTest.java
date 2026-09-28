@@ -3,6 +3,7 @@ package edu.unse.sera.pagos.control;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +36,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class SuscripcionMercadoPagoServiceTest {
@@ -43,6 +47,7 @@ class SuscripcionMercadoPagoServiceTest {
   @Mock private PagoRepository pagos;
   @Mock private PagoService pagoService;
   @Mock private MercadoPagoGateway mercadoPago;
+  @Mock private TransactionTemplate transacciones;
   @Mock private Payment pagoRemoto;
   @Mock private Preapproval preapproval;
   @Mock private PreapprovalAutoRecurring recurrencia;
@@ -55,7 +60,7 @@ class SuscripcionMercadoPagoServiceTest {
   void preparar() {
     service =
         new SuscripcionMercadoPagoService(
-            suscripciones, membresias, pagos, pagoService, mercadoPago);
+            suscripciones, membresias, pagos, pagoService, mercadoPago, transacciones);
     Usuario usuario =
         new Usuario(
             "Ada Lovelace",
@@ -95,7 +100,13 @@ class SuscripcionMercadoPagoServiceTest {
     UUID membresiaId = UUID.randomUUID();
     ReflectionTestUtils.setField(suscripcion.getMembresia(), "id", membresiaId);
     UUID titular = pagoInicial.getUsuario().getId();
-    when(membresias.findById(membresiaId)).thenReturn(Optional.of(suscripcion.getMembresia()));
+    when(membresias.bloquearPorId(membresiaId)).thenReturn(Optional.of(suscripcion.getMembresia()));
+    when(transacciones.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              TransactionCallback<?> callback = invocation.getArgument(0);
+              return callback.doInTransaction(mock(TransactionStatus.class));
+            });
     when(pagos.findAllByMembresiaId(membresiaId)).thenReturn(java.util.List.of(pagoInicial));
     var creada = new java.util.concurrent.atomic.AtomicReference<SuscripcionMercadoPago>();
     when(suscripciones.saveAndFlush(any(SuscripcionMercadoPago.class)))
@@ -106,6 +117,8 @@ class SuscripcionMercadoPagoServiceTest {
               creada.set(local);
               return local;
             });
+    when(suscripciones.findById(any(UUID.class)))
+        .thenAnswer(invocation -> Optional.of(creada.get()));
     when(mercadoPago.crear(
             any(UUID.class),
             org.mockito.ArgumentMatchers.eq("ada@example.com"),
@@ -129,7 +142,13 @@ class SuscripcionMercadoPagoServiceTest {
   @Test
   void otroUsuarioNoPuedeIniciarLaSuscripcion() {
     UUID membresiaId = UUID.randomUUID();
-    when(membresias.findById(membresiaId)).thenReturn(Optional.of(suscripcion.getMembresia()));
+    when(membresias.bloquearPorId(membresiaId)).thenReturn(Optional.of(suscripcion.getMembresia()));
+    when(transacciones.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              TransactionCallback<?> callback = invocation.getArgument(0);
+              return callback.doInTransaction(mock(TransactionStatus.class));
+            });
 
     assertThatThrownBy(() -> service.iniciar(membresiaId, UUID.randomUUID()))
         .isInstanceOf(edu.unse.sera.shared.exception.OperacionNoPermitidaException.class);
@@ -169,6 +188,40 @@ class SuscripcionMercadoPagoServiceTest {
 
     assertThatThrownBy(() -> service.recibirFactura(123L))
         .isInstanceOf(MercadoPagoNoDisponibleException.class);
+  }
+
+  @Test
+  void webhookEnlazaSuscripcionCreadaAntesDeRecibirRespuesta() {
+    var local = new SuscripcionMercadoPago(suscripcion.getMembresia(), pagoInicial);
+    ReflectionTestUtils.setField(local, "id", UUID.randomUUID());
+    when(suscripciones.findById(local.getId())).thenReturn(Optional.of(local));
+    when(mercadoPago.obtenerSuscripcion("preapproval-nueva")).thenReturn(preapproval);
+    when(preapproval.getId()).thenReturn("preapproval-nueva");
+    when(preapproval.getExternalReference()).thenReturn(local.getId().toString());
+    when(preapproval.getInitPoint()).thenReturn("https://www.mercadopago.com.ar/checkout");
+    when(preapproval.getStatus()).thenReturn("pending");
+    when(preapproval.getAutoRecurring()).thenReturn(recurrencia);
+    when(recurrencia.getCurrencyId()).thenReturn("ARS");
+    when(recurrencia.getFrequency()).thenReturn(1);
+    when(recurrencia.getFrequencyType()).thenReturn("months");
+    when(recurrencia.getTransactionAmount()).thenReturn(new BigDecimal("1000.00"));
+
+    service.recibirSuscripcion("preapproval-nueva");
+
+    assertThat(local.getPreapprovalId()).isEqualTo("preapproval-nueva");
+    assertThat(local.getEstado()).isEqualTo("pending");
+  }
+
+  @Test
+  void noCancelaLocalmenteUnaSuscripcionRemotaIncierta() {
+    UUID membresiaId = UUID.randomUUID();
+    var incierta = new SuscripcionMercadoPago(suscripcion.getMembresia(), pagoInicial);
+    when(suscripciones.findAllByMembresiaIdOrderByCreatedAtDesc(membresiaId))
+        .thenReturn(java.util.List.of(incierta));
+
+    assertThatThrownBy(() -> service.cancelarVigente(membresiaId))
+        .isInstanceOf(IllegalStateException.class);
+    verify(mercadoPago, never()).cancelarSuscripcion(any(String.class));
   }
 
   @Test

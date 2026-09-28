@@ -55,10 +55,7 @@ public class MercadoPagoGateway {
   }
 
   public Preapproval crear(UUID referencia, String email, String nivel, BigDecimal monto) {
-    requerirCredenciales();
-    if (!backUrl.startsWith("https://")) {
-      throw new IllegalStateException("Configurá MP_BACK_URL con una URL HTTPS pública.");
-    }
+    validarConfiguracion();
     var recurrencia =
         PreApprovalAutoRecurringCreateRequest.builder()
             .frequency(1)
@@ -79,6 +76,13 @@ public class MercadoPagoGateway {
       return preapprovals.create(solicitud);
     } catch (MPException | MPApiException e) {
       throw new MercadoPagoNoDisponibleException(e);
+    }
+  }
+
+  public void validarConfiguracion() {
+    requerirCredenciales();
+    if (!backUrl.startsWith("https://")) {
+      throw new IllegalStateException("Configurá MP_BACK_URL con una URL HTTPS pública.");
     }
   }
 
