@@ -52,7 +52,13 @@ class PagoServiceTest {
 
   @BeforeEach
   void preparar() {
-    service = new PagoService(pagos, membresias, usuarios, suscripciones);
+    service =
+        new PagoService(
+            pagos,
+            membresias,
+            usuarios,
+            suscripciones,
+            org.mockito.Mockito.mock(edu.unse.sera.reserva.control.ReservaService.class));
     titular = usuario(RolUsuario.USUARIO);
     var socio = new Socio(titular, RelacionUnse.ESTUDIANTE, EstadoVerificacionUnse.PENDIENTE, null);
     var nivel = new NivelMembresia("General", "Acceso");

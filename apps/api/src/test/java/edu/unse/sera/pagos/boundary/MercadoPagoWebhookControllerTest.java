@@ -25,6 +25,7 @@ class MercadoPagoWebhookControllerTest {
   @MockitoBean private MercadoPagoGateway mercadoPago;
   @MockitoBean private SuscripcionMercadoPagoService suscripciones;
   @MockitoBean private UsuarioService usuarios;
+  @MockitoBean private edu.unse.sera.reserva.control.ReservaService reservas;
 
   @Test
   void aceptaWebhookFirmadoSinSesionNiCsrf() throws Exception {
@@ -58,6 +59,21 @@ class MercadoPagoWebhookControllerTest {
         .andExpect(status().isUnauthorized());
 
     verify(suscripciones, never()).recibirFactura(123L);
+  }
+
+  @Test
+  void paymentFirmadoProcesaLaReservaSinSesion() throws Exception {
+    when(mercadoPago.firmaValida("firma", "request-1", "123")).thenReturn(true);
+    mvc.perform(
+            post("/api/webhooks/mercadopago")
+                .param("data.id", "123")
+                .param("type", "payment")
+                .header("x-signature", "firma")
+                .header("x-request-id", "request-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":\"payment\",\"data\":{\"id\":\"123\"}}"))
+        .andExpect(status().isOk());
+    verify(reservas).recibirPago(123L);
   }
 
   @Test

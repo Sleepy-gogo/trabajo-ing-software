@@ -20,7 +20,7 @@ En el panel de Mercado Pago, registrar para prueba y producción la URL:
 https://<dominio-publico-de-la-api>/api/webhooks/mercadopago
 ```
 
-Activar `subscription_preapproval`, `subscription_authorized_payment` y `payment`. SERA procesa los dos primeros; reconoce `payment` sin cambiar el estado local porque la factura autorizada aporta el vínculo con la suscripción. Con ngrok sobre el puerto 4500, usar `https://<subdominio-ngrok>/api/webhooks/mercadopago`. El panel debe tener la clave secreta correspondiente al entorno de las credenciales.
+Activar `subscription_preapproval`, `subscription_authorized_payment` y `payment`. Los dos primeros procesan membresías. `payment` verifica los cobros únicos de reservas; los pagos de suscripciones siguen confirmándose por su factura autorizada. Con ngrok sobre el puerto 4500, usar `https://<subdominio-ngrok>/api/webhooks/mercadopago`. El panel debe tener la clave secreta correspondiente al entorno de las credenciales.
 
 El webhook es un `POST` público sin sesión ni CSRF. Valida `x-signature` con el SDK oficial de Java, `x-request-id` y el parámetro `data.id`. Rechaza firmas inválidas con 401. Consulta la suscripción o factura a Mercado Pago, comprueba referencia, moneda, monto, identificador del cobrador y estado del pago antes de registrar una aprobación. Guarda el identificador del cobro con una restricción única para tolerar reintentos. Un retorno del navegador no confirma pagos.
 

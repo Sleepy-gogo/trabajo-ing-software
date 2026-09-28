@@ -42,9 +42,10 @@ export function AdminPaymentsPage() {
   const confirm = useMutation({
     mutationFn: paymentsApi.confirmCash,
     onSuccess: async () => {
-      setNotice("El efectivo quedó confirmado y la membresía fue actualizada.")
+      setNotice("El pago en efectivo quedó confirmado.")
       await Promise.all([
         client.invalidateQueries({ queryKey: ["payments"] }),
+        client.invalidateQueries({ queryKey: ["reservations"] }),
         client.invalidateQueries({ queryKey: ["my-member"] }),
         client.invalidateQueries({ queryKey: ["members"] }),
       ])
@@ -58,6 +59,7 @@ export function AdminPaymentsPage() {
       )
       await Promise.all([
         client.invalidateQueries({ queryKey: ["payments"] }),
+        client.invalidateQueries({ queryKey: ["reservations"] }),
         client.invalidateQueries({ queryKey: ["members"] }),
       ])
     },
@@ -66,7 +68,7 @@ export function AdminPaymentsPage() {
     <>
       <PageHeader
         title="Pagos"
-        description="Cobros de membresías registrados en la API."
+        description="Cobros de membresías y reservas."
         actions={
           <Button variant="outline" onClick={() => void payments.refetch()}>
             Actualizar
@@ -110,6 +112,7 @@ export function AdminPaymentsPage() {
                   <tr>
                     <th className="px-3 py-3 font-medium">Fecha</th>
                     <th className="px-3 py-3 font-medium">Titular</th>
+                    <th className="px-3 py-3 font-medium">Concepto</th>
                     <th className="px-3 py-3 font-medium">Medio</th>
                     <th className="px-3 py-3 font-medium">Importe</th>
                     <th className="px-3 py-3 font-medium">Estado</th>
@@ -124,6 +127,13 @@ export function AdminPaymentsPage() {
                         {formatDateTime(payment.creadoEn)}
                       </td>
                       <td className="px-3 py-4">{payment.titular}</td>
+                      <td className="px-3 py-4">
+                        {payment.conceptoPago === "CUOTA_MENSUAL"
+                          ? "Membresía"
+                          : payment.conceptoPago === "DIFERENCIA_TICKET"
+                            ? "Diferencia de reserva"
+                            : "Reserva"}
+                      </td>
                       <td className="px-3 py-4">
                         {payment.medioPago === "EFECTIVO"
                           ? "Efectivo"

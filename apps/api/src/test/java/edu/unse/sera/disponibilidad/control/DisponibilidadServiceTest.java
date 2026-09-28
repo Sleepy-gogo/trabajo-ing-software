@@ -31,7 +31,11 @@ class DisponibilidadServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new DisponibilidadService(disponibilidadRepository, espacioRepository);
+    service =
+        new DisponibilidadService(
+            disponibilidadRepository,
+            espacioRepository,
+            org.mockito.Mockito.mock(edu.unse.sera.reserva.persistence.ReservaRepository.class));
   }
 
   @Test

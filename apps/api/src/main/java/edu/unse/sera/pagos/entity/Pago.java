@@ -61,6 +61,9 @@ public class Pago {
   @JoinColumn(name = "membresia_id", updatable = false)
   private Membresia membresia;
 
+  private UUID reservaId;
+  private String checkoutUrl;
+
   @Column(name = "contratacion_id", updatable = false)
   private UUID contratacionId;
 
@@ -138,6 +141,36 @@ public class Pago {
     this.relacionAplicada = membresia.getSocio().relacionParaTarifa().name();
     this.nivelNombreAplicado = membresia.getNivelMembresia().getNombre();
     this.estado = EstadoPago.PENDIENTE;
+  }
+
+  public Pago(edu.unse.sera.reserva.entity.Reserva reserva, MedioPago medio) {
+    if (reserva.importeAPagar().signum() <= 0) {
+      throw new IllegalArgumentException("La reserva no requiere pago.");
+    }
+    this.concepto =
+        reserva.getCreditoAplicado().signum() > 0
+            ? ConceptoPago.DIFERENCIA_TICKET
+            : ConceptoPago.RESERVA;
+    this.usuario = reserva.getUsuario();
+    this.reservaId = Objects.requireNonNull(reserva.getId());
+    this.medioPago = Objects.requireNonNull(medio);
+    this.monto = reserva.importeAPagar();
+    this.claveSolicitud = UUID.randomUUID();
+    this.relacionAplicada = reserva.getRelacionAplicada();
+    this.nivelNombreAplicado = reserva.getEspacio().getNombre();
+    this.estado = EstadoPago.PENDIENTE;
+  }
+
+  public UUID getReservaId() {
+    return reservaId;
+  }
+
+  public String getCheckoutUrl() {
+    return checkoutUrl;
+  }
+
+  public void vincularCheckout(String url) {
+    checkoutUrl = Objects.requireNonNull(url);
   }
 
   public boolean aprobar(String identidad, OffsetDateTime fecha) {

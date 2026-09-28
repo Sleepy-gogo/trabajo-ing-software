@@ -56,6 +56,8 @@ public class SecurityConfig {
                         "/api/niveles-membresia",
                         "/api/niveles-membresia/**")
                     .hasRole("ADMIN")
+                    .requestMatchers("/api/reservas", "/api/reservas/**")
+                    .authenticated()
                     .anyRequest()
                     .denyAll())
         .addFilterBefore(new SesionFilter(usuarios), AnonymousAuthenticationFilter.class)

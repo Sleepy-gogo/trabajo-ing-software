@@ -14,6 +14,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface PagoRepository extends JpaRepository<Pago, UUID> {
 
+  Optional<Pago> findByReservaId(UUID reservaId);
+
   List<Pago> findAllByUsuarioId(UUID usuarioId);
 
   @Query(

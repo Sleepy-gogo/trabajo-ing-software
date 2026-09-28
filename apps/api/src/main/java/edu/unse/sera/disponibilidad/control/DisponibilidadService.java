@@ -18,9 +18,13 @@ public class DisponibilidadService {
 
   private final DisponibilidadRepository disponibilidadRepository;
   private final EspacioRepository espacioRepository;
+  private final edu.unse.sera.reserva.persistence.ReservaRepository reservas;
 
   public DisponibilidadService(
-      DisponibilidadRepository disponibilidadRepository, EspacioRepository espacioRepository) {
+      DisponibilidadRepository disponibilidadRepository,
+      EspacioRepository espacioRepository,
+      edu.unse.sera.reserva.persistence.ReservaRepository reservas) {
+    this.reservas = reservas;
     this.disponibilidadRepository = disponibilidadRepository;
     this.espacioRepository = espacioRepository;
   }
@@ -58,6 +62,7 @@ public class DisponibilidadService {
     espacioRepository
         .bloquearPorId(espacioId)
         .orElseThrow(() -> new EspacioNoEncontradoException(espacioId));
+    verificarSinReservas(espacioId);
     Disponibilidad disponibilidad = buscar(espacioId, disponibilidadId);
     if (disponibilidadRepository
         .existsByEspacioIdAndDiaSemanaAndHoraDesdeLessThanAndHoraHastaGreaterThanAndIdNot(
@@ -69,7 +74,19 @@ public class DisponibilidadService {
   }
 
   public void eliminar(UUID espacioId, UUID disponibilidadId) {
+    espacioRepository
+        .bloquearPorId(espacioId)
+        .orElseThrow(() -> new EspacioNoEncontradoException(espacioId));
+    verificarSinReservas(espacioId);
     disponibilidadRepository.delete(buscar(espacioId, disponibilidadId));
+  }
+
+  private void verificarSinReservas(UUID id) {
+    if (reservas.tieneReservasFuturas(
+        id, java.time.LocalDate.now(edu.unse.sera.reserva.entity.Reserva.ZONA))) {
+      throw new IllegalStateException(
+          "El espacio tiene reservas pendientes o confirmadas. Cancelalas antes de modificar sus horarios.");
+    }
   }
 
   private Disponibilidad buscar(UUID espacioId, UUID disponibilidadId) {

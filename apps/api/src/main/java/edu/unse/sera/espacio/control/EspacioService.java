@@ -14,8 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class EspacioService {
 
   private final EspacioRepository espacioRepository;
+  private final edu.unse.sera.reserva.persistence.ReservaRepository reservas;
 
-  public EspacioService(EspacioRepository espacioRepository) {
+  public EspacioService(
+      EspacioRepository espacioRepository,
+      edu.unse.sera.reserva.persistence.ReservaRepository reservas) {
+    this.reservas = reservas;
     this.espacioRepository = espacioRepository;
   }
 
@@ -46,6 +50,7 @@ public class EspacioService {
       BigDecimal tarifaHora,
       String tipo,
       String rutaImagen) {
+    verificarSinReservas(id);
     Espacio espacio = buscar(id);
     String nombreNormalizado = nombre == null ? null : nombre.trim();
     if (espacioRepository.existsByNombreIgnoreCaseAndIdNot(nombreNormalizado, id)) {
@@ -56,10 +61,12 @@ public class EspacioService {
   }
 
   public void eliminar(UUID id) {
+    verificarSinReservas(id);
     buscar(id).cambiarEstado(edu.unse.sera.espacio.entity.EstadoEspacio.INUTILIZABLE);
   }
 
   public EspacioDetalle cambiarEstado(UUID id, edu.unse.sera.espacio.entity.EstadoEspacio estado) {
+    verificarSinReservas(id);
     Espacio espacio = buscar(id);
     espacio.cambiarEstado(estado);
     return toResponse(espacio);
@@ -70,6 +77,15 @@ public class EspacioService {
     Espacio espacio = buscar(id);
     espacio.configurarTarifas(tarifas);
     return toResponse(espacio);
+  }
+
+  private void verificarSinReservas(UUID id) {
+    espacioRepository.bloquearPorId(id).orElseThrow(() -> new EspacioNoEncontradoException(id));
+    if (reservas.tieneReservasFuturas(
+        id, java.time.LocalDate.now(edu.unse.sera.reserva.entity.Reserva.ZONA))) {
+      throw new IllegalStateException(
+          "El espacio tiene reservas pendientes o confirmadas. Cancelalas antes de modificarlo.");
+    }
   }
 
   private Espacio buscar(UUID id) {
