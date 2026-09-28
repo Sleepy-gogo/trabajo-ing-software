@@ -31,18 +31,26 @@ El webhook es un `POST` público sin sesión ni CSRF. Valida `x-signature` con e
 | `POST` | `/api/pagos/membresias/{id}/suscripcion` | Titular inicia o recupera el enlace de autorización |
 | `GET` | `/api/pagos/membresias/{id}/suscripcion` | Titular consulta la suscripción local |
 | `POST` | `/api/webhooks/mercadopago` | Mercado Pago envía notificaciones firmadas |
+| `POST` | `/api/pagos/membresias/{id}/conciliacion` | Administrador consulta facturas de la suscripción si faltó un webhook |
+
+La conciliación recorre las facturas de la suscripción mediante
+`GET /authorized_payments/search?preapproval_id=...` y procesa cada una por la misma ruta
+verificada del webhook. Puede repetirse: el identificador único del cobro evita aplicar dos
+veces una renovación. La pantalla administrativa ofrece «Conciliar cobros» para los pagos de
+Mercado Pago. La consulta puede tardar si la suscripción tiene muchas facturas.
 
 La cancelación de una membresía cancela también su suscripción remota antes de cerrar la membresía local. Un fallo de Mercado Pago impide completar la cancelación para evitar que continúen los débitos mientras SERA muestra la membresía como cancelada. El importe se fija al crear la suscripción. Para cambiar de nivel, primero hay que cancelar la suscripción y contratar de nuevo.
 
 ## Prueba manual con credenciales
 
-1. Iniciar PostgreSQL y la API con las tres variables configuradas; abrir el frontend en una URL HTTPS pública.
-2. Crear una membresía con Mercado Pago y seguir el enlace de autorización.
-3. Usar usuarios y medios de pago de prueba de Mercado Pago.
+1. Crear cuentas de prueba de vendedor y comprador en Mercado Pago. Usar el Access Token de prueba del vendedor en `MP_ACCESS_TOKEN`, y el email de la cuenta compradora para el usuario de SERA. No usar la misma cuenta para ambos lados.
+2. Iniciar PostgreSQL y la API con las tres variables configuradas; abrir el frontend en una URL HTTPS pública. Usar la clave de Webhooks de prueba de esa aplicación en `MP_WEBHOOK_SECRET`.
+3. Crear una membresía con Mercado Pago y seguir el enlace de autorización. Usar un medio de pago de prueba.
 4. Confirmar en el panel que llegan eventos `subscription_preapproval` y `subscription_authorized_payment` con respuesta 200.
-5. Verificar que un pago aprobado activa la membresía y que repetir una notificación no crea otra cuota.
-6. Cancelar la membresía y comprobar en Mercado Pago que la suscripción quedó `canceled`.
+5. Verificar que un pago aprobado activa la membresía y que repetir una notificación no crea otra renovación.
+6. Ejecutar «Conciliar cobros» y comprobar que el vencimiento no cambia si la factura ya se procesó.
+7. Cancelar la membresía y comprobar en Mercado Pago que la suscripción quedó `canceled`.
 
 Sin credenciales reales no se puede ejecutar este recorrido contra Mercado Pago. Los tests del repositorio cubren validación, correlación e idempotencia con dobles de la API.
 
-Referencias: [crear suscripción](https://www.mercadopago.com.ar/developers/es/reference/online-payments/subscriptions/create-preapproval/post), [webhooks](https://www.mercadopago.com.ar/developers/es/docs/links-and-debts/additional-content/your-integrations/notifications/webhooks), [factura autorizada](https://www.mercadopago.com.ar/developers/es/reference/online-payments/subscriptions/get-authorized-payment/get).
+Referencias: [cuentas de prueba](https://www.mercadopago.com.ar/developers/es/docs/subscriptions/additional-content/your-integrations/test/accounts), [aprobar un pago de prueba](https://www.mercadopago.com.ar/developers/es/docs/subscriptions/integration-test/payment-approval), [crear suscripción](https://www.mercadopago.com.ar/developers/es/reference/online-payments/subscriptions/create-preapproval/post), [webhooks](https://www.mercadopago.com.ar/developers/es/docs/links-and-debts/additional-content/your-integrations/notifications/webhooks), [factura autorizada](https://www.mercadopago.com.ar/developers/es/reference/online-payments/subscriptions/get-authorized-payment/get), [buscar facturas](https://www.mercadopago.com.ar/developers/es/reference/online-payments/subscriptions/authorized-payment-search/get).

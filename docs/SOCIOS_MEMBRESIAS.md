@@ -14,9 +14,9 @@ Hay una sola membresía por socio. No se modelan múltiples membresías ni rango
 `vigenciaHasta`. La contratación crea `PENDIENTE_PAGO`; una nueva contratación tras la cancelación
 reutiliza la misma fila. La restricción única sobre `socio_id` refuerza esta regla.
 
-`fechaAlta` y `fechaBaja` registran la solicitud y su cancelación. `proximoVencimiento` pertenece al
-seguimiento de la próxima cuota y puede ser nulo mientras el pago está pendiente. No define un
-intervalo de vigencia.
+`fechaAlta` y `fechaBaja` registran la solicitud y su cancelación. `proximoVencimiento` es el
+límite de vigencia de los beneficios y puede ser nulo mientras el pago está pendiente. Los
+beneficios requieren que esa fecha sea posterior al día actual de Buenos Aires.
 
 Al aprobar el primer pago, el próximo vencimiento se fija un mes después de la fecha de
 aprobación. Cada pago posterior aprobado extiende un mes desde el vencimiento actual cuando aún
@@ -31,11 +31,12 @@ de aprobar la cuota. La interfaz no aprueba pagos. Ver [MERCADO_PAGO.md](MERCADO
 
 ## Estados y auditoría
 
-Un proceso diario a las 00:05 de Buenos Aires revisa los vencimientos. La membresía conserva
-`ACTIVA` durante todo el día de `proximoVencimiento`; al día siguiente pasa a `VENCIDA` y pierde
-los beneficios. Si no se regulariza, pasa a `SUSPENDIDA` al cumplirse dos meses calendario desde
-ese vencimiento. Un pago aprobado reactiva la membresía y fija un nuevo vencimiento según la regla
-anterior.
+Un proceso diario a las 00:05 de Buenos Aires sincroniza el estado persistido con los
+vencimientos. El día de `proximoVencimiento` ya no hay beneficios: las consultas y las reglas
+de acceso calculan el estado efectivo aunque el proceso no haya corrido. La falta de renovación
+deja la membresía `VENCIDA`, sin deuda acumulada ni suspensión automática. `SUSPENDIDA` es una
+decisión administrativa que un nuevo cobro no levanta. Un pago aprobado de una membresía vencida
+la reactiva y fija un nuevo vencimiento según la regla anterior.
 
 Un proceso horario cancela los pagos que siguen `PENDIENTE` después de una hora desde su creación.
 También cancela las solicitudes `PENDIENTE_PAGO` de más de una hora que ya no tienen un pago
@@ -46,7 +47,7 @@ vinculado a una suscripción de Mercado Pago no vence mientras esa suscripción 
 - Una solicitud pendiente puede cancelarse inmediatamente.
 - Una membresía activa puede pasar a vencida, suspendida o cancelada.
 - Una vencida puede suspenderse, cancelarse o reactivarse con un pago aprobado; una suspendida
-  puede cancelarse o reactivarse con un pago aprobado.
+  solo puede cancelarse. Un cobro recibido mientras esté suspendida queda para revisión.
 - Un pago aprobado mantiene activa la membresía activa y renueva su próximo vencimiento.
 - Una membresía cancelada no admite pagos; se debe crear una nueva solicitud para volver a
   contratar.
@@ -67,7 +68,7 @@ puede contratar ese nivel. Deshabilitar un nivel conserva las membresías existe
 
 La tarifa de espacios se calcula en backend según la relación UNSE verificada. Para una relación
 pendiente o rechazada se usa `EXTERNO`; si no existe tarifa específica, se usa la tarifa general.
-El futuro módulo de pagos debe aplicar la misma verificación antes de emitir una cuota.
+El módulo de pagos aplica la misma verificación al iniciar cada cobro y congela el importe.
 
 ## API
 

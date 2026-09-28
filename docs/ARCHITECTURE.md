@@ -268,10 +268,10 @@ Los casos de uso que modifican varias cosas de forma atómica deben usar una tra
 Ejemplo:
 
 ```text
-Registrar pago
-  1. guardar pago
-  2. actualizar cuota
-  3. actualizar estado
+Confirmar pago
+  1. verificar y aprobar el cobro
+  2. renovar la membresía una sola vez
+  3. guardar la fecha resultante en el pago
 ```
 
 Debe ocurrir todo o nada.
@@ -298,13 +298,13 @@ React
   v
 Spring Boot
   |
-  | crea operación
+  | crea suscripción mensual pendiente
   v
 Mercado Pago
 
 Mercado Pago
   |
-  | webhook
+  | webhook firmado de factura autorizada
   v
 ngrok
   |
@@ -312,13 +312,16 @@ ngrok
 Spring Boot
   |
   v
-PagoService
+SuscripcionMercadoPagoService -> PagoService
   |
   v
 PostgreSQL
 ```
 
 Los secretos de Mercado Pago solo existen en backend.
+El backend consulta la factura y el cobro en Mercado Pago antes de aprobar. La clave de solicitud,
+el ID externo único y el bloqueo de la membresía protegen los reintentos. El retorno del navegador
+solo lleva al usuario a consultar el estado; no confirma el pago.
 
 ## PostgreSQL
 
