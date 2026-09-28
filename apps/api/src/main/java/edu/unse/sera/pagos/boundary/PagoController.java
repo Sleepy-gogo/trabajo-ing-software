@@ -1,6 +1,7 @@
 package edu.unse.sera.pagos.boundary;
 
 import edu.unse.sera.pagos.boundary.dto.SuscripcionResponse;
+import edu.unse.sera.pagos.control.ConciliacionPagoService;
 import edu.unse.sera.pagos.control.PagoDetalle;
 import edu.unse.sera.pagos.control.PagoService;
 import edu.unse.sera.pagos.control.SuscripcionMercadoPagoService;
@@ -23,10 +24,15 @@ public class PagoController {
 
   private final SuscripcionMercadoPagoService suscripciones;
   private final PagoService pagos;
+  private final ConciliacionPagoService conciliacion;
 
-  public PagoController(SuscripcionMercadoPagoService suscripciones, PagoService pagos) {
+  public PagoController(
+      SuscripcionMercadoPagoService suscripciones,
+      PagoService pagos,
+      ConciliacionPagoService conciliacion) {
     this.suscripciones = suscripciones;
     this.pagos = pagos;
+    this.conciliacion = conciliacion;
   }
 
   public record IniciarPagoRequest(MedioPago medioPago, UUID claveSolicitud) {}
@@ -75,5 +81,12 @@ public class PagoController {
   @GetMapping("/membresias/{id}/suscripcion")
   public SuscripcionResponse consultarSuscripcion(@PathVariable UUID id, Principal actor) {
     return SuscripcionResponse.from(suscripciones.consultar(id, UUID.fromString(actor.getName())));
+  }
+
+  public record ConciliacionResponse(int facturasRevisadas) {}
+
+  @PostMapping("/membresias/{id}/conciliacion")
+  public ConciliacionResponse conciliar(@PathVariable UUID id, Principal actor) {
+    return new ConciliacionResponse(conciliacion.conciliar(id, UUID.fromString(actor.getName())));
   }
 }

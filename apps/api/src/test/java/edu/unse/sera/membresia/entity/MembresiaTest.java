@@ -118,4 +118,17 @@ class MembresiaTest {
     assertThat(m.renovarUnMes(LocalDate.of(2026, 4, 5), LocalDate.of(2026, 4, 5)))
         .isEqualTo(LocalDate.of(2026, 5, 5));
   }
+
+  @Test
+  void suspensionAdministrativaImpideRenovarYConservaElVencimiento() {
+    var m = new Membresia(null, nivel());
+    var vencimiento = m.renovarUnMes(LocalDate.of(2026, 9, 27), LocalDate.of(2026, 9, 27));
+    m.cambiarEstado(EstadoMembresia.SUSPENDIDA);
+
+    assertThat(m.admitePago()).isFalse();
+    assertThatThrownBy(() -> m.renovarUnMes(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1)))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(m.getEstado()).isEqualTo(EstadoMembresia.SUSPENDIDA);
+    assertThat(m.getProximoVencimiento()).isEqualTo(vencimiento);
+  }
 }

@@ -157,9 +157,7 @@ public class Membresia {
               nuevo == EstadoMembresia.SUSPENDIDA
                   || nuevo == EstadoMembresia.CANCELADA
                   || (nuevo == EstadoMembresia.ACTIVA && pagoAprobado);
-          case SUSPENDIDA ->
-              nuevo == EstadoMembresia.CANCELADA
-                  || (nuevo == EstadoMembresia.ACTIVA && pagoAprobado);
+          case SUSPENDIDA -> nuevo == EstadoMembresia.CANCELADA;
           case CANCELADA -> nuevo == EstadoMembresia.PENDIENTE_PAGO && nuevaSolicitud;
         };
     return permitido;
