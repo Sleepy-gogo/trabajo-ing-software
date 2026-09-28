@@ -76,6 +76,7 @@ class SuscripcionMercadoPagoServiceTest {
             membresia);
     ReflectionTestUtils.setField(pagoInicial, "id", UUID.randomUUID());
     suscripcion = new SuscripcionMercadoPago(membresia, pagoInicial);
+    ReflectionTestUtils.setField(suscripcion, "id", UUID.randomUUID());
     suscripcion.vincular("preapproval-123", "https://www.mercadopago.com.ar/checkout");
   }
 
@@ -101,6 +102,7 @@ class SuscripcionMercadoPagoServiceTest {
         .thenAnswer(
             invocation -> {
               SuscripcionMercadoPago local = invocation.getArgument(0);
+              ReflectionTestUtils.setField(local, "id", UUID.randomUUID());
               creada.set(local);
               return local;
             });

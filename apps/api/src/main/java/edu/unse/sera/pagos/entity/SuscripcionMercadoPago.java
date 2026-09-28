@@ -4,6 +4,8 @@ import edu.unse.sera.membresia.entity.Membresia;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -18,7 +20,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Entity
 @Table(name = "suscripciones_mercado_pago")
 public class SuscripcionMercadoPago {
-  @Id private UUID id;
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  @Column(nullable = false, updatable = false)
+  private UUID id;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "membresia_id", nullable = false)
@@ -51,7 +57,6 @@ public class SuscripcionMercadoPago {
   protected SuscripcionMercadoPago() {}
 
   public SuscripcionMercadoPago(Membresia membresia, Pago pagoInicial) {
-    this.id = UUID.randomUUID();
     this.membresia = membresia;
     this.pagoInicial = pagoInicial;
     this.estado = "pending";
