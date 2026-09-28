@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
+  Optional<Reserva> findByCodigo(String codigo);
+
   @Query("select r.usuario.id from Reserva r where r.id = :id")
   Optional<UUID> titular(UUID id);
 

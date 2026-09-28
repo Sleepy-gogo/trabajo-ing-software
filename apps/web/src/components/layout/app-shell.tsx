@@ -10,7 +10,6 @@ import {
   useNavigate,
 } from "react-router-dom"
 import {
-  Activity,
   ArrowUpRight,
   Bell,
   CalendarDays,
@@ -67,11 +66,6 @@ const memberNav = [
 ]
 const staffNav = [
   { label: "Validar ingreso", path: "/admin/access", icon: QrCode },
-  {
-    label: "Historial de accesos",
-    path: "/admin/access?tab=history",
-    icon: Activity,
-  },
 ]
 const roleNames = {
   admin: "Administración",
@@ -352,9 +346,7 @@ export function AppShell({
             role === "member" && "pb-28 lg:pb-10"
           )}
         >
-          {/\/(access|reports|surveys|settings)(\/|$)/.test(
-            location.pathname
-          ) && (
+          {/\/(reports|surveys|settings)(\/|$)/.test(location.pathname) && (
             <div
               role="note"
               className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"

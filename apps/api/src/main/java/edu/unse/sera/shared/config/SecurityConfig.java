@@ -56,6 +56,8 @@ public class SecurityConfig {
                         "/api/niveles-membresia",
                         "/api/niveles-membresia/**")
                     .hasRole("ADMIN")
+                    .requestMatchers("/api/accesos", "/api/accesos/**")
+                    .hasAnyRole("ADMIN", "STAFF")
                     .requestMatchers("/api/reservas", "/api/reservas/**")
                     .authenticated()
                     .anyRequest()

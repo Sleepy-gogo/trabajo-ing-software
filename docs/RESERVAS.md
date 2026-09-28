@@ -36,7 +36,7 @@ Suscripciones para membresías; las reservas usan Checkout Pro para un cobro ún
   descuentos adicionales por membresía. Esto precisa el texto genérico de TRA-41.
 - El estado finalizado se calcula por fecha y hora; no requiere otro proceso.
 - El código se genera al confirmar y el frontend representa ese mismo código en
-  un QR. Validar el ingreso físico sigue perteneciendo al incremento 6.
+  un QR. El personal puede consultar su vigencia desde Validar ingreso.
 - Se mantienen las transacciones y el control de superposición. Simplificar el
   modelo no permite confirmar dos reservas del mismo espacio y horario.
 
@@ -114,3 +114,29 @@ el perfil `dev` lo importa opcionalmente al iniciar desde `apps/api`.
 El frontend genera `claveSolicitud` con `crypto.getRandomValues`, disponible en
 HTTP, y conserva la clave en los reintentos. Es una clave de idempotencia, no el ID
 de la entidad: JPA sigue generando los IDs de las reservas.
+
+
+## Lector QR y validación de acceso
+
+`/admin/access` está conectado a `POST /api/accesos/validacion`, disponible solo
+para ADMIN y STAFF, con sesión y CSRF. Recibe `{ "codigo": "SERA-…" }` y devuelve
+un DTO con `autorizado`, `motivo` y los datos del titular y horario cuando corresponde.
+No devuelve entidades ni interpreta URLs externas.
+
+El frontend usa [qr-scanner](https://github.com/nimiq/qr-scanner) para leer cámara
+tras una acción del operador o una imagen seleccionada. La cámara requiere HTTPS
+(o localhost), se detiene después de una lectura y se libera al cerrar o salir.
+La entrada manual funciona también con lectores USB que escriben como un teclado.
+Una lectura nunca autoriza por sí sola: se consulta el estado actual en la API.
+
+Reglas implementadas:
+
+- Reserva: cuenta activa, reserva confirmada, espacio habilitado y hora actual
+  dentro de `[desde, hasta)` en Argentina. No hay tolerancia de ingreso anticipado.
+- Carnet personal: cuenta activa y membresía vigente según `estaVigente`.
+  Habilita acceso general; no acredita una reserva de espacio.
+- Códigos desconocidos, cancelaciones y vencimientos se rechazan.
+
+La consulta no registra asistencia, no consume códigos ni impide reingresos.
+Se retiraron las acciones e historial ficticios de la pantalla anterior. Un registro
+persistente de ingresos o excepciones requiere definir esas reglas por separado.
