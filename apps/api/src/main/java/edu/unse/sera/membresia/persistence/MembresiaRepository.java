@@ -2,17 +2,23 @@ package edu.unse.sera.membresia.persistence;
 
 import edu.unse.sera.membresia.entity.EstadoMembresia;
 import edu.unse.sera.membresia.entity.Membresia;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /** Acceso a persistencia de membresías contratadas. */
 public interface MembresiaRepository extends JpaRepository<Membresia, UUID> {
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT m FROM Membresia m WHERE m.id = :id")
+  Optional<Membresia> bloquearPorId(@Param("id") UUID id);
 
   // 1. buscarMembresiaActiva(idUsuario)
   @Query(

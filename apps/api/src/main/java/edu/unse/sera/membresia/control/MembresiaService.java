@@ -74,24 +74,20 @@ public class MembresiaService {
     if (!membresia.getSocio().getUsuario().getId().equals(pago.getUsuario().getId())) {
       throw new IllegalStateException("El pago no pertenece al titular de la membresía.");
     }
-    LocalDate vencimiento = membresia.getProximoVencimiento();
-
-    LocalDate referencia;
-    if (vencimiento != null && vencimiento.isAfter(fechaPago.toLocalDate())) {
-      referencia = vencimiento;
-    } else {
-      referencia = fechaPago.toLocalDate();
-    }
-
-    membresia.setProximoVencimiento(referencia.plusMonths(1));
-    membresia.activarPorPago();
+    LocalDate fechaNegocio =
+        fechaPago
+            .atZoneSameInstant(java.time.ZoneId.of("America/Argentina/Buenos_Aires"))
+            .toLocalDate();
+    membresia.renovarUnMes(
+        fechaNegocio, LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires")));
 
     return new MembresiaDetalle(
         membresia.getId(),
         membresia.getSocio().getId(),
         membresia.getNivelMembresia().getId(),
         membresia.getNivelMembresia().getNombre(),
-        membresia.getEstado(),
+        membresia.estadoEfectivo(
+            LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"))),
         membresia.getFechaAlta(),
         membresia.getFechaBaja(),
         membresia.getProximoVencimiento());

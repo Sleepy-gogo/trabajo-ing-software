@@ -80,6 +80,12 @@ public class Socio {
     return relacionUnse;
   }
 
+  public RelacionUnse relacionParaTarifa() {
+    return estadoVerificacionUnse == EstadoVerificacionUnse.VERIFICADA
+        ? relacionUnse
+        : RelacionUnse.EXTERNO;
+  }
+
   public EstadoVerificacionUnse getEstadoVerificacionUnse() {
     return estadoVerificacionUnse;
   }

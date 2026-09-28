@@ -39,6 +39,10 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers("/api/pagos/membresias/**")
                     .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/pagos/*/confirmacion-efectivo")
+                    .hasRole("ADMIN")
+                    .requestMatchers("/api/pagos", "/api/pagos/**")
+                    .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/socios")
                     .authenticated()
                     .requestMatchers(

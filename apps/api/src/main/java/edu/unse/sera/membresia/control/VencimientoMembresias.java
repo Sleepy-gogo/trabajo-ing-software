@@ -27,7 +27,7 @@ public class VencimientoMembresias {
 
   void procesar(LocalDate hoy) {
     membresias
-        .findAllByEstadoAndProximoVencimientoBefore(EstadoMembresia.ACTIVA, hoy)
+        .findAllByEstadoAndProximoVencimientoBefore(EstadoMembresia.ACTIVA, hoy.plusDays(1))
         .forEach(membresia -> membresia.actualizarPorVencimiento(hoy));
     membresias
         .findAllByEstado(EstadoMembresia.VENCIDA)

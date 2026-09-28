@@ -7,17 +7,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import edu.unse.sera.membresia.control.MembresiaService;
 import edu.unse.sera.membresia.entity.EstadoMembresia;
 import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.membresia.entity.NivelMembresia;
 import edu.unse.sera.membresia.persistence.MembresiaRepository;
-import edu.unse.sera.membresia.persistence.NivelMembresiaRepository;
 import edu.unse.sera.pagos.entity.ConceptoPago;
 import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
 import edu.unse.sera.pagos.persistence.PagoRepository;
+import edu.unse.sera.shared.exception.OperacionNoPermitidaException;
 import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
 import edu.unse.sera.socio.entity.Socio;
@@ -27,6 +26,9 @@ import edu.unse.sera.usuario.entity.Usuario;
 import edu.unse.sera.usuario.persistence.UsuarioRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,149 +40,119 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class PagoServiceTest {
-
   @Mock private PagoRepository pagos;
   @Mock private MembresiaRepository membresias;
   @Mock private UsuarioRepository usuarios;
-  @Mock private NivelMembresiaRepository niveles;
-
   private PagoService service;
+  private Usuario titular;
+  private Membresia membresia;
+  private UUID membresiaId;
 
   @BeforeEach
-  void setUp() {
-    service = new PagoService(pagos, membresias, usuarios, new MembresiaService(niveles));
+  void preparar() {
+    service = new PagoService(pagos, membresias, usuarios);
+    titular = usuario(RolUsuario.USUARIO);
+    var socio = new Socio(titular, RelacionUnse.ESTUDIANTE, EstadoVerificacionUnse.PENDIENTE, null);
+    var nivel = new NivelMembresia("General", "Acceso");
+    nivel.actualizar(
+        "General",
+        "Acceso",
+        Map.of(RelacionUnse.EXTERNO, new BigDecimal("1000.00")),
+        List.of("Acceso"),
+        true);
+    membresia = new Membresia(socio, nivel);
+    membresiaId = UUID.randomUUID();
+    ReflectionTestUtils.setField(membresia, "id", membresiaId);
   }
 
   @Test
-  void aprobarPagoActivaLaMembresiaPendiente() {
-    Pago pago = pagoPendiente();
-    UUID pagoId = UUID.randomUUID();
-    when(pagos.findById(pagoId)).thenReturn(Optional.of(pago));
+  void iniciaConTarifaExternaYGuardaAntesDeResponder() {
+    UUID clave = UUID.randomUUID();
+    when(membresias.bloquearPorId(membresiaId)).thenReturn(Optional.of(membresia));
+    when(pagos.saveAndFlush(any(Pago.class)))
+        .thenAnswer(
+            invocation -> {
+              Pago pago = invocation.getArgument(0);
+              ReflectionTestUtils.setField(pago, "id", UUID.randomUUID());
+              return pago;
+            });
 
-    service.confirmarPago(pagoId, "comprobante-123");
+    var detalle = service.iniciarPagoCuota(membresiaId, titular.getId(), MedioPago.EFECTIVO, clave);
 
+    assertThat(detalle.id()).isNotNull();
+    assertThat(detalle.monto()).isEqualByComparingTo("1000.00");
+    assertThat(detalle.estado()).isEqualTo(EstadoPago.PENDIENTE);
+    verify(pagos).saveAndFlush(any(Pago.class));
+  }
+
+  @Test
+  void mismaClaveDevuelveElPagoExistente() {
+    Pago pago = pendiente(MedioPago.EFECTIVO);
+    when(membresias.bloquearPorId(membresiaId)).thenReturn(Optional.of(membresia));
+    when(pagos.findByUsuarioIdAndClaveSolicitud(titular.getId(), pago.getClaveSolicitud()))
+        .thenReturn(Optional.of(pago));
+
+    assertThat(
+            service
+                .iniciarPagoCuota(
+                    membresiaId, titular.getId(), MedioPago.EFECTIVO, pago.getClaveSolicitud())
+                .id())
+        .isEqualTo(pago.getId());
+    verify(pagos, never()).saveAndFlush(any(Pago.class));
+  }
+
+  @Test
+  void aprobacionDuplicadaNoAgregaOtroMes() {
+    Pago pago = pendiente(MedioPago.MERCADO_PAGO);
+    when(pagos.findById(pago.getId())).thenReturn(Optional.of(pago));
+    when(membresias.bloquearPorId(membresiaId)).thenReturn(Optional.of(membresia));
+    OffsetDateTime fecha = OffsetDateTime.parse("2026-09-27T12:00:00Z");
+
+    service.confirmarPago(pago.getId(), "mp-123", fecha);
+    LocalDate vencimiento = membresia.getProximoVencimiento();
+    service.confirmarPago(pago.getId(), "mp-123", fecha);
+
+    assertThat(membresia.getProximoVencimiento()).isEqualTo(vencimiento);
+    assertThat(pago.getAplicadoEn()).isNotNull();
     assertThat(pago.getEstado()).isEqualTo(EstadoPago.APROBADO);
-    assertThat(pago.getMembresia().getEstado()).isEqualTo(EstadoMembresia.ACTIVA);
-    assertThat(pago.getMembresia().getProximoVencimiento()).isNotNull();
   }
 
   @Test
-  void confirmarPagoSinMembresiaDevuelveDetalleConIdMembresiaNulo() {
-    Pago pago = pagoPendiente();
-    pago.setMembresia(null);
-    UUID pagoId = UUID.randomUUID();
-    when(pagos.findById(pagoId)).thenReturn(Optional.of(pago));
+  void cobroDeContratacionAnteriorQuedaParaRevision() {
+    Pago pago = pendiente(MedioPago.MERCADO_PAGO);
+    membresia.cancelar();
+    membresia.renovarSolicitud(membresia.getNivelMembresia());
+    when(pagos.findById(pago.getId())).thenReturn(Optional.of(pago));
+    when(membresias.bloquearPorId(membresiaId)).thenReturn(Optional.of(membresia));
 
-    PagoDetalle detalle = service.confirmarPago(pagoId, "comprobante-reserva");
+    service.confirmarPago(pago.getId(), "mp-456", OffsetDateTime.now());
 
-    assertThat(pago.getEstado()).isEqualTo(EstadoPago.APROBADO);
-    assertThat(detalle.idMembresia()).isNull();
+    assertThat(pago.isRequiereRevision()).isTrue();
+    assertThat(membresia.getEstado()).isEqualTo(EstadoMembresia.PENDIENTE_PAGO);
+    assertThat(membresia.getProximoVencimiento()).isNull();
   }
 
   @Test
-  void rechazarPagoConservaMembresiaPendiente() {
-    Pago pago = pagoPendiente();
-    UUID pagoId = UUID.randomUUID();
-    when(pagos.findById(pagoId)).thenReturn(Optional.of(pago));
+  void soloAdminPuedeConfirmarEfectivo() {
+    Pago pago = pendiente(MedioPago.EFECTIVO);
+    when(usuarios.findById(titular.getId())).thenReturn(Optional.of(titular));
 
-    service.rechazarPago(pagoId);
-
-    assertThat(pago.getEstado()).isEqualTo(EstadoPago.RECHAZADO);
-    assertThat(pago.getMembresia().getEstado()).isEqualTo(EstadoMembresia.PENDIENTE_PAGO);
+    assertThatThrownBy(() -> service.confirmarPagoEfectivo(pago.getId(), titular.getId()))
+        .isInstanceOf(OperacionNoPermitidaException.class);
+    verify(pagos, never()).findById(any());
   }
 
-  @Test
-  void aprobarCuotaPosteriorConservaMembresiaActiva() {
-    Pago pago = pagoPendiente();
-    pago.getMembresia().activarPorPago();
-    LocalDate vencimiento = LocalDate.now().plusMonths(2);
-    pago.getMembresia().setProximoVencimiento(vencimiento);
-    UUID pagoId = UUID.randomUUID();
-    when(pagos.findById(pagoId)).thenReturn(Optional.of(pago));
-
-    service.confirmarPago(pagoId, "comprobante-456");
-
-    assertThat(pago.getEstado()).isEqualTo(EstadoPago.APROBADO);
-    assertThat(pago.getMembresia().getEstado()).isEqualTo(EstadoMembresia.ACTIVA);
-    assertThat(pago.getMembresia().getProximoVencimiento()).isEqualTo(vencimiento.plusMonths(1));
+  private Pago pendiente(MedioPago medio) {
+    Pago pago =
+        new Pago(ConceptoPago.CUOTA_MENSUAL, titular, medio, new BigDecimal("1000.00"), membresia);
+    ReflectionTestUtils.setField(pago, "id", UUID.randomUUID());
+    return pago;
   }
 
-  @Test
-  void aprobarPagoReactivaMembresiaVencida() {
-    Pago pago = pagoPendiente();
-    pago.getMembresia().activarPorPago();
-    pago.getMembresia().setProximoVencimiento(LocalDate.now().minusDays(1));
-    pago.getMembresia().cambiarEstado(EstadoMembresia.VENCIDA);
-    UUID pagoId = UUID.randomUUID();
-    when(pagos.findById(pagoId)).thenReturn(Optional.of(pago));
-
-    service.confirmarPago(pagoId, "comprobante-vencida");
-
-    assertThat(pago.getEstado()).isEqualTo(EstadoPago.APROBADO);
-    assertThat(pago.getMembresia().getEstado()).isEqualTo(EstadoMembresia.ACTIVA);
-    assertThat(pago.getMembresia().getProximoVencimiento()).isAfter(LocalDate.now());
-  }
-
-  @Test
-  void aprobarPagoReactivaMembresiaSuspendida() {
-    Pago pago = pagoPendiente();
-    pago.getMembresia().activarPorPago();
-    pago.getMembresia().cambiarEstado(EstadoMembresia.SUSPENDIDA);
-    UUID pagoId = UUID.randomUUID();
-    when(pagos.findById(pagoId)).thenReturn(Optional.of(pago));
-
-    service.confirmarPago(pagoId, "comprobante-suspendida");
-
-    assertThat(pago.getEstado()).isEqualTo(EstadoPago.APROBADO);
-    assertThat(pago.getMembresia().getEstado()).isEqualTo(EstadoMembresia.ACTIVA);
-    assertThat(pago.getMembresia().getProximoVencimiento()).isAfter(LocalDate.now());
-  }
-
-  @Test
-  void noApruebaPagoDeMembresiaCancelada() {
-    Pago pago = pagoPendiente();
-    pago.getMembresia().cancelar();
-    UUID pagoId = UUID.randomUUID();
-    when(pagos.findById(pagoId)).thenReturn(Optional.of(pago));
-
-    assertThatThrownBy(() -> service.confirmarPago(pagoId, "comprobante-123"))
-        .isInstanceOf(IllegalStateException.class);
-    assertThat(pago.getEstado()).isEqualTo(EstadoPago.PENDIENTE);
-  }
-
-  @Test
-  void noCreaOtroPagoMientrasExisteUnoPendiente() {
-    Pago existente = pagoPendiente();
-    UUID membresiaId = UUID.randomUUID();
-    UUID usuarioId = existente.getUsuario().getId();
-    when(membresias.findById(membresiaId)).thenReturn(Optional.of(existente.getMembresia()));
-    when(usuarios.findById(usuarioId)).thenReturn(Optional.of(existente.getUsuario()));
-    when(membresias.getReferenceById(membresiaId)).thenReturn(existente.getMembresia());
-    when(pagos.existsByMembresiaIdAndEstado(membresiaId, EstadoPago.PENDIENTE)).thenReturn(true);
-
-    assertThatThrownBy(
-            () -> service.iniciarPagoCuota(membresiaId, usuarioId, MedioPago.MERCADO_PAGO))
-        .isInstanceOf(IllegalStateException.class);
-    verify(pagos, never()).save(any());
-  }
-
-  private Pago pagoPendiente() {
+  private Usuario usuario(RolUsuario rol) {
     Usuario usuario =
-        new Usuario(
-            "Ada Lovelace",
-            "ada@example.com",
-            12345678,
-            EstadoUsuario.ACTIVO,
-            RolUsuario.USUARIO,
-            "hash");
+        new Usuario("Ada Lovelace", "ada@example.com", 12345678, EstadoUsuario.ACTIVO, rol, "hash");
     ReflectionTestUtils.setField(usuario, "id", UUID.randomUUID());
-    Socio socio = new Socio(usuario, RelacionUnse.EXTERNO, EstadoVerificacionUnse.PENDIENTE, null);
-    Membresia membresia = new Membresia(socio, new NivelMembresia("General", "Acceso"));
-    return new Pago(
-        ConceptoPago.CUOTA_MENSUAL,
-        usuario,
-        MedioPago.MERCADO_PAGO,
-        new BigDecimal("1000.00"),
-        membresia);
+    return usuario;
   }
 }

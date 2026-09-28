@@ -170,8 +170,10 @@ public class SuscripcionMercadoPagoService {
     if (pagos.findByMercadoPagoPaymentId(paymentId).isPresent()) {
       return;
     }
+    boolean facturaYaAplicada =
+        pagos.findByMercadoPagoFacturaIdAndEstado(factura.id(), EstadoPago.APROBADO).isPresent();
     Pago pago = suscripcion.getPagoInicial();
-    if (pago.getEstado() != EstadoPago.PENDIENTE) {
+    if (pago.getEstado() != EstadoPago.PENDIENTE || facturaYaAplicada) {
       pago =
           pagos.saveAndFlush(
               new Pago(
@@ -182,6 +184,12 @@ public class SuscripcionMercadoPagoService {
                   suscripcion.getMembresia()));
     }
     pago.vincularMercadoPagoPaymentId(paymentId);
+    pago.vincularFacturaMercadoPago(factura.id());
+    if (facturaYaAplicada) {
+      pago.aprobar(paymentId, remoto.getDateApproved());
+      pago.marcarParaRevision("Otro cobro de la misma factura ya renovó la membresía.");
+      return;
+    }
     pagoService.confirmarPago(pago.getId(), paymentId, remoto.getDateApproved());
   }
 

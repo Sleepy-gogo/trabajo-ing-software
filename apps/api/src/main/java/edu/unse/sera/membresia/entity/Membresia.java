@@ -19,7 +19,7 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-/** Membresía contratada por un socio. Los importes pertenecen a las cuotas y pagos. */
+/** Membresía contratada por un socio. Su vencimiento determina la vigencia. */
 @Entity
 @Table(name = "membresias")
 public class Membresia {
@@ -50,6 +50,9 @@ public class Membresia {
   @Column(name = "proximo_vencimiento")
   private LocalDate proximoVencimiento;
 
+  @Column(name = "contratacion_id", nullable = false)
+  private UUID contratacionId;
+
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private OffsetDateTime createdAt;
@@ -67,6 +70,7 @@ public class Membresia {
     this.nivelMembresia = nivelMembresia;
     this.estado = EstadoMembresia.PENDIENTE_PAGO;
     this.fechaAlta = LocalDate.now();
+    this.contratacionId = UUID.randomUUID();
   }
 
   public UUID getId() {
@@ -95,6 +99,10 @@ public class Membresia {
 
   public LocalDate getProximoVencimiento() {
     return proximoVencimiento;
+  }
+
+  public UUID getContratacionId() {
+    return contratacionId;
   }
 
   public void setProximoVencimiento(LocalDate nuevaFecha) {
@@ -163,18 +171,45 @@ public class Membresia {
   }
 
   public boolean tieneBeneficios() {
-    return estado == EstadoMembresia.ACTIVA;
+    return estaVigente(LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires")));
+  }
+
+  public boolean estaVigente(LocalDate hoy) {
+    return estado != EstadoMembresia.CANCELADA
+        && estado != EstadoMembresia.SUSPENDIDA
+        && estado != EstadoMembresia.PENDIENTE_PAGO
+        && proximoVencimiento != null
+        && proximoVencimiento.isAfter(hoy);
+  }
+
+  public EstadoMembresia estadoEfectivo(LocalDate hoy) {
+    if (estado == EstadoMembresia.CANCELADA
+        || estado == EstadoMembresia.SUSPENDIDA
+        || estado == EstadoMembresia.PENDIENTE_PAGO) {
+      return estado;
+    }
+    return estaVigente(hoy) ? EstadoMembresia.ACTIVA : EstadoMembresia.VENCIDA;
+  }
+
+  public LocalDate renovarUnMes(LocalDate fechaPago, LocalDate hoy) {
+    if (fechaPago == null || hoy == null || !admitePago()) {
+      throw new IllegalStateException("La membresía no admite esta renovación.");
+    }
+    LocalDate base =
+        proximoVencimiento != null && proximoVencimiento.isAfter(fechaPago)
+            ? proximoVencimiento
+            : fechaPago;
+    proximoVencimiento = base.plusMonths(1);
+    estado = proximoVencimiento.isAfter(hoy) ? EstadoMembresia.ACTIVA : EstadoMembresia.VENCIDA;
+    return proximoVencimiento;
   }
 
   public void actualizarPorVencimiento(LocalDate hoy) {
-    if (proximoVencimiento == null || !proximoVencimiento.isBefore(hoy)) {
+    if (proximoVencimiento == null || proximoVencimiento.isAfter(hoy)) {
       return;
     }
     if (estado == EstadoMembresia.ACTIVA) {
       cambiarEstado(EstadoMembresia.VENCIDA);
-    }
-    if (estado == EstadoMembresia.VENCIDA && !proximoVencimiento.plusMonths(2).isAfter(hoy)) {
-      cambiarEstado(EstadoMembresia.SUSPENDIDA);
     }
   }
 
@@ -200,6 +235,7 @@ public class Membresia {
     fechaAlta = LocalDate.now();
     fechaBaja = null;
     proximoVencimiento = null;
+    contratacionId = UUID.randomUUID();
   }
 
   public void setNivelMembresia(NivelMembresia nivel) {

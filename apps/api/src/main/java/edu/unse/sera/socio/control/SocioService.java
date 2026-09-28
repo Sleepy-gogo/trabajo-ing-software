@@ -162,10 +162,7 @@ public class SocioService {
     if (medioPago == null) {
       throw new IllegalArgumentException("Elegí un medio de pago.");
     }
-    RelacionUnse tarifaRelacion =
-        s.getEstadoVerificacionUnse() == EstadoVerificacionUnse.VERIFICADA
-            ? s.getRelacionUnse()
-            : RelacionUnse.EXTERNO;
+    RelacionUnse tarifaRelacion = s.relacionParaTarifa();
     NivelMembresia n = nivel(nivelId, tarifaRelacion);
     if (s.getMembresia() == null) {
       s.setMembresia(membresias.save(new Membresia(s, n)));
@@ -234,7 +231,8 @@ public class SocioService {
         m.getSocio().getId(),
         m.getNivelMembresia().getId(),
         m.getNivelMembresia().getNombre(),
-        m.getEstado(),
+        m.estadoEfectivo(
+            java.time.LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"))),
         m.getFechaAlta(),
         m.getFechaBaja(),
         m.getProximoVencimiento());
@@ -256,7 +254,10 @@ public class SocioService {
         m == null ? null : m.getId(),
         n == null ? null : n.getId(),
         n == null ? null : n.getNombre(),
-        m == null ? null : m.getEstado(),
+        m == null
+            ? null
+            : m.estadoEfectivo(
+                java.time.LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"))),
         m == null ? null : m.getProximoVencimiento());
   }
 }

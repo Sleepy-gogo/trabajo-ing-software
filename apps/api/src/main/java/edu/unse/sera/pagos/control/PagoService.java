@@ -1,7 +1,6 @@
 package edu.unse.sera.pagos.control;
 
 import edu.unse.sera.membresia.control.MembresiaNoEncontradaException;
-import edu.unse.sera.membresia.control.MembresiaService;
 import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.membresia.persistence.MembresiaRepository;
 import edu.unse.sera.pagos.entity.ConceptoPago;
@@ -9,126 +8,200 @@ import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
 import edu.unse.sera.pagos.persistence.PagoRepository;
-import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
-import edu.unse.sera.socio.entity.RelacionUnse;
-import edu.unse.sera.socio.entity.Socio;
+import edu.unse.sera.shared.exception.OperacionNoPermitidaException;
 import edu.unse.sera.usuario.control.UsuarioNoEncontradoException;
+import edu.unse.sera.usuario.entity.EstadoUsuario;
+import edu.unse.sera.usuario.entity.RolUsuario;
 import edu.unse.sera.usuario.entity.Usuario;
 import edu.unse.sera.usuario.persistence.UsuarioRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Transactional
 @Service
+@Transactional
 public class PagoService {
-
-  private PagoRepository pagoRepository;
-  private MembresiaRepository membresiaRepository;
-  private UsuarioRepository usuarioRepository;
-  private final MembresiaService membresiaService;
+  private static final ZoneId ZONA = ZoneId.of("America/Argentina/Buenos_Aires");
+  private final PagoRepository pagos;
+  private final MembresiaRepository membresias;
+  private final UsuarioRepository usuarios;
 
   public PagoService(
-      PagoRepository pagoRepository,
-      MembresiaRepository membresiaRepository,
-      UsuarioRepository usuarioRepository,
-      MembresiaService membresiaService) {
-    this.pagoRepository = pagoRepository;
-    this.membresiaRepository = membresiaRepository;
-    this.usuarioRepository = usuarioRepository;
-    this.membresiaService = membresiaService;
+      PagoRepository pagos, MembresiaRepository membresias, UsuarioRepository usuarios) {
+    this.pagos = pagos;
+    this.membresias = membresias;
+    this.usuarios = usuarios;
   }
 
-  private Pago buscar(UUID id) {
-    return pagoRepository.findById(id).orElseThrow(() -> new PagoNoEncontradoException(id));
-  }
-
-  public PagoDetalle iniciarPagoCuota(UUID idMembresia, UUID idUsuario, MedioPago medioPago) {
-
-    if (membresiaRepository.findById(idMembresia).isEmpty()) {
-      throw new MembresiaNoEncontradaException();
+  public PagoDetalle iniciarPagoCuota(
+      UUID membresiaId, UUID actorId, MedioPago medio, UUID claveSolicitud) {
+    if (medio == null || claveSolicitud == null) {
+      throw new IllegalArgumentException("Indicá el medio y la clave de solicitud.");
     }
-
-    if (usuarioRepository.findById(idUsuario).isEmpty()) {
-      throw new UsuarioNoEncontradoException(idUsuario);
+    Membresia membresia =
+        membresias.bloquearPorId(membresiaId).orElseThrow(MembresiaNoEncontradaException::new);
+    autorizar(membresia.getSocio().getUsuario().getId(), actorId);
+    if (membresia.getSocio().getUsuario().getEstadoCuenta() != EstadoUsuario.ACTIVO
+        || !membresia.admitePago()) {
+      throw new IllegalStateException("La membresía no admite este pago.");
     }
-    Membresia membresia = membresiaRepository.getReferenceById(idMembresia);
-    if (!membresia.admitePago()) {
-      throw new IllegalStateException("La membresía no admite pagos en su estado actual.");
+    var repetido =
+        pagos.findByUsuarioIdAndClaveSolicitud(
+            membresia.getSocio().getUsuario().getId(), claveSolicitud);
+    if (repetido.isPresent()) {
+      Pago pago = repetido.get();
+      if (!membresiaId.equals(pago.getMembresia().getId()) || medio != pago.getMedioPago()) {
+        throw new IllegalStateException("La clave ya pertenece a otra operación.");
+      }
+      return detalle(pago);
     }
-    Socio membresiaSocio = membresia.getSocio();
-    Usuario membresiaUsuario = membresiaSocio.getUsuario();
-
-    if (!membresiaUsuario.getId().equals(idUsuario)) {
-      throw new PagoDiscrepanciaException();
+    var pendiente =
+        pagos.findByMembresiaIdAndContratacionIdAndEstado(
+            membresiaId, membresia.getContratacionId(), EstadoPago.PENDIENTE);
+    if (pendiente.isPresent()) {
+      if (pendiente.get().getMedioPago() != medio) {
+        throw new IllegalStateException("Ya existe un pago pendiente con otro medio.");
+      }
+      return detalle(pendiente.get());
     }
-    if (pagoRepository.existsByMembresiaIdAndEstado(idMembresia, EstadoPago.PENDIENTE)) {
-      throw new IllegalStateException("Ya existe un pago pendiente para esta membresía.");
-    }
-    RelacionUnse tarifaRelacion =
-        membresiaSocio.getEstadoVerificacionUnse() == EstadoVerificacionUnse.VERIFICADA
-            ? membresiaSocio.getRelacionUnse()
-            : RelacionUnse.EXTERNO;
-    BigDecimal monto = membresia.getNivelMembresia().getPreciosPorRelacion().get(tarifaRelacion);
+    var socio = membresia.getSocio();
+    BigDecimal monto =
+        membresia.getNivelMembresia().getPreciosPorRelacion().get(socio.relacionParaTarifa());
     if (monto == null) {
-      throw new IllegalArgumentException(
-          "El nivel no tiene una tarifa disponible para esta relación.");
+      throw new IllegalArgumentException("El nivel no tiene una tarifa para esta relación.");
     }
-    Pago pago = new Pago(ConceptoPago.CUOTA_MENSUAL, membresiaUsuario, medioPago, monto, membresia);
-    pagoRepository.save(pago);
-    return toResponse(pago);
+    Pago pago =
+        pagos.saveAndFlush(
+            new Pago(
+                ConceptoPago.CUOTA_MENSUAL,
+                socio.getUsuario(),
+                medio,
+                monto,
+                membresia,
+                claveSolicitud));
+    return detalle(pago);
   }
 
-  public PagoDetalle confirmarPago(UUID id, String comprobante) {
-    return confirmarPago(id, comprobante, OffsetDateTime.now());
+  public PagoDetalle confirmarPagoEfectivo(UUID pagoId, UUID adminId) {
+    Usuario admin = usuario(adminId);
+    if (admin.getRol() != RolUsuario.ADMIN) {
+      throw new OperacionNoPermitidaException();
+    }
+    Pago pago = buscar(pagoId);
+    if (pago.getMedioPago() != MedioPago.EFECTIVO) {
+      throw new IllegalStateException("Solo se confirma efectivo desde administración.");
+    }
+    if (pago.getEstado() != EstadoPago.PENDIENTE && pago.getEstado() != EstadoPago.APROBADO) {
+      throw new IllegalStateException("Este pago ya no está pendiente.");
+    }
+    return confirmarPago(pagoId, "SERA-" + pagoId, OffsetDateTime.now(ZoneOffset.UTC));
   }
 
-  public PagoDetalle confirmarPago(UUID id, String comprobante, OffsetDateTime fechaPago) {
-    if (fechaPago == null) {
-      throw new IllegalArgumentException("La fecha de aprobación es obligatoria.");
+  /** Solo la integración verificada con el proveedor llama este método para Mercado Pago. */
+  public PagoDetalle confirmarPago(UUID pagoId, String comprobante, OffsetDateTime fechaPago) {
+    Pago pago = buscar(pagoId);
+    if (pago.getMembresia() == null) {
+      throw new IllegalStateException("El pago no tiene una membresía.");
     }
-    Pago pago = buscar(id);
-    if (pago.getEstado() == EstadoPago.APROBADO) {
-      return toResponse(pago);
+    Membresia membresia =
+        membresias
+            .bloquearPorId(pago.getMembresia().getId())
+            .orElseThrow(MembresiaNoEncontradaException::new);
+    boolean nuevo = pago.aprobar(comprobante, fechaPago);
+    if (!nuevo) {
+      return detalle(pago);
     }
-    switch (pago.getConcepto()) {
-      case ConceptoPago.CUOTA_MENSUAL:
-        Membresia membresia = pago.getMembresia();
-        if (membresia != null && !membresia.admitePago()) {
-          throw new IllegalStateException("La membresía ya no admite este pago.");
-        }
-        pago.aprobar(comprobante);
-        if (membresia != null) {
-          membresiaService.activarMembresia(pago, fechaPago);
-        }
-        break;
-      case ConceptoPago.RESERVA:
-      case ConceptoPago.DIFERENCIA_TICKET:
-        // TODO: Implementar
-        pago.aprobar(comprobante);
-        break;
+    if (!membresia.getContratacionId().equals(pago.getContratacionId())
+        || !membresia.admitePago()
+        || !membresia.getSocio().getUsuario().getId().equals(pago.getUsuario().getId())) {
+      pago.marcarParaRevision("El cobro pertenece a una contratación que ya no admite pagos.");
+      return detalle(pago);
     }
-    return toResponse(pago);
+    LocalDate anterior = membresia.getProximoVencimiento();
+    LocalDate fechaNegocio = fechaPago.atZoneSameInstant(ZONA).toLocalDate();
+    LocalDate nuevoVencimiento = membresia.renovarUnMes(fechaNegocio, LocalDate.now(ZONA));
+    pago.marcarAplicado(anterior, nuevoVencimiento, OffsetDateTime.now(ZoneOffset.UTC));
+    return detalle(pago);
   }
 
   public PagoDetalle rechazarPago(UUID id) {
     Pago pago = buscar(id);
     pago.rechazar();
-    return toResponse(pago);
+    return detalle(pago);
   }
 
-  public PagoDetalle toResponse(Pago pago) {
-    Membresia membresia = pago.getMembresia();
+  public PagoDetalle cancelarPendiente(UUID id, UUID actorId) {
+    Pago pago = buscar(id);
+    autorizar(pago.getUsuario().getId(), actorId);
+    if (pago.getMedioPago() == MedioPago.MERCADO_PAGO) {
+      throw new IllegalStateException("Cancelá primero la suscripción de Mercado Pago.");
+    }
+    pago.cancelarPendiente();
+    return detalle(pago);
+  }
+
+  @Transactional(readOnly = true)
+  public PagoDetalle consultar(UUID id, UUID actorId) {
+    Pago pago = buscar(id);
+    autorizar(pago.getUsuario().getId(), actorId);
+    return detalle(pago);
+  }
+
+  @Transactional(readOnly = true)
+  public Page<PagoDetalle> listar(UUID actorId, UUID usuarioId, EstadoPago estado, int pagina) {
+    Usuario actor = usuario(actorId);
+    if (actor.getRol() != RolUsuario.ADMIN) {
+      usuarioId = actorId;
+    }
+    return pagos.buscarHistorial(usuarioId, estado, PageRequest.of(pagina, 20)).map(this::detalle);
+  }
+
+  @Transactional(readOnly = true)
+  public PagoDetalle consultarComprobante(UUID id, UUID actorId) {
+    PagoDetalle pago = consultar(id, actorId);
+    if (pago.estado() != EstadoPago.APROBADO) {
+      throw new IllegalStateException("El pago todavía no tiene comprobante.");
+    }
+    return pago;
+  }
+
+  private Usuario usuario(UUID id) {
+    return usuarios.findById(id).orElseThrow(() -> new UsuarioNoEncontradoException(id));
+  }
+
+  private void autorizar(UUID titularId, UUID actorId) {
+    if (!titularId.equals(actorId) && usuario(actorId).getRol() != RolUsuario.ADMIN) {
+      throw new OperacionNoPermitidaException();
+    }
+  }
+
+  private Pago buscar(UUID id) {
+    return pagos.findById(id).orElseThrow(() -> new PagoNoEncontradoException(id));
+  }
+
+  private PagoDetalle detalle(Pago pago) {
     return new PagoDetalle(
         pago.getId(),
         pago.getConcepto(),
         pago.getUsuario().getId(),
+        pago.getUsuario().getNombreCompleto(),
         pago.getEstado(),
         pago.getMedioPago(),
         pago.getMonto(),
         pago.getComprobante(),
-        membresia == null ? null : membresia.getId());
+        pago.getMembresia() == null ? null : pago.getMembresia().getId(),
+        pago.getCreatedAt(),
+        pago.getAprobadoEn(),
+        pago.getAplicadoEn(),
+        pago.getVencimientoResultante(),
+        pago.isRequiereRevision(),
+        pago.getMotivoRevision());
   }
 }
