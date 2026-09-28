@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ApiError, usersApi } from "@/lib/users-api"
 import { homeFor } from "@/hooks/use-session"
 import { useState, type FormEvent, type ReactNode } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
   ArrowLeft,
   ArrowRight,
@@ -203,6 +203,7 @@ function PasswordInput({
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [error, setError] = useState("")
   const client = useQueryClient()
   const login = useMutation({
@@ -210,7 +211,12 @@ export function LoginPage() {
     onSuccess: (user) => {
       client.clear()
       client.setQueryData(["session"], user)
-      navigate(homeFor(user.rol), { replace: true })
+      const returnTo: unknown = location.state?.returnTo
+      const destination =
+        typeof returnTo === "string" && /^\/(app|admin|staff)\//.test(returnTo)
+          ? returnTo
+          : homeFor(user.rol)
+      navigate(destination, { replace: true })
     },
     onError: (error) =>
       setError(
@@ -286,6 +292,8 @@ export function LoginPage() {
       <Button
         variant="outline"
         className="h-11 w-full"
+        nativeButton={false}
+        role="link"
         render={<Link to="/register" />}
       >
         Crear una cuenta
@@ -343,7 +351,11 @@ export function RegisterPage() {
           title="Tu cuenta está lista"
           description="Tu cuenta se registró. Iniciá sesión para consultar y actualizar tus datos."
           action={
-            <Button render={<Link to="/login" />}>
+            <Button
+              nativeButton={false}
+              role="link"
+              render={<Link to="/login" />}
+            >
               Iniciar sesión
               <ArrowRight />
             </Button>
@@ -489,7 +501,12 @@ export function ForgotPasswordPage() {
       <p className="my-6 text-sm text-muted-foreground">
         Contactá a administración para solicitar un cambio de contraseña.
       </p>
-      <Button variant="outline" render={<Link to="/login" />}>
+      <Button
+        variant="outline"
+        nativeButton={false}
+        role="link"
+        render={<Link to="/login" />}
+      >
         Volver a iniciar sesión
       </Button>
     </AuthLayout>

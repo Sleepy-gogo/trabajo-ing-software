@@ -1,3 +1,4 @@
+import { createRequestKey } from "@/lib/request-key"
 import { useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useSearchParams } from "react-router-dom"
@@ -44,7 +45,7 @@ export function MemberPaymentsPage() {
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
-  const requestKey = useRef(crypto.randomUUID())
+  const requestKey = useRef(createRequestKey())
   const member = useQuery({
     queryKey: ["my-member", session.data?.id],
     queryFn: ({ signal }) => membersApi.me(signal),
@@ -78,7 +79,7 @@ export function MemberPaymentsPage() {
         requestKey.current
       ),
     onSuccess: async (payment) => {
-      requestKey.current = crypto.randomUUID()
+      requestKey.current = createRequestKey()
       setNotice(
         "El pago en efectivo quedó pendiente de confirmación administrativa."
       )

@@ -1,4 +1,6 @@
-import { useState } from "react"
+import { availableStarts } from "@/lib/booking-times"
+import { createRequestKey } from "@/lib/request-key"
+import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import QRCode from "react-qr-code"
@@ -26,6 +28,7 @@ import {
   type Reservation,
 } from "@/lib/reservations-api"
 import type { PaymentMethod } from "@/lib/payments-api"
+import { ApiError } from "@/lib/users-api"
 
 function today() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -39,12 +42,12 @@ export function BookingPage() {
   const client = useQueryClient()
   const [spaceId, setSpaceId] = useState(params.get("space") ?? "")
   const [date, setDate] = useState(params.get("date") ?? today())
-  const [start, setStart] = useState("")
+  const [start, setStart] = useState(params.get("start") ?? "")
   const [hours, setHours] = useState(1)
   const [people, setPeople] = useState(1)
   const [ticketId, setTicketId] = useState(params.get("ticket") ?? "")
   const [method, setMethod] = useState<PaymentMethod>("MERCADO_PAGO")
-  const [key, setKey] = useState(() => crypto.randomUUID())
+  const [key, setKey] = useState(() => createRequestKey())
   const [review, setReview] = useState(false)
   const spaces = useQuery({
     queryKey: ["spaces"],
@@ -60,20 +63,7 @@ export function BookingPage() {
     enabled: !!spaceId && !!date,
   })
   const space = spaces.data?.find((s) => s.id === spaceId)
-  const starts: string[] = []
-  for (const slot of calendar.data?.franjas ?? []) {
-    const [h, m, seconds = 0] = slot.desde.split(":").map(Number)
-    const [endH, endM] = slot.hasta.split(":").map(Number)
-    for (
-      let minute = Math.ceil((h * 60 + m + seconds / 60) / 30) * 30;
-      minute + hours * 60 <= endH * 60 + endM;
-      minute += 30
-    ) {
-      starts.push(
-        `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`
-      )
-    }
-  }
+  const starts = availableStarts(calendar.data?.franjas ?? [], hours)
   const end = start
     ? `${String(Number(start.slice(0, 2)) + hours).padStart(2, "0")}:${start.slice(3)}`
     : ""
@@ -105,13 +95,14 @@ export function BookingPage() {
       )
       navigate(`/app/reservations/${reservation.id}`)
     },
-    onError: () => {
-      void calendar.refetch()
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 409)
+        void calendar.refetch()
     },
   })
   function edit() {
     setReview(false)
-    setKey(crypto.randomUUID())
+    setKey(createRequestKey())
     create.reset()
   }
   return (
@@ -128,7 +119,7 @@ export function BookingPage() {
           (step, i) => (
             <li
               key={step}
-              className="rounded-full border px-4 py-2"
+              className="rounded-full border px-4 py-2 text-muted-foreground aria-[current=step]:border-primary aria-[current=step]:bg-primary/5 aria-[current=step]:font-semibold aria-[current=step]:text-primary"
               aria-current={
                 i === (review ? 2 : spaceId ? 1 : 0) ? "step" : undefined
               }
@@ -154,133 +145,177 @@ export function BookingPage() {
               className="space-y-5"
               onSubmit={(event) => {
                 event.preventDefault()
+                if (
+                  !valid ||
+                  !quote.data ||
+                  quote.isFetching ||
+                  quote.isError ||
+                  create.isPending
+                )
+                  return
                 if (review) create.mutate()
                 else setReview(true)
               }}
             >
-              <fieldset
-                disabled={review || create.isPending}
-                className="space-y-5"
-              >
-                <SelectField
-                  label="Espacio"
-                  value={spaceId}
-                  required
-                  onChange={(event) => {
-                    setSpaceId(event.target.value)
-                    setStart("")
-                    edit()
-                  }}
+              {review ? (
+                <dl className="grid gap-5 text-sm sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <dt className="text-muted-foreground">Espacio</dt>
+                    <dd className="mt-1 text-lg font-semibold">
+                      {space?.nombre}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Fecha</dt>
+                    <dd className="mt-1 font-medium">{formatDate(date)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Horario</dt>
+                    <dd className="mt-1 font-medium tabular-nums">
+                      {start} a {end} · {hours} {hours === 1 ? "hora" : "horas"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Personas</dt>
+                    <dd className="mt-1 font-medium">{people}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Medio de pago</dt>
+                    <dd className="mt-1 font-medium">
+                      {method === "MERCADO_PAGO"
+                        ? "Mercado Pago"
+                        : "Efectivo en administración"}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <fieldset
+                  disabled={review || create.isPending}
+                  className="grid gap-5 sm:grid-cols-2 [&>div:first-child]:sm:col-span-2"
                 >
-                  <option value="">Elegí un espacio</option>
-                  {spaces.data
-                    ?.filter((s) => s.estado === "HABILITADO")
-                    .map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nombre}
-                      </option>
-                    ))}
-                </SelectField>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field
-                    label="Fecha"
-                    type="date"
-                    min={today()}
-                    required
-                    value={date}
-                    onChange={(event) => {
-                      setDate(event.target.value)
-                      setStart("")
-                      edit()
-                    }}
-                  />
                   <SelectField
-                    label="Duración"
-                    value={hours}
+                    label="Espacio"
+                    value={spaceId}
+                    required
                     onChange={(event) => {
-                      setHours(Number(event.target.value))
+                      setSpaceId(event.target.value)
                       setStart("")
                       edit()
                     }}
                   >
-                    {[1, 2, 3, 4].map((n) => (
-                      <option key={n} value={n}>
-                        {n} {n === 1 ? "hora" : "horas"}
-                      </option>
-                    ))}
+                    <option value="">Elegí un espacio</option>
+                    {spaces.data
+                      ?.filter((s) => s.estado === "HABILITADO")
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre}
+                        </option>
+                      ))}
                   </SelectField>
-                </div>
-                {!!spaceId && (
-                  <QueryState
-                    pending={calendar.isPending}
-                    error={calendar.error}
-                    retry={calendar.refetch}
-                  >
-                    <SelectField
-                      label="Horario disponible"
+                  <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
+                    <Field
+                      label="Fecha"
+                      type="date"
+                      min={today()}
                       required
-                      value={start}
+                      value={date}
                       onChange={(event) => {
-                        setStart(event.target.value)
+                        setDate(event.target.value)
+                        setStart("")
+                        edit()
+                      }}
+                    />
+                    <SelectField
+                      label="Duración"
+                      value={hours}
+                      onChange={(event) => {
+                        setHours(Number(event.target.value))
+                        setStart("")
                         edit()
                       }}
                     >
-                      <option value="">Elegí un horario</option>
-                      {starts.map((time) => (
-                        <option key={time} value={time}>
-                          {time}
+                      {[1, 2, 3, 4].map((n) => (
+                        <option key={n} value={n}>
+                          {n} {n === 1 ? "hora" : "horas"}
                         </option>
                       ))}
                     </SelectField>
-                    {starts.length === 0 && (
-                      <p className="mt-3 text-sm">
-                        No quedan horarios con esa duración. Probá otra fecha o
-                        duración.
-                      </p>
-                    )}
-                  </QueryState>
-                )}
-                <Field
-                  label="Cantidad de personas"
-                  type="number"
-                  min={1}
-                  max={space?.capacidad ?? 1}
-                  required
-                  value={people}
-                  onChange={(event) => {
-                    setPeople(Number(event.target.value))
-                    edit()
-                  }}
-                />
-                <SelectField
-                  label="Ticket de una cancelación"
-                  value={ticketId}
-                  onChange={(event) => {
-                    setTicketId(event.target.value)
-                    edit()
-                  }}
-                >
-                  <option value="">Sin ticket</option>
-                  {tickets.data
-                    ?.filter((r) => r.saldoTicket > 0)
-                    .map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.espacioNombre} · {formatCurrency(r.saldoTicket)}
-                      </option>
-                    ))}
-                </SelectField>
-                <SelectField
-                  label="Medio de pago"
-                  value={method}
-                  onChange={(event) => {
-                    setMethod(event.target.value as PaymentMethod)
-                    edit()
-                  }}
-                >
-                  <option value="MERCADO_PAGO">Mercado Pago</option>
-                  <option value="EFECTIVO">Efectivo en administración</option>
-                </SelectField>
-              </fieldset>
+                  </div>
+                  {!!spaceId && (
+                    <QueryState
+                      pending={calendar.isPending}
+                      error={calendar.error}
+                      retry={calendar.refetch}
+                    >
+                      <SelectField
+                        label="Horario disponible"
+                        required
+                        value={start}
+                        onChange={(event) => {
+                          setStart(event.target.value)
+                          edit()
+                        }}
+                      >
+                        <option value="">Elegí un horario</option>
+                        {starts.map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                      </SelectField>
+                      {starts.length === 0 && (
+                        <p className="mt-3 text-sm">
+                          No quedan horarios con esa duración. Probá otra fecha
+                          o duración.
+                        </p>
+                      )}
+                    </QueryState>
+                  )}
+                  <Field
+                    label="Cantidad de personas"
+                    type="number"
+                    min={1}
+                    max={space?.capacidad ?? 1}
+                    required
+                    value={people}
+                    onChange={(event) => {
+                      setPeople(Number(event.target.value))
+                      edit()
+                    }}
+                  />
+                  {(ticketId ||
+                    tickets.data?.some((r) => r.saldoTicket > 0)) && (
+                    <SelectField
+                      label="Ticket de una cancelación"
+                      value={ticketId}
+                      onChange={(event) => {
+                        setTicketId(event.target.value)
+                        edit()
+                      }}
+                    >
+                      <option value="">Sin ticket</option>
+                      {tickets.data
+                        ?.filter((r) => r.saldoTicket > 0)
+                        .map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.espacioNombre} · {formatCurrency(r.saldoTicket)}
+                          </option>
+                        ))}
+                    </SelectField>
+                  )}
+                  <SelectField
+                    label="Medio de pago"
+                    value={method}
+                    onChange={(event) => {
+                      setMethod(event.target.value as PaymentMethod)
+                      edit()
+                    }}
+                  >
+                    <option value="MERCADO_PAGO">Mercado Pago</option>
+                    <option value="EFECTIVO">Efectivo en administración</option>
+                  </SelectField>
+                </fieldset>
+              )}
               <ErrorMessage error={create.error} />
               <div className="flex flex-wrap gap-3">
                 {review && (
@@ -312,7 +347,7 @@ export function BookingPage() {
               </div>
             </form>
           </SectionCard>
-          <SectionCard title="Resumen">
+          <SectionCard title="Resumen" className="lg:sticky lg:top-6">
             <p className="font-semibold">
               {space?.nombre ?? "Elegí un espacio"}
             </p>
@@ -327,7 +362,7 @@ export function BookingPage() {
                 error={quote.error}
                 retry={quote.refetch}
               >
-                <dl className="mt-5 space-y-3 text-sm">
+                <dl className="mt-5 space-y-3 text-sm [&_dd]:shrink-0 [&_dd]:text-right [&_dd]:font-medium [&_dd]:tabular-nums [&>div]:flex [&>div]:justify-between [&>div]:gap-4">
                   <div>
                     <dt>
                       Tarifa por hora · {label(quote.data?.relacionAplicada)}
@@ -340,12 +375,14 @@ export function BookingPage() {
                     </dt>
                     <dd>{formatCurrency(quote.data?.total ?? 0)}</dd>
                   </div>
-                  <div>
-                    <dt>Ticket aplicado</dt>
-                    <dd>
-                      − {formatCurrency(quote.data?.creditoAplicado ?? 0)}
-                    </dd>
-                  </div>
+                  {quote.data?.creditoAplicado ? (
+                    <div>
+                      <dt>Ticket aplicado</dt>
+                      <dd>
+                        − {formatCurrency(quote.data?.creditoAplicado ?? 0)}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="border-t pt-3 text-lg font-semibold">
                     <dt>A pagar</dt>
                     <dd>{formatCurrency(quote.data?.aPagar ?? 0)}</dd>
@@ -387,7 +424,11 @@ export function MemberReservationsPage() {
         title="Mis reservas"
         description="Horarios, pagos y tickets disponibles."
         actions={
-          <Button render={<Link to="/app/reservations/new" />}>
+          <Button
+            nativeButton={false}
+            role="link"
+            render={<Link to="/app/reservations/new" />}
+          >
             Nueva reserva
           </Button>
         }
@@ -432,12 +473,16 @@ export function MemberReservationsPage() {
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button
                   variant="outline"
+                  nativeButton={false}
+                  role="link"
                   render={<Link to={`/app/reservations/${r.id}`} />}
                 >
                   Ver detalle
                 </Button>
                 {r.saldoTicket > 0 && (
                   <Button
+                    nativeButton={false}
+                    role="link"
                     render={
                       <Link to={`/app/reservations/new?ticket=${r.id}`} />
                     }
@@ -473,7 +518,12 @@ export function MemberReservationDetailPage() {
       <PageHeader
         title="Detalle de reserva"
         actions={
-          <Button variant="outline" render={<Link to="/app/reservations" />}>
+          <Button
+            variant="outline"
+            nativeButton={false}
+            role="link"
+            render={<Link to="/app/reservations" />}
+          >
             Mis reservas
           </Button>
         }
@@ -501,7 +551,9 @@ export function ReservationDetails({
   const client = useQueryClient()
   const [params] = useSearchParams()
   const [cancelOpen, setCancelOpen] = useState(false)
-  const [paymentId, setPaymentId] = useState(params.get("payment_id") ?? "")
+  const returnPaymentId = params.get("payment_id") ?? ""
+  const [paymentId, setPaymentId] = useState(returnPaymentId)
+  const verifiedReturn = useRef("")
   async function refresh() {
     await Promise.all(
       ["reservations", "calendar", "payments"].map((name) =>
@@ -523,9 +575,29 @@ export function ReservationDetails({
     },
   })
   const verify = useMutation({
-    mutationFn: () => reservationsApi.verify(r.id, Number(paymentId)),
-    onSuccess: refresh,
+    mutationFn: (id: number) => reservationsApi.verify(r.id, id),
+    onSuccess: async (result) => {
+      client.setQueryData(["reservations", r.id], result)
+      await refresh()
+    },
   })
+  const verifyPayment = verify.mutate
+  useEffect(() => {
+    const id = Number(returnPaymentId)
+    const attempt = `${r.id}:${returnPaymentId}`
+    if (
+      r.medioPago !== "MERCADO_PAGO" ||
+      r.estadoPago === "APROBADO" ||
+      !/^\d+$/.test(returnPaymentId) ||
+      !Number.isSafeInteger(id) ||
+      id <= 0 ||
+      verifiedReturn.current === attempt
+    )
+      return
+    verifiedReturn.current = attempt
+    // The return URL only supplies an ID. The backend verifies the actual payment.
+    verifyPayment(id)
+  }, [r.id, r.medioPago, r.estadoPago, returnPaymentId, verifyPayment])
   const future = r.cancelable
   const pending = r.estado === "PENDIENTE_PAGO"
   return (
@@ -588,10 +660,15 @@ export function ReservationDetails({
           </Note>
         )}
         <ErrorMessage error={checkout.error ?? cancel.error ?? verify.error} />
+        {verify.isPending && (
+          <p role="status" className="mt-4 text-sm text-muted-foreground">
+            Verificando el pago con Mercado Pago…
+          </p>
+        )}
         <div className="mt-6 flex flex-wrap gap-3">
           {pending && r.medioPago === "MERCADO_PAGO" && !admin && (
             <Button
-              disabled={checkout.isPending}
+              disabled={checkout.isPending || verify.isPending}
               onClick={() => checkout.mutate()}
             >
               {checkout.isPending ? "Abriendo pago…" : "Pagar con Mercado Pago"}
@@ -608,7 +685,7 @@ export function ReservationDetails({
             className="mt-6 space-y-3 border-t pt-5"
             onSubmit={(e) => {
               e.preventDefault()
-              verify.mutate()
+              verify.mutate(Number(paymentId))
             }}
           >
             <Field
@@ -666,6 +743,8 @@ export function ReservationDetails({
             </p>
             {!admin && (
               <Button
+                nativeButton={false}
+                role="link"
                 render={<Link to={`/app/reservations/new?ticket=${r.id}`} />}
               >
                 Usar ticket

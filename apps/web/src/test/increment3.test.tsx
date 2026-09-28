@@ -121,9 +121,16 @@ describe("Incrementos 2 y 3", () => {
       </Routes>,
       "/app/services/e1"
     )
+    expect(await screen.findByText("Sin horarios disponibles")).toBeTruthy()
     expect(
-      await screen.findByText("No hay franjas disponibles para esta fecha.")
-    ).toBeTruthy()
-    expect(screen.queryByRole("button", { name: "Reservar" })).toBeNull()
+      (
+        screen.getByRole("button", {
+          name: "Reservar este espacio",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true)
+    expect(
+      screen.queryByRole("link", { name: "Reservar este espacio" })
+    ).toBeNull()
   })
 })

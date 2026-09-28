@@ -6,6 +6,10 @@ SERA usa la API de Suscripciones sin plan asociado. El backend crea una suscripc
 
 Definir estas variables en el proceso de la API, sin guardarlas en el repositorio:
 
+En desarrollo también se pueden guardar en `apps/api/.env`, copiando `.env.example`.
+El perfil `dev` lo carga al iniciar desde `apps/api`; usar valores sin comillas y
+reiniciar la API después de cambiarlos. Las variables del proceso tienen prioridad.
+
 | Variable | Valor |
 | --- | --- |
 | `MP_ACCESS_TOKEN` | Access Token de la aplicación de Mercado Pago, de prueba o producción según el entorno |

@@ -77,7 +77,13 @@ No asumir que estos puertos estarán libres en todas las máquinas. Si se cambia
 
 Spring usa `dev` como perfil por defecto. Este perfil encuentra `../../compose.yml` desde `apps/api` y usa las credenciales locales `sera`. El backend puede iniciar PostgreSQL mediante el soporte de Docker Compose; `docker compose up -d` permite iniciarlo explícitamente y revisar su estado primero.
 
-Para una base externa, activar un perfil distinto con `SPRING_PROFILES_ACTIVE` y proporcionar `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` y `SPRING_DATASOURCE_PASSWORD`. La URL debe ser JDBC, por ejemplo `jdbc:postgresql://host:5432/sera`. Spring no carga archivos `.env` automáticamente.
+Para una base externa, activar un perfil distinto con `SPRING_PROFILES_ACTIVE` y proporcionar `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` y `SPRING_DATASOURCE_PASSWORD`. La URL debe ser JDBC, por ejemplo `jdbc:postgresql://host:5432/sera`.
+
+El perfil `dev` importa opcionalmente `apps/api/.env` al iniciar desde `apps/api`.
+Copiar `.env.example` a `.env` y completar las variables de Mercado Pago con valores
+sin comillas ni prefijo `export`. Reiniciar la API después de cambiarlas. Las variables
+del proceso tienen prioridad sobre el archivo. Otros perfiles usan variables del entorno.
+Se usa el [import de configuración de Spring Boot](https://docs.spring.io/spring-boot/reference/features/external-config.html), sin agregar dependencias.
 
 Nunca commitear secretos.
 

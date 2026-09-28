@@ -1,7 +1,15 @@
 import { useState, type FormEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Landmark, Users, ArrowLeft } from "lucide-react"
+import {
+  Plus,
+  Landmark,
+  Users,
+  ArrowLeft,
+  ArrowRight,
+  Clock,
+} from "lucide-react"
+import { availableStarts } from "@/lib/booking-times"
 import {
   spacesApi,
   calendarApi,
@@ -261,6 +269,7 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
   const { id = "" } = useParams()
   const client = useQueryClient()
   const [date, setDate] = useState(today)
+  const [selectedStart, setSelectedStart] = useState("")
   const [editing, setEditing] = useState(false)
   const [notice, setNotice] = useState("")
   const [deleting, setDeleting] = useState<{
@@ -342,6 +351,9 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
     onSuccess: refresh,
   })
   const s = space.data
+  const starts = availableStarts(calendar.data?.franjas ?? [], 1)
+  const canReserve =
+    !calendar.isFetching && !calendar.isError && starts.includes(selectedStart)
   return (
     <>
       <Link
@@ -375,11 +387,13 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                 ) : undefined
               }
             />
-            <p role="status" className="mb-4 text-sm text-emerald-800">
-              {notice}
-            </p>
-            <div className="grid gap-6 xl:grid-cols-[1fr_1.5fr]">
-              <SectionCard>
+            {notice && (
+              <p role="status" className="mb-4 text-sm text-emerald-800">
+                {notice}
+              </p>
+            )}
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+              <SectionCard className={admin ? undefined : "order-2 lg:order-1"}>
                 <SpaceImage space={s} />
                 <div className="mt-5 flex justify-between gap-3">
                   <span className="text-sm">
@@ -428,64 +442,146 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
               </SectionCard>
               <SectionCard
                 title="Disponibilidad"
-                description="Los horarios reflejan la configuración y los bloqueos del espacio."
+                description={
+                  admin
+                    ? "Horarios libres, descontando reservas y bloqueos."
+                    : "Elegí una fecha y un horario de inicio."
+                }
+                className={admin ? undefined : "order-1 lg:order-2"}
               >
-                <Field
-                  label="Fecha de consulta"
-                  type="date"
-                  min={today()}
-                  required
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
+                <div className="grid items-end gap-4 border-b pb-5 sm:grid-cols-[1fr_auto]">
+                  <Field
+                    label="Fecha de consulta"
+                    type="date"
+                    min={today()}
+                    required
+                    value={date}
+                    onChange={(e) => {
+                      setDate(e.target.value)
+                      setSelectedStart("")
+                    }}
+                  />
+                  {calendar.data && !calendar.isError && (
+                    <div className="sm:text-right">
+                      <p className="text-xl font-bold tabular-nums">
+                        {formatCurrency(calendar.data.tarifaHora)}
+                        <span className="ml-1 text-sm font-normal text-muted-foreground">
+                          / hora
+                        </span>
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Tarifa{" "}
+                        {label(calendar.data.relacionAplicada).toLowerCase()}
+                      </p>
+                    </div>
+                  )}
+                </div>
                 <QueryState
                   pending={calendar.isPending}
                   error={calendar.error}
                   retry={calendar.refetch}
                 >
-                  <p className="my-5 text-xl font-bold">
-                    {formatCurrency(calendar.data?.tarifaHora ?? 0)}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {" "}
-                      / hora
-                    </span>
-                  </p>
-                  <p className="mb-4 text-xs text-muted-foreground">
-                    Tarifa aplicada: {label(calendar.data?.relacionAplicada)}.
-                    Se usa la relación verificada por administración.
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {calendar.data?.franjas.map((f) => (
-                      <div
-                        key={f.desde}
-                        className="rounded-lg border border-emerald-200 bg-emerald-50 p-4"
-                      >
-                        <p className="font-semibold text-emerald-900">
-                          {f.desde.slice(0, 5)} a {f.hasta.slice(0, 5)}
+                  {admin ? (
+                    <div className="mt-5 divide-y">
+                      {calendar.data?.franjas.map((f) => (
+                        <div
+                          key={f.desde}
+                          className="flex items-center justify-between gap-3 py-3"
+                        >
+                          <p className="font-medium tabular-nums">
+                            {f.desde.slice(0, 5)} a {f.hasta.slice(0, 5)}
+                          </p>
+                          <p className="text-xs text-emerald-800">Disponible</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    starts.length > 0 && (
+                      <fieldset className="mt-5">
+                        <legend className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                          <Clock className="size-4" aria-hidden="true" />
+                          Horarios de inicio
+                        </legend>
+                        <p className="mb-4 text-xs text-muted-foreground">
+                          Para una reserva de 1 hora. Podés cambiar la duración
+                          en el siguiente paso.
                         </p>
-                        <p className="mt-1 text-xs text-emerald-800">
-                          Disponible
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                  {calendar.data?.franjas.length === 0 && (
-                    <p className="rounded-lg bg-muted p-5 text-sm">
-                      No hay franjas disponibles para esta fecha.
-                    </p>
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-5">
+                          {starts.map((time) => (
+                            <label
+                              key={time}
+                              className="relative cursor-pointer"
+                            >
+                              <input
+                                type="radio"
+                                name="start"
+                                value={time}
+                                checked={selectedStart === time}
+                                onChange={() => setSelectedStart(time)}
+                                className="peer sr-only"
+                              />
+                              <span className="flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-card text-sm font-medium tabular-nums transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary hover:border-primary/50">
+                                {time}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                    )
+                  )}
+                  {(admin
+                    ? calendar.data?.franjas.length === 0
+                    : starts.length === 0) && (
+                    <div role="status" className="py-8 text-center">
+                      <Clock
+                        className="mx-auto mb-3 size-6 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                      <p className="text-sm font-semibold">
+                        Sin horarios disponibles
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Probá con otra fecha.
+                      </p>
+                    </div>
                   )}
                 </QueryState>
                 {!admin && (
-                  <Button
-                    className="mt-5"
-                    render={
-                      <Link
-                        to={`/app/reservations/new?space=${s.id}&date=${date}`}
-                      />
-                    }
-                  >
-                    Reservar este espacio
-                  </Button>
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t pt-5">
+                    <p role="status" className="text-sm text-muted-foreground">
+                      {canReserve ? (
+                        <>
+                          Inicio{" "}
+                          <span className="font-semibold text-foreground tabular-nums">
+                            {selectedStart}
+                          </span>{" "}
+                          · 1 hora
+                        </>
+                      ) : (
+                        "Seleccioná un horario para continuar."
+                      )}
+                    </p>
+                    {canReserve ? (
+                      <Button
+                        size="lg"
+                        nativeButton={false}
+                        role="link"
+                        render={
+                          <Link
+                            to={`/app/reservations/new?space=${s.id}&date=${date}&start=${selectedStart}`}
+                          />
+                        }
+                      >
+                        Reservar este espacio
+                        <ArrowRight aria-hidden="true" />
+                      </Button>
+                    ) : (
+                      <Button size="lg" disabled>
+                        Reservar este espacio
+                        <ArrowRight aria-hidden="true" />
+                      </Button>
+                    )}
+                  </div>
                 )}
               </SectionCard>
             </div>

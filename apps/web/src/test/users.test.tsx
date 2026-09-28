@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 import { LoginPage, RegisterPage } from "@/pages/auth"
 import { MemberProfilePage } from "@/pages/member/profile"
@@ -39,6 +39,31 @@ function json(value: unknown, status = 200) {
 }
 
 describe("Incremento 1", () => {
+  it("vuelve al detalle y conserva el número de pago después de iniciar sesión", async () => {
+    vi.spyOn(usersApi, "me").mockResolvedValue(null as never)
+    vi.spyOn(usersApi, "login").mockResolvedValue(user)
+    function Destination() {
+      const location = useLocation()
+      return <p>{location.pathname + location.search}</p>
+    }
+    const actor = mount(
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<RequireSession />}>
+          <Route path="/app/reservations/:id" element={<Destination />} />
+        </Route>
+      </Routes>,
+      "/app/reservations/r1?payment_id=123&status=approved"
+    )
+    await actor.type(await screen.findByLabelText("Email"), user.email)
+    await actor.type(screen.getByLabelText("Contraseña"), "password-seguro")
+    await actor.click(screen.getByRole("button", { name: "Iniciar sesión" }))
+    expect(
+      await screen.findByText(
+        "/app/reservations/r1?payment_id=123&status=approved"
+      )
+    ).toBeTruthy()
+  })
   it("envía login JSON con CSRF y navega al perfil real", async () => {
     const request = vi.fn(async (path: string, options?: RequestInit) => {
       if (path === "/api/auth/csrf")

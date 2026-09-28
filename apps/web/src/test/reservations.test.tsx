@@ -10,6 +10,7 @@ import {
 } from "@/pages/member/reservations"
 import { reservationsApi, type Reservation } from "@/lib/reservations-api"
 import { calendarApi, spacesApi } from "@/lib/spaces-api"
+import { MemberServiceDetailPage } from "@/pages/spaces-live"
 
 const pending: Reservation = {
   id: "r1",
@@ -48,7 +49,10 @@ function mount(content: React.ReactNode, url = "/") {
   return userEvent.setup()
 }
 describe("Reservas conectadas", () => {
-  it("un retorno approved no genera un QR ni confirma desde el navegador", () => {
+  it("un retorno approved se verifica en backend y no genera un QR por sí solo", async () => {
+    const verify = vi
+      .spyOn(reservationsApi, "verify")
+      .mockResolvedValue(pending)
     mount(
       <ReservationDetails reservation={pending} />,
       "/?status=approved&payment_id=123"
@@ -62,6 +66,16 @@ describe("Reservas conectadas", () => {
         ) as HTMLInputElement
       ).value
     ).toBe("123")
+    await waitFor(() => expect(verify).toHaveBeenCalledWith("r1", 123))
+    expect(screen.queryByTitle("QR de la reserva")).toBeNull()
+  })
+  it("no verifica identificadores inválidos del retorno", () => {
+    const verify = vi.spyOn(reservationsApi, "verify")
+    mount(
+      <ReservationDetails reservation={pending} />,
+      "/?payment_id=NaN&status=approved"
+    )
+    expect(verify).not.toHaveBeenCalled()
   })
   it("cancela mediante la API solo después de confirmar", async () => {
     const cancel = vi
@@ -87,23 +101,25 @@ describe("Reservas conectadas", () => {
       screen.getByRole("link", { name: "Usar ticket" }).getAttribute("href")
     ).toContain("ticket=r1")
   })
-  it("crea con horario y precio cotizado por el backend", async () => {
-    vi.spyOn(spacesApi, "list").mockResolvedValue([
-      {
-        id: "e1",
-        nombre: "Cancha real",
-        estado: "HABILITADO",
-        capacidad: 10,
-        tarifaHora: 1000,
-        tarifas: {},
-        tipo: "Cancha",
-        descripcion: null,
-        rutaImagen: null,
-        disponibilidades: [],
-        creadoEn: "",
-        actualizadoEn: "",
-      },
-    ])
+  it("reserva desde disponibilidad en HTTP y conserva la clave al reintentar", async () => {
+    const getRandomValues = crypto.getRandomValues.bind(crypto)
+    vi.stubGlobal("crypto", { getRandomValues })
+    const space = {
+      id: "e1",
+      nombre: "Cancha real",
+      estado: "HABILITADO" as const,
+      capacidad: 10,
+      tarifaHora: 1000,
+      tarifas: {},
+      tipo: "Cancha",
+      descripcion: null,
+      rutaImagen: null,
+      disponibilidades: [],
+      creadoEn: "",
+      actualizadoEn: "",
+    }
+    vi.spyOn(spacesApi, "list").mockResolvedValue([space])
+    vi.spyOn(spacesApi, "get").mockResolvedValue(space)
     vi.spyOn(calendarApi, "get").mockResolvedValue({
       fecha: pending.fecha,
       estado: "HABILITADO",
@@ -121,21 +137,35 @@ describe("Reservas conectadas", () => {
     })
     const create = vi
       .spyOn(reservationsApi, "create")
+      .mockRejectedValueOnce(
+        new Error("No se pudo conectar. Intentá de nuevo.")
+      )
       .mockResolvedValue(pending)
     const user = mount(
       <Routes>
-        <Route path="/new" element={<BookingPage />} />
+        <Route path="/app/services/:id" element={<MemberServiceDetailPage />} />
+        <Route path="/app/reservations/new" element={<BookingPage />} />
         <Route
           path="/app/reservations/:id"
           element={<p>Reserva registrada</p>}
         />
       </Routes>,
-      "/new?space=e1&date=2099-10-01"
+      "/app/services/e1"
     )
-    await user.selectOptions(
-      await screen.findByLabelText("Horario disponible"),
-      "10:00"
+    const date = await screen.findByLabelText("Fecha de consulta")
+    await user.clear(date)
+    await user.type(date, "2099-10-01")
+    await user.click(await screen.findByRole("radio", { name: "10:00" }))
+    await user.click(
+      screen.getByRole("link", { name: "Reservar este espacio" })
     )
+    expect(
+      (
+        (await screen.findByLabelText(
+          "Horario disponible"
+        )) as HTMLSelectElement
+      ).value
+    ).toBe("10:00")
     const review = await screen.findByRole("button", {
       name: "Revisar reserva",
     })
@@ -146,7 +176,13 @@ describe("Reservas conectadas", () => {
     await user.click(
       await screen.findByRole("button", { name: "Crear reserva" })
     )
+    expect(await screen.findByRole("alert")).toBeTruthy()
+    await user.click(screen.getByRole("button", { name: "Crear reserva" }))
     expect(await screen.findByText("Reserva registrada")).toBeTruthy()
+    expect(create).toHaveBeenCalledTimes(2)
+    expect(create.mock.calls[0][0].claveSolicitud).toBe(
+      create.mock.calls[1][0].claveSolicitud
+    )
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         espacioId: "e1",

@@ -56,9 +56,11 @@ que las membresías. El retorno de la reserva se construye sobre el origen de
 en el webhook existente del panel de Mercado Pago. No hace falta otra aplicación
 ni una suscripción para reservar.
 
-Si no llega el webhook, el titular o administración pueden verificar el número
-del pago desde el detalle. SERA consulta Mercado Pago; nunca confía en el estado
-enviado por el navegador. Los rechazos permiten reintentar dentro del plazo.
+Al volver del checkout con `payment_id`, el detalle solicita una verificación al
+backend una vez por retorno. Si no llega el webhook o la consulta falla, el titular
+o administración pueden verificar el número del pago desde el detalle. SERA consulta
+Mercado Pago; nunca confía en el estado enviado por el navegador. Si la sesión venció,
+el login conserva la ruta de la reserva y el número de pago. Los rechazos permiten reintentar dentro del plazo.
 No se implementan reembolsos automáticos ni conciliación masiva de reservas.
 
 ## Recorrido para la presentación
@@ -95,7 +97,20 @@ El soporte automático de Compose debe estar desactivado en esta prueba porque
 sus datos de conexión reemplazan la URL de la base aislada. El script comprueba
 el destino antes de promover su cuenta ficticia a administrador. No borra datos.
 
-Las pruebas del proveedor usan respuestas controladas: preferencia, firma,
-importe incorrecto, cobro repetido y cobro tardío. Antes de presentar con Mercado
-Pago, completar un checkout con las cuentas de prueba del equipo y confirmar la
-llegada del webhook público. No se realizó un cobro externo durante esta validación.
+Las pruebas del proveedor con respuestas controladas cubren preferencia, firma,
+importe incorrecto, cobro repetido y cobro tardío.
+
+El 28/09/2026 se completó un Checkout Pro con las cuentas de prueba del equipo y
+una tarjeta de prueba de Mercado Pago. El pago fue aprobado y la verificación
+contra la API del proveedor confirmó la reserva y generó su QR. No se observó
+confirmación automática por webhook durante ese recorrido; revisar el tópico
+`payment`, la URL pública y la clave de firma en el panel antes de la presentación.
+Un segundo pago de prueba comprobó el retorno automático: SERA consultó al
+backend sin intervención del usuario y mostró la reserva confirmada con su QR.
+El botón manual queda disponible si esa consulta falla.
+
+El mismo recorrido detectó que el perfil local no cargaba `apps/api/.env`. Ahora
+el perfil `dev` lo importa opcionalmente al iniciar desde `apps/api`.
+El frontend genera `claveSolicitud` con `crypto.getRandomValues`, disponible en
+HTTP, y conserva la clave en los reintentos. Es una clave de idempotencia, no el ID
+de la entidad: JPA sigue generando los IDs de las reservas.
