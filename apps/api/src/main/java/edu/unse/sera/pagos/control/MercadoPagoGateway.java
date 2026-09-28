@@ -208,7 +208,14 @@ public class MercadoPagoGateway {
   public void cancelarSuscripcion(String id) {
     requerirCredenciales();
     try {
-      preapprovals.update(id, PreapprovalUpdateRequest.builder().status("canceled").build());
+      var cancelada =
+          preapprovals.update(id, PreapprovalUpdateRequest.builder().status("cancelled").build());
+      if (cancelada == null
+          || !id.equals(cancelada.getId())
+          || !("cancelled".equals(cancelada.getStatus())
+              || "canceled".equals(cancelada.getStatus()))) {
+        throw new MercadoPagoNoDisponibleException();
+      }
     } catch (MPException | MPApiException e) {
       throw new MercadoPagoNoDisponibleException(e);
     }

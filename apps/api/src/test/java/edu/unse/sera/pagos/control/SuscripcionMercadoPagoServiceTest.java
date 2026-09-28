@@ -316,4 +316,27 @@ class SuscripcionMercadoPagoServiceTest {
         .hasMessageContaining("incierto");
     verify(mercadoPago, org.mockito.Mockito.times(2)).crear(any(), any(), any(), any());
   }
+
+  @Test
+  void cancelacionRemotaYaCompletadaPermiteRecuperarLaCancelacionLocal() {
+    UUID membresiaId = UUID.randomUUID();
+    when(suscripciones.findAllByMembresiaIdOrderByCreatedAtDesc(membresiaId))
+        .thenReturn(java.util.List.of(suscripcion));
+    when(mercadoPago.obtenerSuscripcion("preapproval-123")).thenReturn(preapproval);
+    when(preapproval.getId()).thenReturn("preapproval-123");
+    when(preapproval.getExternalReference()).thenReturn(suscripcion.getId().toString());
+    when(preapproval.getAutoRecurring()).thenReturn(recurrencia);
+    when(recurrencia.getCurrencyId()).thenReturn("ARS");
+    when(recurrencia.getFrequency()).thenReturn(1);
+    when(recurrencia.getFrequencyType()).thenReturn("months");
+    when(recurrencia.getTransactionAmount()).thenReturn(new BigDecimal("1000.00"));
+    when(preapproval.getStatus()).thenReturn("cancelled");
+
+    service.cancelarVigente(membresiaId);
+
+    assertThat(suscripcion.getEstado()).isEqualTo("canceled");
+    verify(mercadoPago, never()).cancelarSuscripcion(any());
+    suscripcion.actualizarEstado("cancelled");
+    assertThat(suscripcion.getEstado()).isEqualTo("canceled");
+  }
 }

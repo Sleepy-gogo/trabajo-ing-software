@@ -161,7 +161,7 @@ public class SuscripcionMercadoPagoService {
       if (suscripcion.getPreapprovalId() != null && !suscripcion.getEstado().equals("canceled")) {
         Preapproval remota = mercadoPago.obtenerSuscripcion(suscripcion.getPreapprovalId());
         validarSuscripcion(suscripcion, remota);
-        if (!"canceled".equals(remota.getStatus())) {
+        if (!"canceled".equals(remota.getStatus()) && !"cancelled".equals(remota.getStatus())) {
           mercadoPago.cancelarSuscripcion(suscripcion.getPreapprovalId());
         }
         suscripcion.actualizarEstado("canceled");

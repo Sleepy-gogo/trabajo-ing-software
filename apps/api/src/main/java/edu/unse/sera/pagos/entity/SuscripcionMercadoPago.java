@@ -78,7 +78,7 @@ public class SuscripcionMercadoPago {
     if (nuevoEstado == null || nuevoEstado.isBlank()) {
       throw new IllegalArgumentException("El estado de la suscripción es obligatorio.");
     }
-    this.estado = nuevoEstado;
+    this.estado = "cancelled".equals(nuevoEstado) ? "canceled" : nuevoEstado;
   }
 
   public UUID getId() {

@@ -90,3 +90,11 @@ ARS 18.000 se recuperó mediante la verificación del titular. SERA dejó el pago a
 y la membresía activa hasta el 28/10/2026. Repetir la verificación conservó el mismo
 vencimiento y comprobante; otro usuario recibió 403. No se verificó la entrega automática
 del webhook. La URL de retorno estaba configurada, pero el checkout no redirigió al usuario.
+
+En esa prueba la suscripción remota ya estaba `cancelled`, mientras SERA conservaba
+`pending`. La cancelación acepta `cancelled` y `canceled` al consultar al proveedor,
+normaliza a `canceled` en la entidad local y no repite la baja remota si ya terminó.
+El gateway envía `cancelled` y exige que la respuesta confirme el identificador y estado.
+Se recuperó el caso confirmando primero la baja remota, sincronizando únicamente el estado
+de esa suscripción y ejecutando la cancelación normal del titular. La membresía quedó
+`CANCELADA`; el pago aprobado se conserva en el historial.

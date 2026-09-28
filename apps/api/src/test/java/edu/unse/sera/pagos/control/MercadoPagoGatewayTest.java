@@ -171,4 +171,34 @@ class MercadoPagoGatewayTest {
     org.assertj.core.api.Assertions.assertThatThrownBy(() -> gateway.buscarFacturas("other", 0))
         .isInstanceOf(MercadoPagoNoDisponibleException.class);
   }
+
+  @Test
+  void cancelarEnviaEstadoDelProveedorYExigeConfirmacion() throws Exception {
+    var respuesta =
+        org.mockito.Mockito.mock(com.mercadopago.resources.preapproval.Preapproval.class);
+    org.mockito.Mockito.when(respuesta.getId()).thenReturn("subscription");
+    org.mockito.Mockito.when(respuesta.getStatus()).thenReturn("cancelled", "authorized");
+    try (var clientes =
+        org.mockito.Mockito.mockConstruction(
+            com.mercadopago.client.preapproval.PreapprovalClient.class,
+            (cliente, contexto) ->
+                org.mockito.Mockito.when(
+                        cliente.update(
+                            org.mockito.ArgumentMatchers.eq("subscription"),
+                            org.mockito.ArgumentMatchers.any(
+                                com.mercadopago.client.preapproval.PreapprovalUpdateRequest.class)))
+                    .thenReturn(respuesta))) {
+      var gateway = new MercadoPagoGateway("token", "", "", "", new ObjectMapper());
+      gateway.cancelarSuscripcion("subscription");
+      var request =
+          org.mockito.ArgumentCaptor.forClass(
+              com.mercadopago.client.preapproval.PreapprovalUpdateRequest.class);
+      org.mockito.Mockito.verify(clientes.constructed().getFirst())
+          .update(org.mockito.ArgumentMatchers.eq("subscription"), request.capture());
+      assertThat(request.getValue().getStatus()).isEqualTo("cancelled");
+      org.assertj.core.api.Assertions.assertThatThrownBy(
+              () -> gateway.cancelarSuscripcion("subscription"))
+          .isInstanceOf(MercadoPagoNoDisponibleException.class);
+    }
+  }
 }
