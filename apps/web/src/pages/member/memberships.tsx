@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Link } from "react-router-dom"
+import { useEffect, useRef, useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   membersApi,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/members-api"
 import { useSession } from "@/hooks/use-session"
 import { formatCurrency } from "@/lib/format"
+import { paymentsApi, type PaymentMethod } from "@/lib/payments-api"
 import { Button } from "@/components/ui/button"
 import {
   PageHeader,
@@ -25,12 +26,13 @@ import {
   Note,
 } from "@/components/shared/real-data"
 export function MembershipsPage() {
+  const navigate = useNavigate()
   const session = useSession()
   const client = useQueryClient()
   const [relation, setRelation] = useState<Relationship>("EXTERNO")
   const [identifier, setIdentifier] = useState("")
   const [confirm, setConfirm] = useState<Level | null>(null)
-  const [notice, setNotice] = useState("")
+  const [method, setMethod] = useState<PaymentMethod>("MERCADO_PAGO")
   const member = useQuery({
     queryKey: ["my-member"],
     queryFn: ({ signal }) => membersApi.me(signal),
@@ -40,23 +42,30 @@ export function MembershipsPage() {
     queryFn: ({ signal }) => membersApi.levels(false, signal),
   })
   const contract = useMutation({
-    mutationFn: (level: Level) =>
-      member.data
-        ? membersApi.contract(member.data.id, level.id)
-        : membersApi.register({
-            usuarioId: session.data!.id,
-            relacionUnse: relation,
-            identificadorUnse: identifier || null,
-            nivelMembresiaId: level.id,
-          }),
-    onSuccess: async () => {
+    mutationFn: async (level: Level) => {
+      const socio =
+        member.data ??
+        (await membersApi.register({
+          usuarioId: session.data!.id,
+          relacionUnse: relation,
+          identificadorUnse: identifier || null,
+        }))
+      const membership = await membersApi.contract(socio.id, level.id, method)
+      return method === "MERCADO_PAGO"
+        ? membersApi.startSubscription(membership.id)
+        : null
+    },
+    onSuccess: async (subscription) => {
       await client.invalidateQueries({ queryKey: ["my-member"] })
-      setNotice(
-        "La contratación quedó pendiente de pago. Podés consultar su estado en Mi membresía."
-      )
+      await client.invalidateQueries({ queryKey: ["payments"] })
+      if (subscription) window.location.assign(subscription.checkoutUrl)
+      else navigate("/app/payments")
     },
   })
-  const currentRelation = member.data?.relacionUnse ?? relation
+  const currentRelation: Relationship =
+    member.data?.estadoVerificacionUnse === "VERIFICADA"
+      ? member.data.relacionUnse
+      : "EXTERNO"
   const incompatible =
     !!member.data?.membresiaId && member.data.estadoMembresia !== "CANCELADA"
   return (
@@ -73,10 +82,16 @@ export function MembershipsPage() {
           </Link>
         }
       />
-      <p role="status" className="mb-4 text-sm text-emerald-800">
-        {notice}
-      </p>
       <ErrorMessage error={contract.error} />
+      {contract.error && (
+        <p className="mb-4 text-sm">
+          Si la solicitud quedó registrada, continuá desde{" "}
+          <Link to="/app/memberships/status" className="underline">
+            Mi membresía
+          </Link>
+          .
+        </p>
+      )}
       <QueryState
         pending={levels.isPending || member.isPending}
         error={levels.error ?? member.error}
@@ -111,6 +126,20 @@ export function MembershipsPage() {
             </p>
           </SectionCard>
         )}
+        <SectionCard title="Medio de pago" className="mb-5">
+          <SelectField
+            label="Cómo querés pagar"
+            value={method}
+            onChange={(event) => setMethod(event.target.value as PaymentMethod)}
+          >
+            <option value="MERCADO_PAGO">
+              Mercado Pago, cobro mensual autorizado
+            </option>
+            <option value="EFECTIVO">
+              Efectivo, confirmación administrativa
+            </option>
+          </SelectField>
+        </SectionCard>
         {incompatible && (
           <Note>
             Ya tenés una membresía{" "}
@@ -133,8 +162,9 @@ export function MembershipsPage() {
                 </span>
               </p>
               <p className="mb-4 text-xs text-muted-foreground">
-                Precio para {label(currentRelation).toLowerCase()}. Sujeto a
-                verificación administrativa.
+                Precio para {label(currentRelation).toLowerCase()}.
+                {currentRelation === "EXTERNO" &&
+                  " Se aplica esta tarifa hasta verificar la relación con la UNSE."}
               </p>
               <ul className="mb-6 list-inside list-disc space-y-2 text-sm">
                 {n.beneficios.map((b) => (
@@ -170,8 +200,16 @@ export function MembershipsPage() {
           if (!v) setConfirm(null)
         }}
         title={`Solicitar ${confirm?.nombre ?? "membresía"}`}
-        description="La solicitud quedará pendiente de pago. Todavía no habilita beneficios ni genera un cobro."
-        confirmLabel="Confirmar solicitud"
+        description={
+          method === "MERCADO_PAGO"
+            ? "Se registrará la membresía y continuarás en Mercado Pago. Los beneficios se habilitan cuando se confirme el primer cobro."
+            : "Se registrará un pago pendiente en efectivo. La administración deberá confirmar su recepción para habilitar los beneficios."
+        }
+        confirmLabel={
+          method === "MERCADO_PAGO"
+            ? "Continuar a Mercado Pago"
+            : "Solicitar pago en efectivo"
+        }
         onConfirm={() => {
           if (confirm) contract.mutate(confirm)
         }}
@@ -180,20 +218,53 @@ export function MembershipsPage() {
   )
 }
 export function MembershipStatusPage() {
+  const session = useSession()
   const client = useQueryClient()
+  const pollingStarted = useRef<number | null>(null)
+  useEffect(() => {
+    pollingStarted.current = Date.now()
+  }, [])
   const [confirm, setConfirm] = useState(false)
   const [reason, setReason] = useState("")
   const [notice, setNotice] = useState("")
   const member = useQuery({
     queryKey: ["my-member"],
     queryFn: ({ signal }) => membersApi.me(signal),
+    refetchInterval: (query) =>
+      query.state.data?.estadoMembresia === "PENDIENTE_PAGO" &&
+      (pollingStarted.current === null ||
+        Date.now() - pollingStarted.current < 120_000)
+        ? 10_000
+        : false,
   })
+  const payments = useQuery({
+    queryKey: ["payments", session.data?.id, "membership-status"],
+    queryFn: ({ signal }) => paymentsApi.list(0, undefined, signal),
+    enabled: !!session.data,
+    refetchInterval: () =>
+      member.data?.estadoMembresia === "PENDIENTE_PAGO" &&
+      (pollingStarted.current === null ||
+        Date.now() - pollingStarted.current < 120_000)
+        ? 10_000
+        : false,
+  })
+  const pendingPayment = payments.data?.content.find(
+    (payment) =>
+      payment.idMembresia === member.data?.membresiaId &&
+      payment.estado === "PENDIENTE"
+  )
   const cancel = useMutation({
     mutationFn: () => membersApi.cancel(member.data!.membresiaId!, reason),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["my-member"] })
       setNotice("La membresía fue cancelada.")
       setReason("")
+    },
+  })
+  const subscribe = useMutation({
+    mutationFn: () => membersApi.startSubscription(member.data!.membresiaId!),
+    onSuccess: (subscription) => {
+      window.location.assign(subscription.checkoutUrl)
     },
   })
   return (
@@ -239,18 +310,49 @@ export function MembershipStatusPage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Próximo vencimiento</dt>
+                <dt className="text-muted-foreground">Vence el</dt>
                 <dd className="mt-1 font-medium">
-                  {member.data.proximoVencimiento ?? "Sin cuota emitida"}
+                  {member.data.proximoVencimiento ?? "Aún sin pago aprobado"}
                 </dd>
               </div>
             </dl>
             {member.data.estadoMembresia === "PENDIENTE_PAGO" && (
-              <Note>
-                Tu solicitud está registrada. Los beneficios se habilitan cuando
-                se aprueba el pago. El cobro estará disponible en la próxima
-                entrega.
-              </Note>
+              <div className="mt-5 space-y-3">
+                <Note>
+                  Tu solicitud está pendiente. Los beneficios se habilitan
+                  cuando se confirme el primer pago.
+                </Note>
+                {payments.isPending ? (
+                  <p className="text-sm">Consultando el medio de pago…</p>
+                ) : payments.isError ? (
+                  <ErrorMessage error={payments.error} />
+                ) : pendingPayment?.medioPago === "MERCADO_PAGO" ? (
+                  <Button
+                    disabled={subscribe.isPending}
+                    onClick={() => subscribe.mutate()}
+                  >
+                    Continuar a Mercado Pago
+                  </Button>
+                ) : pendingPayment?.medioPago === "EFECTIVO" ? (
+                  <p className="text-sm">
+                    El pago en efectivo espera confirmación administrativa.
+                  </p>
+                ) : (
+                  <p className="text-sm">
+                    No hay un pago pendiente. Consultá el historial o volvé a
+                    solicitar la membresía.
+                  </p>
+                )}
+                <ErrorMessage error={subscribe.error} />
+              </div>
+            )}
+            {member.data.estadoMembresia === "VENCIDA" && (
+              <Link
+                className="mt-5 inline-block text-primary underline"
+                to="/app/payments"
+              >
+                Renovar membresía
+              </Link>
             )}
             {member.data.estadoMembresia !== "CANCELADA" ? (
               <form

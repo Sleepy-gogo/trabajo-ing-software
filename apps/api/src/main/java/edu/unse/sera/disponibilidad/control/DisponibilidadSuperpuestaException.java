@@ -3,7 +3,7 @@ package edu.unse.sera.disponibilidad.control;
 import edu.unse.sera.disponibilidad.entity.DiaSemana;
 import java.util.UUID;
 
-public class DisponibilidadSuperpuestaException extends RuntimeException {
+public class DisponibilidadSuperpuestaException extends IllegalStateException {
 
   public DisponibilidadSuperpuestaException(DiaSemana diaSemana, UUID espacioId) {
     super(

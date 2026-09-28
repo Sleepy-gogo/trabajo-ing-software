@@ -1,5 +1,6 @@
 package edu.unse.sera.shared.boundary;
 
+import edu.unse.sera.pagos.control.PagoNoEncontradoException;
 import edu.unse.sera.shared.boundary.dto.ApiError;
 import edu.unse.sera.shared.exception.RecursoNoEncontradoException;
 import java.util.LinkedHashMap;
@@ -55,7 +56,7 @@ public class ApiExceptionHandler {
                 "datos_invalidos", "Revisá los tipos, fechas y valores enviados.", Map.of()));
   }
 
-  @ExceptionHandler(RecursoNoEncontradoException.class)
+  @ExceptionHandler({RecursoNoEncontradoException.class, PagoNoEncontradoException.class})
   public ResponseEntity<ApiError> handleRecursoNoEncontrado(
       RecursoNoEncontradoException exception) {
     ApiError error = new ApiError("recurso_no_encontrado", exception.getMessage(), Map.of());

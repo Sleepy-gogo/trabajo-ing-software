@@ -37,7 +37,7 @@ export type Member = {
 }
 export type MemberInput = Pick<
   Member,
-  "usuarioId" | "relacionUnse" | "identificadorUnse" | "nivelMembresiaId"
+  "usuarioId" | "relacionUnse" | "identificadorUnse"
 >
 export type MemberUpdate = Pick<
   Member,
@@ -54,6 +54,13 @@ export type Audit = {
   detalle: string
   fecha: string
 }
+export type Subscription = {
+  id: string
+  preapprovalId: string
+  estado: string
+  checkoutUrl: string
+}
+export type ContractedMembership = { id: string }
 export const membersApi = {
   levels: (all = false, signal?: AbortSignal) =>
     api<Level[]>(`/niveles-membresia?soloDisponibles=${!all}`, { signal }),
@@ -80,10 +87,18 @@ export const membersApi = {
     api<Member>("/socios", { method: "POST", body: JSON.stringify(data) }),
   update: (id: string, data: MemberUpdate) =>
     api<Member>(`/socios/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  contract: (socioId: string, nivelMembresiaId: string) =>
-    api("/membresias", {
+  contract: (
+    socioId: string,
+    nivelMembresiaId: string,
+    medioPago: "MERCADO_PAGO" | "EFECTIVO"
+  ) =>
+    api<ContractedMembership>("/membresias", {
       method: "POST",
-      body: JSON.stringify({ socioId, nivelMembresiaId }),
+      body: JSON.stringify({ socioId, nivelMembresiaId, medioPago }),
+    }),
+  startSubscription: (membresiaId: string) =>
+    api<Subscription>(`/pagos/membresias/${membresiaId}/suscripcion`, {
+      method: "POST",
     }),
   cancel: (id: string, motivo: string) =>
     api(`/membresias/${id}/cancelacion`, {

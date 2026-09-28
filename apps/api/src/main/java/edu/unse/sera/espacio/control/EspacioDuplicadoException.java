@@ -1,6 +1,6 @@
 package edu.unse.sera.espacio.control;
 
-public class EspacioDuplicadoException extends RuntimeException {
+public class EspacioDuplicadoException extends IllegalStateException {
 
   private final String nombre;
 

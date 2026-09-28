@@ -1,5 +1,5 @@
 export { AdminDashboardPage } from "../overview-live"
-export { AdminPaymentsPage, PaymentsPage } from "./payments"
+export { AdminPaymentsPage } from "./payments"
 export { AdminReservationsPage, ReservationsPage } from "./reservations"
 export { AdminSpaceDetailPage, AdminSpacesPage } from "../spaces-live"
 export { SpacesPage } from "./spaces"

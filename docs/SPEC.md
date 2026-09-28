@@ -1,5 +1,13 @@
 # SERA frontend product specification
 
+> Actualización del incremento de pagos (27/09/2026): las pantallas de pagos de membresía
+> consultan la API real. La membresía se renueva con un `Pago` aprobado; no se emiten cuotas
+> ni deuda automática. `proximoVencimiento` es el límite de beneficios y debe ser posterior
+> al día actual. La falta de renovación produce `VENCIDA`, mientras `SUSPENDIDA` queda para
+> decisiones administrativas. Las referencias posteriores a simulación, cuotas y suspensión
+> por impago describen el prototipo anterior y quedan sustituidas para este flujo. Reservas
+> y sus pagos siguen fuera del alcance de este incremento.
+
 ## 1. Purpose of this file
 
 This file is the frontend product specification for SERA, the web system for the UNSE sports complex. It condenses the software requirements document `SI-II-2026-Plantilla-ERS-DOO.pdf` into implementation context for a coding agent.

@@ -31,7 +31,11 @@ public class MembresiaController {
       @Valid @RequestBody ContratarMembresiaRequest r, Principal actor) {
     var m =
         response(
-            service.contratar(r.socioId(), r.nivelMembresiaId(), UUID.fromString(actor.getName())));
+            service.contratar(
+                r.socioId(),
+                r.nivelMembresiaId(),
+                r.medioPago(),
+                UUID.fromString(actor.getName())));
     return ResponseEntity.created(URI.create("/api/membresias/" + m.id())).body(m);
   }
 
