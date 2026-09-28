@@ -85,6 +85,12 @@ public class PagoController {
 
   public record ConciliacionResponse(int facturasRevisadas) {}
 
+  @PostMapping("/membresias/{id}/verificacion")
+  public ConciliacionResponse verificar(@PathVariable UUID id, Principal actor) {
+    return new ConciliacionResponse(
+        conciliacion.verificarPropia(id, UUID.fromString(actor.getName())));
+  }
+
   @PostMapping("/membresias/{id}/conciliacion")
   public ConciliacionResponse conciliar(@PathVariable UUID id, Principal actor) {
     return new ConciliacionResponse(conciliacion.conciliar(id, UUID.fromString(actor.getName())));

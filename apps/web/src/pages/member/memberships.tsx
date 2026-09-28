@@ -7,6 +7,7 @@ import {
   label,
   type Relationship,
   type Level,
+  type Member,
 } from "@/lib/members-api"
 import { useSession } from "@/hooks/use-session"
 import { formatCurrency } from "@/lib/format"
@@ -54,6 +55,11 @@ export function MembershipsPage() {
       return method === "MERCADO_PAGO"
         ? membersApi.startSubscription(membership.id)
         : null
+    },
+    onError: async () => {
+      // El alta local puede haber terminado aunque Mercado Pago rechace el checkout.
+      await client.invalidateQueries({ queryKey: ["my-member"] })
+      await client.invalidateQueries({ queryKey: ["payments"] })
     },
     onSuccess: async (subscription) => {
       await client.invalidateQueries({ queryKey: ["my-member"] })
@@ -261,6 +267,40 @@ export function MembershipStatusPage() {
       setReason("")
     },
   })
+  const verification = useMutation({
+    mutationFn: () => membersApi.verifyPayment(member.data!.membresiaId!),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["my-member"] }),
+        client.invalidateQueries({ queryKey: ["payments"] }),
+      ])
+      const current = client.getQueryData<Member | null>(["my-member"])
+      setNotice(
+        current?.estadoMembresia === "ACTIVA"
+          ? "Pago confirmado. Tu membres�a est� activa."
+          : "Mercado Pago todav�a no confirm� el pago. Pod�s volver a verificar en unos momentos."
+      )
+    },
+  })
+  const verifiedMembership = useRef<string | null>(null)
+  const verifyPayment = verification.mutate
+  useEffect(() => {
+    const id = member.data?.membresiaId
+    if (
+      id &&
+      member.data?.estadoMembresia === "PENDIENTE_PAGO" &&
+      pendingPayment?.medioPago === "MERCADO_PAGO" &&
+      verifiedMembership.current !== id
+    ) {
+      verifiedMembership.current = id
+      verifyPayment()
+    }
+  }, [
+    member.data?.membresiaId,
+    member.data?.estadoMembresia,
+    pendingPayment?.medioPago,
+    verifyPayment,
+  ])
   const subscribe = useMutation({
     mutationFn: () => membersApi.startSubscription(member.data!.membresiaId!),
     onSuccess: (subscription) => {
@@ -327,12 +367,30 @@ export function MembershipStatusPage() {
                 ) : payments.isError ? (
                   <ErrorMessage error={payments.error} />
                 ) : pendingPayment?.medioPago === "MERCADO_PAGO" ? (
-                  <Button
-                    disabled={subscribe.isPending}
-                    onClick={() => subscribe.mutate()}
-                  >
-                    Continuar a Mercado Pago
-                  </Button>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-3">
+                      <Button
+                        disabled={subscribe.isPending || verification.isPending}
+                        onClick={() => subscribe.mutate()}
+                      >
+                        Continuar a Mercado Pago
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={verification.isPending || subscribe.isPending}
+                        onClick={() => verification.mutate()}
+                      >
+                        {verification.isPending
+                          ? "Verificando pago�"
+                          : "Ya pagu� � Verificar pago"}
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Si Mercado Pago no te devuelve a SERA, volv� a esta
+                      pantalla para verificar el pago.
+                    </p>
+                    <ErrorMessage error={verification.error} />
+                  </div>
                 ) : pendingPayment?.medioPago === "EFECTIVO" ? (
                   <p className="text-sm">
                     El pago en efectivo espera confirmación administrativa.

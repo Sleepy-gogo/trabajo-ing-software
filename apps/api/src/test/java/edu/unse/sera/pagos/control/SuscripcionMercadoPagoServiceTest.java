@@ -282,4 +282,38 @@ class SuscripcionMercadoPagoServiceTest {
     when(recurrencia.getTransactionAmount()).thenReturn(new BigDecimal("1000.00"));
     when(preapproval.getCollectorId()).thenReturn(789L);
   }
+
+  @Test
+  void rechazoDefinitivoSePuedeReintentarPeroTimeoutNo() {
+    var membresia = suscripcion.getMembresia();
+    UUID id = UUID.randomUUID();
+    ReflectionTestUtils.setField(membresia, "id", id);
+    ReflectionTestUtils.setField(suscripcion, "preapprovalId", null);
+    suscripcion.actualizarEstado("rejected");
+    when(membresias.bloquearPorId(id)).thenReturn(Optional.of(membresia));
+    when(pagos.findAllByMembresiaId(id)).thenReturn(java.util.List.of(pagoInicial));
+    when(suscripciones.findByPagoInicialId(pagoInicial.getId()))
+        .thenReturn(Optional.of(suscripcion));
+    when(suscripciones.findById(suscripcion.getId())).thenReturn(Optional.of(suscripcion));
+    when(transacciones.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              TransactionCallback<?> callback = invocation.getArgument(0);
+              return callback.doInTransaction(mock(TransactionStatus.class));
+            });
+    when(mercadoPago.crear(any(), any(), any(), any()))
+        .thenThrow(new MercadoPagoSolicitudRechazadaException("Comprador inválido", null))
+        .thenThrow(new MercadoPagoNoDisponibleException());
+    UUID titular = pagoInicial.getUsuario().getId();
+    assertThatThrownBy(() -> service.iniciar(id, titular))
+        .isInstanceOf(MercadoPagoSolicitudRechazadaException.class);
+    assertThat(suscripcion.getEstado()).isEqualTo("rejected");
+    assertThatThrownBy(() -> service.iniciar(id, titular))
+        .isInstanceOf(MercadoPagoNoDisponibleException.class);
+    assertThat(suscripcion.getEstado()).isEqualTo("pending");
+    assertThatThrownBy(() -> service.iniciar(id, titular))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("incierto");
+    verify(mercadoPago, org.mockito.Mockito.times(2)).crear(any(), any(), any(), any());
+  }
 }

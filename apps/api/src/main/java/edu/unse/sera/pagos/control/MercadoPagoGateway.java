@@ -34,6 +34,7 @@ public class MercadoPagoGateway {
   private final String accessToken;
   private final String webhookSecret;
   private final String backUrl;
+  private final String testPayerEmail;
   private final ObjectMapper mapper;
   private final HttpClient http;
   private final PreapprovalClient preapprovals = new PreapprovalClient();
@@ -43,10 +44,12 @@ public class MercadoPagoGateway {
       @Value("${mercadopago.access-token:}") String accessToken,
       @Value("${mercadopago.webhook-secret:}") String webhookSecret,
       @Value("${mercadopago.back-url:}") String backUrl,
+      @Value("${mercadopago.test-payer-email:}") String testPayerEmail,
       ObjectMapper mapper) {
     this.accessToken = accessToken;
     this.webhookSecret = webhookSecret;
     this.backUrl = backUrl;
+    this.testPayerEmail = testPayerEmail.trim();
     this.mapper = mapper;
     this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     if (!accessToken.isBlank()) {
@@ -63,9 +66,16 @@ public class MercadoPagoGateway {
             .currencyId("ARS")
             .transactionAmount(monto)
             .build();
+    String comprador;
+    try {
+      comprador = emailComprador(email);
+    } catch (RuntimeException e) {
+      // No se envió el alta: corregir la configuración permite reintentar sin duplicar.
+      throw new MercadoPagoSolicitudRechazadaException(e.getMessage(), e);
+    }
     var solicitud =
         PreapprovalCreateRequest.builder()
-            .payerEmail(email)
+            .payerEmail(comprador)
             .reason("Membresía SERA: " + nivel)
             .externalReference(referencia.toString())
             .backUrl(backUrl)
@@ -74,7 +84,65 @@ public class MercadoPagoGateway {
             .build();
     try {
       return preapprovals.create(solicitud);
-    } catch (MPException | MPApiException e) {
+    } catch (MPApiException e) {
+      if (e.getStatusCode() == 400
+          || e.getStatusCode() == 422
+          || e.getStatusCode() == 401
+          || e.getStatusCode() == 403) {
+        String mensaje =
+            "Mercado Pago rechazó la solicitud. Revisá la cuenta compradora y la configuración del vendedor.";
+        if (e.getApiResponse() != null
+            && e.getApiResponse().getContent() != null
+            && e.getApiResponse()
+                .getContent()
+                .contains("Both payer and collector must be real or test users")) {
+          mensaje =
+              "Mercado Pago requiere comprador y vendedor del mismo entorno. "
+                  + "En esta demo, configurá el email del comprador de prueba; "
+                  + "el email de SERA puede ser distinto.";
+        }
+        throw new MercadoPagoSolicitudRechazadaException(mensaje, e);
+      }
+      throw new MercadoPagoNoDisponibleException(e);
+    } catch (MPException e) {
+      throw new MercadoPagoNoDisponibleException(e);
+    }
+  }
+
+  String emailComprador(String email) {
+    if (testPayerEmail.isBlank()) {
+      return email;
+    }
+    if (!testPayerEmail.endsWith("@testuser.com")) {
+      throw new IllegalStateException(
+          "MP_TEST_PAYER_EMAIL debe ser el email del comprador de prueba de Mercado Pago.");
+    }
+    var request =
+        HttpRequest.newBuilder(URI.create("https://api.mercadopago.com/users/me"))
+            .header("Authorization", "Bearer " + accessToken)
+            .timeout(Duration.ofSeconds(10))
+            .GET()
+            .build();
+    try {
+      var response = http.send(request, HttpResponse.BodyHandlers.ofString());
+      if (response.statusCode() != 200) {
+        throw new MercadoPagoNoDisponibleException();
+      }
+      boolean testSeller = false;
+      for (var tag : mapper.readTree(response.body()).path("tags")) {
+        if ("test_user".equals(tag.asText())) {
+          testSeller = true;
+        }
+      }
+      if (!testSeller) {
+        throw new IllegalStateException(
+            "MP_TEST_PAYER_EMAIL solo puede usarse con un vendedor de prueba.");
+      }
+      return testPayerEmail;
+    } catch (IOException e) {
+      throw new MercadoPagoNoDisponibleException(e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new MercadoPagoNoDisponibleException(e);
     }
   }
@@ -197,7 +265,7 @@ public class MercadoPagoGateway {
                 URI.create(
                     "https://api.mercadopago.com/authorized_payments/search?preapproval_id="
                         + query
-                        + "&limit=20&offset="
+                        + "&offset="
                         + offset))
             .header("Authorization", "Bearer " + accessToken)
             .timeout(Duration.ofSeconds(10))

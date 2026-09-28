@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
+import { MembershipStatusPage } from "@/pages/member/memberships"
 import { MemberPaymentsPage } from "@/pages/member/membership-payments"
 import { AdminPaymentsPage } from "@/pages/admin/payments"
 import { membersApi, type Member } from "@/lib/members-api"
@@ -68,6 +69,39 @@ function mount(content: React.ReactNode, url: string) {
 }
 
 describe("Pagos conectados", () => {
+  it("verifica al regresar y permite reintentar sin confiar en la URL", async () => {
+    vi.spyOn(usersApi, "me").mockResolvedValue(user)
+    const membership = vi.spyOn(membersApi, "me").mockResolvedValue(member)
+    vi.spyOn(paymentsApi, "list").mockResolvedValue({
+      content: [pending],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+    })
+    const verify = vi
+      .spyOn(membersApi, "verifyPayment")
+      .mockResolvedValue({ facturasRevisadas: 0 })
+    const actor = mount(
+      <MembershipStatusPage />,
+      "/app/memberships/status?status=approved"
+    )
+    await screen.findByText(/Mercado Pago todav�a no confirm�/)
+    expect(verify).toHaveBeenCalledTimes(1)
+    expect(verify).toHaveBeenCalledWith("m1")
+    expect(screen.queryByText("Activa")).toBeNull()
+    membership.mockResolvedValue({
+      ...member,
+      estadoMembresia: "ACTIVA",
+      proximoVencimiento: "2026-10-28",
+    })
+    await actor.click(
+      screen.getByRole("button", { name: "Ya pagu� � Verificar pago" })
+    )
+    await screen.findByText("Pago confirmado. Tu membres�a est� activa.")
+    await waitFor(() => expect(verify).toHaveBeenCalledTimes(2))
+    expect(screen.getByText("Activa")).toBeTruthy()
+  })
+
   it("el retorno del checkout no aprueba un pago pendiente", async () => {
     vi.spyOn(usersApi, "me").mockResolvedValue(user)
     vi.spyOn(membersApi, "me").mockResolvedValue(member)

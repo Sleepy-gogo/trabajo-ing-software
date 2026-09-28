@@ -60,8 +60,20 @@ public class SuscripcionMercadoPagoService {
     if (inicio.existente() != null) {
       return inicio.existente();
     }
-    Preapproval remota =
-        mercadoPago.crear(inicio.id(), inicio.email(), inicio.nivel(), inicio.monto());
+    Preapproval remota;
+    try {
+      remota = mercadoPago.crear(inicio.id(), inicio.email(), inicio.nivel(), inicio.monto());
+    } catch (MercadoPagoSolicitudRechazadaException e) {
+      transacciones.execute(
+          status -> {
+            var rechazada = suscripciones.findById(inicio.id()).orElseThrow();
+            if (rechazada.getPreapprovalId() == null) {
+              rechazada.actualizarEstado("rejected");
+            }
+            return null;
+          });
+      throw e;
+    }
     return Objects.requireNonNull(
         transacciones.execute(
             status -> {
@@ -96,6 +108,16 @@ public class SuscripcionMercadoPagoService {
       if ("canceled".equals(existente.get().getEstado())) {
         throw new IllegalStateException("La suscripción fue cancelada. Contratá otra membresía.");
       }
+      if (existente.get().getPreapprovalId() == null
+          && "rejected".equals(existente.get().getEstado())) {
+        existente.get().actualizarEstado("pending");
+        return new Inicio(
+            existente.get().getId(),
+            membresia.getSocio().getUsuario().getEmail(),
+            membresia.getNivelMembresia().getNombre(),
+            pagoInicial.getMonto(),
+            null);
+      }
       if (existente.get().getPreapprovalId() == null) {
         throw new IllegalStateException(
             "La solicitud a Mercado Pago tiene un resultado incierto. Consultá a administración.");
@@ -129,6 +151,9 @@ public class SuscripcionMercadoPagoService {
 
   public void cancelarVigente(UUID membresiaId) {
     for (var suscripcion : suscripciones.findAllByMembresiaIdOrderByCreatedAtDesc(membresiaId)) {
+      if (suscripcion.getPreapprovalId() == null && "rejected".equals(suscripcion.getEstado())) {
+        suscripcion.actualizarEstado("canceled");
+      }
       if (suscripcion.getPreapprovalId() == null && !"canceled".equals(suscripcion.getEstado())) {
         throw new IllegalStateException(
             "La suscripción tiene un resultado incierto. Revisala en Mercado Pago antes de cancelar.");

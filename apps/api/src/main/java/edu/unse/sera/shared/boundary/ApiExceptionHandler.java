@@ -13,6 +13,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+  @ExceptionHandler(edu.unse.sera.pagos.control.MercadoPagoNoDisponibleException.class)
+  public ResponseEntity<ApiError> mercadoPagoNoDisponible(RuntimeException exception) {
+    return ResponseEntity.status(502)
+        .body(new ApiError("mercado_pago_no_disponible", exception.getMessage(), Map.of()));
+  }
+
+  @ExceptionHandler(edu.unse.sera.pagos.control.MercadoPagoSolicitudRechazadaException.class)
+  public ResponseEntity<ApiError> mercadoPagoRechazo(RuntimeException exception) {
+    return ResponseEntity.status(422)
+        .body(new ApiError("mercado_pago_rechazo", exception.getMessage(), Map.of()));
+  }
 
   @ExceptionHandler(edu.unse.sera.shared.exception.OperacionNoPermitidaException.class)
   public ResponseEntity<ApiError> prohibido(RuntimeException exception) {

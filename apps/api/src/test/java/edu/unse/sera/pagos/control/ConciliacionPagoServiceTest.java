@@ -25,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ConciliacionPagoServiceTest {
   @Mock private SuscripcionMercadoPagoRepository suscripciones;
   @Mock private UsuarioRepository usuarios;
+  @Mock private edu.unse.sera.membresia.persistence.MembresiaRepository membresias;
   @Mock private MercadoPagoGateway mercadoPago;
   @Mock private SuscripcionMercadoPagoService procesador;
   @Mock private SuscripcionMercadoPago suscripcion;
@@ -33,7 +34,8 @@ class ConciliacionPagoServiceTest {
 
   @BeforeEach
   void preparar() {
-    service = new ConciliacionPagoService(suscripciones, usuarios, mercadoPago, procesador);
+    service =
+        new ConciliacionPagoService(suscripciones, usuarios, membresias, mercadoPago, procesador);
   }
 
   @Test
@@ -67,5 +69,26 @@ class ConciliacionPagoServiceTest {
     assertThatThrownBy(() -> service.conciliar(UUID.randomUUID(), actor))
         .isInstanceOf(OperacionNoPermitidaException.class);
     verifyNoInteractions(mercadoPago, procesador);
+  }
+
+  @Test
+  void titularPuedeVerificarSuPagoYReusaLaValidacionDelProveedor() {
+    UUID actor = UUID.randomUUID();
+    UUID membresia = UUID.randomUUID();
+    when(membresias.existsByIdAndSocioUsuarioId(membresia, actor)).thenReturn(true);
+    when(suscripciones.findAllByMembresiaIdOrderByCreatedAtDesc(membresia))
+        .thenReturn(List.of(suscripcion));
+    when(suscripcion.getPreapprovalId()).thenReturn("suscripcion-1");
+    when(mercadoPago.buscarFacturas("suscripcion-1", 0))
+        .thenReturn(new MercadoPagoGateway.PaginaFacturas(List.of(11L), 1, 1));
+    assertThat(service.verificarPropia(membresia, actor)).isEqualTo(1);
+    verify(procesador).recibirFactura(11L);
+  }
+
+  @Test
+  void noPuedeVerificarLaMembresiaDeOtraPersona() {
+    assertThatThrownBy(() -> service.verificarPropia(UUID.randomUUID(), UUID.randomUUID()))
+        .isInstanceOf(OperacionNoPermitidaException.class);
+    verifyNoInteractions(suscripciones, mercadoPago, procesador);
   }
 }

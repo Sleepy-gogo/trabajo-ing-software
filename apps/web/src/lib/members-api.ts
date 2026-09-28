@@ -100,6 +100,13 @@ export const membersApi = {
     api<Subscription>(`/pagos/membresias/${membresiaId}/suscripcion`, {
       method: "POST",
     }),
+  verifyPayment: (membresiaId: string) =>
+    api<{ facturasRevisadas: number }>(
+      `/pagos/membresias/${membresiaId}/verificacion`,
+      {
+        method: "POST",
+      }
+    ),
   cancel: (id: string, motivo: string) =>
     api(`/membresias/${id}/cancelacion`, {
       method: "POST",

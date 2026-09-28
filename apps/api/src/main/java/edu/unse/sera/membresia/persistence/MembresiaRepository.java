@@ -20,6 +20,8 @@ public interface MembresiaRepository extends JpaRepository<Membresia, UUID> {
   @Query("SELECT m FROM Membresia m WHERE m.id = :id")
   Optional<Membresia> bloquearPorId(@Param("id") UUID id);
 
+  boolean existsByIdAndSocioUsuarioId(UUID id, UUID usuarioId);
+
   // 1. buscarMembresiaActiva(idUsuario)
   @Query(
       "SELECT m FROM Membresia m JOIN FETCH m.socio s JOIN FETCH m.nivelMembresia nm WHERE"
