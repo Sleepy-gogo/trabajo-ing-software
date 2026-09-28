@@ -79,6 +79,48 @@ public class MercadoPagoGateway {
     }
   }
 
+  public String crearCheckout(
+      UUID pagoId,
+      UUID reservaId,
+      String espacio,
+      BigDecimal monto,
+      java.time.OffsetDateTime vence) {
+    validarConfiguracion();
+    String retorno = URI.create(backUrl).resolve("/app/reservations/" + reservaId).toString();
+    var item =
+        com.mercadopago.client.preference.PreferenceItemRequest.builder()
+            .id(reservaId.toString())
+            .title("Reserva SERA: " + espacio)
+            .quantity(1)
+            .currencyId("ARS")
+            .unitPrice(monto)
+            .build();
+    var solicitud =
+        com.mercadopago.client.preference.PreferenceRequest.builder()
+            .items(List.of(item))
+            .externalReference(pagoId.toString())
+            .backUrls(
+                com.mercadopago.client.preference.PreferenceBackUrlsRequest.builder()
+                    .success(retorno)
+                    .pending(retorno)
+                    .failure(retorno)
+                    .build())
+            .autoReturn("approved")
+            .expires(true)
+            .expirationDateTo(vence)
+            .build();
+    try {
+      var preferencia = new com.mercadopago.client.preference.PreferenceClient().create(solicitud);
+      if (preferencia.getInitPoint() == null
+          || !preferencia.getInitPoint().startsWith("https://")) {
+        throw new MercadoPagoNoDisponibleException();
+      }
+      return preferencia.getInitPoint();
+    } catch (MPException | MPApiException e) {
+      throw new MercadoPagoNoDisponibleException(e);
+    }
+  }
+
   public void validarConfiguracion() {
     requerirCredenciales();
     if (!backUrl.startsWith("https://")) {

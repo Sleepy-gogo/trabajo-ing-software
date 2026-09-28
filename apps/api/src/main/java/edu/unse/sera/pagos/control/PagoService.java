@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class PagoService {
   private static final ZoneId ZONA = ZoneId.of("America/Argentina/Buenos_Aires");
+  private final edu.unse.sera.reserva.control.ReservaService reservas;
   private final PagoRepository pagos;
   private final MembresiaRepository membresias;
   private final UsuarioRepository usuarios;
@@ -39,7 +40,9 @@ public class PagoService {
       PagoRepository pagos,
       MembresiaRepository membresias,
       UsuarioRepository usuarios,
-      SuscripcionMercadoPagoRepository suscripciones) {
+      SuscripcionMercadoPagoRepository suscripciones,
+      edu.unse.sera.reserva.control.ReservaService reservas) {
+    this.reservas = reservas;
     this.pagos = pagos;
     this.membresias = membresias;
     this.usuarios = usuarios;
@@ -69,7 +72,8 @@ public class PagoService {
             membresia.getSocio().getUsuario().getId(), claveSolicitud);
     if (repetido.isPresent()) {
       Pago pago = repetido.get();
-      if (!membresiaId.equals(pago.getMembresia().getId()) || medio != pago.getMedioPago()) {
+      if ((pago.getMembresia() == null || !membresiaId.equals(pago.getMembresia().getId()))
+          || medio != pago.getMedioPago()) {
         throw new IllegalStateException("La clave ya pertenece a otra operación.");
       }
       return detalle(pago);
@@ -119,6 +123,10 @@ public class PagoService {
   /** Solo la integración verificada con el proveedor llama este método para Mercado Pago. */
   public PagoDetalle confirmarPago(UUID pagoId, String comprobante, OffsetDateTime fechaPago) {
     Pago pago = buscar(pagoId);
+    if (pago.getReservaId() != null) {
+      reservas.confirmarPago(pagoId, comprobante, fechaPago);
+      return detalle(pago);
+    }
     if (pago.getMembresia() == null) {
       throw new IllegalStateException("El pago no tiene una membresía.");
     }
@@ -152,6 +160,10 @@ public class PagoService {
   public PagoDetalle cancelarPendiente(UUID id, UUID actorId) {
     Pago pago = buscar(id);
     autorizar(pago.getUsuario().getId(), actorId);
+    if (pago.getReservaId() != null) {
+      reservas.cancelar(pago.getReservaId(), actorId);
+      return detalle(pago);
+    }
     if (pago.getMedioPago() == MedioPago.MERCADO_PAGO) {
       throw new IllegalStateException("Cancelá primero la suscripción de Mercado Pago.");
     }

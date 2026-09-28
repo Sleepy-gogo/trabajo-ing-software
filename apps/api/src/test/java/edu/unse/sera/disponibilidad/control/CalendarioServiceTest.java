@@ -40,7 +40,13 @@ class CalendarioServiceTest {
 
   @BeforeEach
   void preparar() {
-    service = new CalendarioService(espacios, horarios, bloqueos, socios);
+    service =
+        new CalendarioService(
+            espacios,
+            horarios,
+            bloqueos,
+            socios,
+            org.mockito.Mockito.mock(edu.unse.sera.reserva.persistence.ReservaRepository.class));
     espacio = new Espacio("Cancha", null, 20, new BigDecimal("1200.00"), "Cancha", null);
   }
 

@@ -92,13 +92,15 @@ export function MemberPaymentsPage() {
     member.data?.membresiaId &&
     member.data.estadoMembresia !== "CANCELADA" &&
     member.data.estadoMembresia !== "SUSPENDIDA" &&
-    !payments.data?.content.some((p) => p.estado === "PENDIENTE")
+    !payments.data?.content.some(
+      (p) => p.conceptoPago === "CUOTA_MENSUAL" && p.estado === "PENDIENTE"
+    )
 
   return (
     <>
       <PageHeader
         title="Mis pagos"
-        description="Consultá las renovaciones y el estado confirmado de cada cobro."
+        description="Consultá los pagos de membresías y reservas."
         actions={
           <Button variant="outline" onClick={() => void payments.refetch()}>
             Actualizar
@@ -160,7 +162,13 @@ export function MemberPaymentsPage() {
                     className="flex flex-wrap items-center justify-between gap-3 py-4"
                   >
                     <div>
-                      <p className="font-medium">Renovación mensual</p>
+                      <p className="font-medium">
+                        {payment.conceptoPago === "CUOTA_MENSUAL"
+                          ? "Renovación mensual"
+                          : payment.conceptoPago === "DIFERENCIA_TICKET"
+                            ? "Diferencia de reserva"
+                            : "Reserva"}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {formatDateTime(payment.creadoEn)} ·{" "}
                         {payment.medioPago === "EFECTIVO"

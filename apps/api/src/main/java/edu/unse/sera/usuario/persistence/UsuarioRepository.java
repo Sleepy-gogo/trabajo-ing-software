@@ -8,6 +8,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
+  @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+  @org.springframework.data.jpa.repository.Query("select u from Usuario u where u.id = :id")
+  Optional<Usuario> bloquearPorId(UUID id);
+
   Optional<Usuario> findByEmailIgnoreCase(String email);
 
   List<Usuario> findAllByOrderByNombreCompletoAsc();

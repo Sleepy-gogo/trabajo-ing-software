@@ -26,7 +26,10 @@ class EspacioServiceTest {
 
   @BeforeEach
   void setUp() {
-    espacioService = new EspacioService(espacioRepository);
+    espacioService =
+        new EspacioService(
+            espacioRepository,
+            org.mockito.Mockito.mock(edu.unse.sera.reserva.persistence.ReservaRepository.class));
   }
 
   @Test
@@ -55,6 +58,9 @@ class EspacioServiceTest {
         new Espacio(
             "Cancha cubierta", "Piso de parquet", 20, new BigDecimal("1500.00"), "futsal", null);
     when(espacioRepository.findById(id)).thenReturn(Optional.of(espacio));
+    org.mockito.Mockito.lenient()
+        .when(espacioRepository.bloquearPorId(id))
+        .thenReturn(Optional.of(espacio));
 
     EspacioDetalle response =
         espacioService.actualizar(
@@ -70,6 +76,9 @@ class EspacioServiceTest {
     Espacio espacio =
         new Espacio("Cancha cubierta", null, 20, new BigDecimal("1500.00"), "futsal", null);
     when(espacioRepository.findById(id)).thenReturn(Optional.of(espacio));
+    org.mockito.Mockito.lenient()
+        .when(espacioRepository.bloquearPorId(id))
+        .thenReturn(Optional.of(espacio));
 
     espacioService.eliminar(id);
 

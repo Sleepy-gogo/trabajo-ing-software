@@ -4,7 +4,7 @@ export type PaymentState = "PENDIENTE" | "APROBADO" | "RECHAZADO" | "CANCELADO"
 export type PaymentMethod = "EFECTIVO" | "MERCADO_PAGO"
 export type Payment = {
   id: string
-  conceptoPago: "CUOTA_MENSUAL"
+  conceptoPago: "CUOTA_MENSUAL" | "RESERVA" | "DIFERENCIA_TICKET"
   idUsuario: string
   titular: string
   estado: PaymentState

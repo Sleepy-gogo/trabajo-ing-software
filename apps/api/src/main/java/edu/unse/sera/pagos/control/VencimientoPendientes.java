@@ -43,7 +43,8 @@ public class VencimientoPendientes {
         .findAllByEstadoAndCreatedAtBefore(EstadoPago.PENDIENTE, limite)
         .forEach(
             pago -> {
-              if (!suscripciones.existsByPagoInicialIdAndEstadoNot(pago.getId(), "canceled")) {
+              if (pago.getReservaId() == null
+                  && !suscripciones.existsByPagoInicialIdAndEstadoNot(pago.getId(), "canceled")) {
                 pago.cancelarPendiente();
               }
             });

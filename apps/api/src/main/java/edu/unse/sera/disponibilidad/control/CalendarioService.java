@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class CalendarioService {
+  private final edu.unse.sera.reserva.persistence.ReservaRepository reservas;
   private final EspacioRepository espacios;
   private final DisponibilidadRepository horarios;
   private final BloqueoRepository bloqueos;
@@ -31,7 +32,9 @@ public class CalendarioService {
       EspacioRepository espacios,
       DisponibilidadRepository horarios,
       BloqueoRepository bloqueos,
-      SocioRepository socios) {
+      SocioRepository socios,
+      edu.unse.sera.reserva.persistence.ReservaRepository reservas) {
+    this.reservas = reservas;
     this.espacios = espacios;
     this.horarios = horarios;
     this.bloqueos = bloqueos;
@@ -60,23 +63,29 @@ public class CalendarioService {
             .map(s -> s.getRelacionUnse())
             .orElse(RelacionUnse.EXTERNO);
     List<Franja> libres = new ArrayList<>();
-    if (espacio.getEstado() == EstadoEspacio.HABILITADO && !fecha.isBefore(LocalDate.now())) {
+    if (espacio.getEstado() == EstadoEspacio.HABILITADO
+        && !fecha.isBefore(LocalDate.now(edu.unse.sera.reserva.entity.Reserva.ZONA))) {
       DiaSemana dia = DiaSemana.values()[fecha.getDayOfWeek().getValue() - 1];
-      var cortes = bloqueos.findAllByEspacioIdAndFechaOrderByDesde(id, fecha);
+      List<Franja> cortes = new ArrayList<>();
+      bloqueos
+          .findAllByEspacioIdAndFechaOrderByDesde(id, fecha)
+          .forEach(b -> cortes.add(new Franja(b.getDesde(), b.getHasta())));
+      reservas.ocupadas(id, fecha).forEach(r -> cortes.add(new Franja(r.getDesde(), r.getHasta())));
+      cortes.sort(java.util.Comparator.comparing(Franja::desde));
       for (var h : horarios.findAllByEspacioId(id)) {
         if (h.getDiaSemana() != dia) {
           continue;
         }
         LocalTime cursor = h.getHoraDesde();
         for (var b : cortes) {
-          if (!b.getHasta().isAfter(cursor) || !b.getDesde().isBefore(h.getHoraHasta())) {
+          if (!b.hasta().isAfter(cursor) || !b.desde().isBefore(h.getHoraHasta())) {
             continue;
           }
-          if (b.getDesde().isAfter(cursor)) {
-            libres.add(new Franja(cursor, b.getDesde()));
+          if (b.desde().isAfter(cursor)) {
+            libres.add(new Franja(cursor, b.desde()));
           }
-          if (b.getHasta().isAfter(cursor)) {
-            cursor = b.getHasta();
+          if (b.hasta().isAfter(cursor)) {
+            cursor = b.hasta();
           }
           if (!cursor.isBefore(h.getHoraHasta())) {
             break;
@@ -87,13 +96,17 @@ public class CalendarioService {
         }
       }
     }
-    var ahora = LocalTime.now();
+    var ahora = LocalTime.now(edu.unse.sera.reserva.entity.Reserva.ZONA);
     libres =
         libres.stream()
-            .filter(f -> !fecha.equals(LocalDate.now()) || f.hasta().isAfter(ahora))
+            .filter(
+                f ->
+                    !fecha.equals(LocalDate.now(edu.unse.sera.reserva.entity.Reserva.ZONA))
+                        || f.hasta().isAfter(ahora))
             .map(
                 f ->
-                    fecha.equals(LocalDate.now()) && f.desde().isBefore(ahora)
+                    fecha.equals(LocalDate.now(edu.unse.sera.reserva.entity.Reserva.ZONA))
+                            && f.desde().isBefore(ahora)
                         ? new Franja(ahora.withNano(0), f.hasta())
                         : f)
             .sorted(java.util.Comparator.comparing(Franja::desde))
@@ -105,6 +118,11 @@ public class CalendarioService {
   public BloqueoDetalle bloquear(
       UUID id, LocalDate fecha, LocalTime desde, LocalTime hasta, String motivo) {
     espacios.bloquearPorId(id).orElseThrow(() -> new EspacioNoEncontradoException(id));
+    if (reservas.ocupadas(id, fecha).stream()
+        .anyMatch(r -> r.getDesde().isBefore(hasta) && r.getHasta().isAfter(desde))) {
+      throw new IllegalStateException(
+          "El bloqueo se superpone con una reserva. Cancelala primero.");
+    }
     Bloqueo nuevo = new Bloqueo(id, fecha, desde, hasta, motivo);
     if (bloqueos.findAllByEspacioIdAndFechaOrderByDesde(id, fecha).stream()
         .anyMatch(b -> b.getDesde().isBefore(hasta) && b.getHasta().isAfter(desde))) {

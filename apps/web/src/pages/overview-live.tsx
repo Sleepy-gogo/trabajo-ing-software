@@ -31,7 +31,6 @@ export function AdminDashboardPage() {
       <PageHeader
         title="Administración del polideportivo"
         description="Usuarios, membresías y espacios registrados en SERA."
-        eyebrow="Adelanto · Incremento 3"
       />
       <QueryState
         pending={users.isPending || members.isPending || spaces.isPending}
@@ -85,6 +84,11 @@ export function AdminDashboardPage() {
             description:
               "Definí los planes disponibles para contratar y sus beneficios.",
             to: "/admin/levels",
+          },
+          {
+            title: "Reservas y tickets",
+            description: "Consultá los horarios reservados y sus pagos.",
+            to: "/admin/reservations",
           },
           {
             title: "Usuarios",
@@ -169,6 +173,17 @@ export function MemberHomePage() {
             to="/app/services"
           >
             Explorar espacios
+          </Link>
+        </SectionCard>
+        <SectionCard title="Mis reservas">
+          <p className="mb-4 text-sm text-muted-foreground">
+            Consultá tus horarios, completá un pago o usá un ticket.
+          </p>
+          <Link
+            className="text-sm font-semibold text-primary underline"
+            to="/app/reservations"
+          >
+            Ver mis reservas
           </Link>
         </SectionCard>
         <SectionCard title="Tus datos">

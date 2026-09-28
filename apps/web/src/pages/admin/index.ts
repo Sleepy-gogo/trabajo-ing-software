@@ -1,6 +1,6 @@
 export { AdminDashboardPage } from "../overview-live"
 export { AdminPaymentsPage } from "./payments"
-export { AdminReservationsPage, ReservationsPage } from "./reservations"
+export { AdminReservationsPage } from "./reservations"
 export { AdminSpaceDetailPage, AdminSpacesPage } from "../spaces-live"
 export { SpacesPage } from "./spaces"
 export { MembersPage } from "./members"

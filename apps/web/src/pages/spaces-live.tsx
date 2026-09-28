@@ -25,7 +25,6 @@ import {
   SelectField,
   ErrorMessage,
   QueryState,
-  Note,
 } from "@/components/shared/real-data"
 const days: Weekday[] = [
   "LUNES",
@@ -477,10 +476,16 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                   )}
                 </QueryState>
                 {!admin && (
-                  <Note>
-                    La creación de reservas y su pago estarán disponibles en una
-                    próxima entrega.
-                  </Note>
+                  <Button
+                    className="mt-5"
+                    render={
+                      <Link
+                        to={`/app/reservations/new?space=${s.id}&date=${date}`}
+                      />
+                    }
+                  >
+                    Reservar este espacio
+                  </Button>
                 )}
               </SectionCard>
             </div>

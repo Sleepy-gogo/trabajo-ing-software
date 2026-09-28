@@ -1,5 +1,9 @@
 # SERA frontend product specification
 
+> Incremento 5: reservas y tickets ya consumen la API. El alcance reducido y las
+> políticas de la demo están en [RESERVAS.md](RESERVAS.md); ese documento reemplaza
+> las referencias a mocks y reglas no definidas del prototipo para este flujo.
+
 > Actualización del incremento de pagos (27/09/2026): las pantallas de pagos de membresía
 > consultan la API real. La membresía se renueva con un `Pago` aprobado; no se emiten cuotas
 > ni deuda automática. `proximoVencimiento` es el límite de beneficios y debe ser posterior

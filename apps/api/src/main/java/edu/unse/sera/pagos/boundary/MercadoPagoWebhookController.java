@@ -14,11 +14,15 @@ import tools.jackson.databind.JsonNode;
 @RestController
 @RequestMapping("/api/webhooks/mercadopago")
 public class MercadoPagoWebhookController {
+  private final edu.unse.sera.reserva.control.ReservaService reservas;
   private final MercadoPagoGateway mercadoPago;
   private final SuscripcionMercadoPagoService suscripciones;
 
   public MercadoPagoWebhookController(
-      MercadoPagoGateway mercadoPago, SuscripcionMercadoPagoService suscripciones) {
+      MercadoPagoGateway mercadoPago,
+      SuscripcionMercadoPagoService suscripciones,
+      edu.unse.sera.reserva.control.ReservaService reservas) {
+    this.reservas = reservas;
     this.mercadoPago = mercadoPago;
     this.suscripciones = suscripciones;
   }
@@ -42,6 +46,13 @@ public class MercadoPagoWebhookController {
       case "subscription_authorized_payment" -> {
         try {
           suscripciones.recibirFactura(Long.parseLong(dataId));
+        } catch (NumberFormatException e) {
+          return ResponseEntity.badRequest().build();
+        }
+      }
+      case "payment" -> {
+        try {
+          reservas.recibirPago(Long.parseLong(dataId));
         } catch (NumberFormatException e) {
           return ResponseEntity.badRequest().build();
         }
