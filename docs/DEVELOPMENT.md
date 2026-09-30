@@ -1,319 +1,150 @@
 # Desarrollo local
 
-Para la entrega, se puede usar `python scripts/sera.py setup` y luego
-`python scripts/sera.py start --demo` desde la raíz. La [guía de entrega](ENTREGA.md)
-explica requisitos, diagnóstico, reinicio con respaldo y recorrido de presentación.
-Los comandos manuales de esta guía siguen disponibles para desarrollo.
+La instalación automatizada y la carga de demo están en [ENTREGA.md](ENTREGA.md).
+Esta guía describe el arranque manual, la configuración y las comprobaciones.
 
 ## Requisitos
 
-Instalar:
-
-- Git
-- JDK 21
-- Docker Desktop o Docker Engine con Compose
-- Node.js LTS
-- pnpm
-- IntelliJ IDEA recomendado para backend
-
-Maven global no es obligatorio porque el backend incluye Maven Wrapper.
-
-Comprobar `java -version` antes de usar el wrapper. Debe indicar Java 21. Si Windows usa otra versión, configurar el JDK para la terminal actual, ajustando la ruta a la instalación local:
+Java 21, Docker con Compose, Node.js 22.13+ dentro de la rama 22 o 24+, y pnpm
+11.18.0. Maven Wrapper está incluido. La automatización requiere Python 3.10+.
 
 ```powershell
 java -version
+node --version
+pnpm --version
+docker compose version
 ```
 
-El frontend requiere Node.js 22.13+ dentro de la rama 22 o Node.js 24+. Usar la versión de pnpm declarada en `apps/web/package.json` y conservar `apps/web/pnpm-lock.yaml` como único lockfile.
+En Windows, `JAVA_HOME` y `PATH` deben apuntar a Java 21.
 
-El comando `spring-boot:run` configura la JVM de la API en UTC. Esto evita aliases del sistema operativo como `America/Buenos_Aires`, que algunas versiones de PostgreSQL no reconocen. Al ejecutar desde IntelliJ o con `java -jar`, agregar la opción de JVM `-Duser.timezone=UTC`. La zona horaria de los futuros casos de uso se definirá con sus requisitos.
-
-## Primera ejecución
+## Arranque manual
 
 Desde la raíz:
 
-```bash
-docker compose up -d
-```
-
-Confirmar:
-
-```bash
-docker compose ps
-```
-
-Después levantar backend.
-
-Windows:
-
 ```powershell
+docker compose up -d
+docker compose ps
 cd apps/api
 .\mvnw.cmd spring-boot:run
 ```
 
-Linux/macOS:
-
-```bash
-cd apps/api
-./mvnw spring-boot:run
-```
-
 En otra terminal:
 
-```bash
+```powershell
 cd apps/web
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-## Puertos
+En Linux/macOS se usa `./mvnw` en lugar de `.\mvnw.cmd`.
 
-Convención inicial:
+| Servicio | Dirección local |
+| --- | --- |
+| Web | `http://localhost:5173` |
+| API | `http://localhost:4500` |
+| PostgreSQL | `localhost:5432`, base/usuario/contraseña `sera` |
 
-```text
-Frontend Vite:   5173
-Backend Spring:  4500
-PostgreSQL:      5432
-```
-
-No asumir que estos puertos estarán libres en todas las máquinas. Si se cambia uno, documentarlo.
+El perfil `dev` es el predeterminado. Encuentra `../../compose.yml` desde
+`apps/api`. El arranque con Maven configura UTC; al ejecutar el JAR o desde el
+IDE debe agregarse `-Duser.timezone=UTC`.
 
 ## Variables de entorno
 
-Spring usa `dev` como perfil por defecto. Este perfil encuentra `../../compose.yml` desde `apps/api` y usa las credenciales locales `sera`. El backend puede iniciar PostgreSQL mediante el soporte de Docker Compose; `docker compose up -d` permite iniciarlo explícitamente y revisar su estado primero.
+Copiar `apps/api/.env.example` a `apps/api/.env` y
+`apps/web/.env.example` a `apps/web/.env.local`. Los archivos con valores locales
+no se versionan.
 
-Para una base externa, activar un perfil distinto con `SPRING_PROFILES_ACTIVE` y proporcionar `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` y `SPRING_DATASOURCE_PASSWORD`. La URL debe ser JDBC, por ejemplo `jdbc:postgresql://host:5432/sera`.
+El perfil `dev` importa el `.env` de la API al iniciar desde `apps/api`.
+Los valores no llevan comillas ni `export`. Las variables del proceso tienen
+prioridad; los cambios requieren reiniciar la API.
 
-El perfil `dev` importa opcionalmente `apps/api/.env` al iniciar desde `apps/api`.
-Copiar `.env.example` a `.env` y completar las variables de Mercado Pago con valores
-sin comillas ni prefijo `export`. Reiniciar la API después de cambiarlas. Las variables
-del proceso tienen prioridad sobre el archivo. Otros perfiles usan variables del entorno.
-Se usa el [import de configuración de Spring Boot](https://docs.spring.io/spring-boot/reference/features/external-config.html), sin agregar dependencias.
+La interfaz usa `API_PROXY_TARGET` para reenviar `/api`, con valor predeterminado
+`http://localhost:4500`. `WEB_ALLOWED_HOSTS` admite nombres de host separados por
+comas para accesos mediante túnel.
 
-Nunca commitear secretos.
+Para una base externa se activa otro perfil y se definen:
 
-Para configurar el proxy del frontend, copiar `apps/web/.env.example` a
-`apps/web/.env.local` y ajustar:
-
-```dotenv
-API_PROXY_TARGET=https://mi-api.ngrok-free.app
-WEB_ALLOWED_HOSTS=mi-frontend.ngrok-free.app
+```text
+SPRING_PROFILES_ACTIVE=entrega
+SPRING_DATASOURCE_URL=jdbc:postgresql://host:5432/base
+SPRING_DATASOURCE_USERNAME=usuario
+SPRING_DATASOURCE_PASSWORD=contraseña
+SPRING_DOCKER_COMPOSE_ENABLED=false
 ```
 
-`API_PROXY_TARGET` es el origen del backend, sin `/api` al final; por defecto usa
-`http://localhost:4500`. Se aplica a `pnpm dev` y `pnpm preview`. El proxy conserva
-el prefijo `/api`, adapta el header `Host` al destino y omite la pantalla de aviso
-de ngrok. Reiniciar Vite después de cambiar estas variables.
-
-`WEB_ALLOWED_HOSTS` permite los dominios con los que se accede al frontend a través
-de ngrok o de otro reverse proxy. Usar nombres de host sin protocolo ni puerto,
-separados por comas. Para exponer la demo completa localmente, ejecutar
-`ngrok http 5173` y agregar el dominio asignado a esta variable; el destino de la
-API puede seguir siendo local.
-
-El navegador siempre consume `/api` en el mismo origen que la interfaz, conservando
-las cookies de sesión y CSRF. Al desplegar `dist` en un servidor estático, configurar
-el reverse proxy de ese servidor para reenviar `/api/*` al backend, conservando la
-ruta. La configuración del proxy de Vite no se incluye en `dist`; `pnpm preview`
-sirve para verificar el build localmente. El puerto de Spring se puede cambiar con
-la variable de entorno `SERVER_PORT`.
-
-Backend puede usar variables de entorno desde Spring:
-
-```properties
-mercadopago.access-token=${MERCADOPAGO_ACCESS_TOKEN}
-```
-
-No poner el valor real en `application.properties`.
-
-## Base de datos
-
-PostgreSQL local debe arrancar con Docker Compose.
-
-Para reset total de datos locales:
-
-```bash
-docker compose down -v
-docker compose up -d
-```
-
-Hacerlo solo cuando sea intencional.
+Las variables de Mercado Pago están en [MERCADO_PAGO.md](MERCADO_PAGO.md).
 
 ## Migraciones
 
-`V1__create_espacios.sql` es la primera migración. Hibernate usa `ddl-auto=validate` y detiene el arranque si el modelo JPA no coincide con el esquema creado por Flyway.
+`V1__esquema_inicial.sql` crea las tablas, índices y restricciones de la entrega.
+Hibernate usa `ddl-auto=validate`. Cada cambio posterior requiere una migración
+nueva y la actualización correspondiente del modelo JPA.
 
-Al agregar o modificar schema:
+El historial anterior V1–V20 se consolidó en esta migración inicial. Una base con
+ese historial no debe iniciarse directamente con el esquema consolidado ni
+corregirse con `flyway repair`: sus checksums y versiones pertenecen a la versión
+anterior del código.
 
-1. crear una nueva migración Flyway;
-2. actualizar la Entity JPA;
-3. ejecutar aplicación desde una base limpia cuando sea posible;
-4. verificar que Flyway complete todas las migraciones;
-5. no editar migraciones que ya estén en `main`.
+Para la demo local, detener la aplicación y ejecutar:
 
-## Crear una feature
-
-Ejemplo para `reserva`:
-
-```text
-apps/api/src/main/java/edu/unse/sera/reserva/
-├── boundary/
-│   ├── ReservaController.java
-│   └── dto/
-├── control/
-│   └── ReservaService.java
-├── entity/
-│   └── Reserva.java
-└── persistence/
-    └── ReservaRepository.java
+```powershell
+python scripts/sera.py reset-demo --confirm REINICIAR-SERA-LOCAL --once
 ```
 
-Orden práctico recomendado:
+El comando guarda un respaldo y recrea únicamente `sera`. Las bases aisladas de
+pruebas anteriores se conservan; las nuevas pruebas deben usar una base vacía.
+Para recuperar una base con el historial anterior, restaurar su respaldo y usar
+la revisión del código que contiene aquellas migraciones.
 
-1. entender el caso de uso;
-2. modelar Entity;
-3. crear migración;
-4. crear Repository;
-5. implementar Service;
-6. crear DTOs;
-7. crear Controller;
-8. agregar tests;
-9. integrar frontend.
+## Implementación y comprobaciones
 
-No es una regla absoluta. Es un orden que evita empezar por HTTP sin haber pensado el dominio.
+Los módulos siguen BCE por funcionalidad. Boundary traduce HTTP y transporta DTO;
+Control coordina los casos de uso y transacciones; Entity mantiene invariantes;
+Persistence accede a los datos. Ver [ARCHITECTURE.md](ARCHITECTURE.md) y el
+[CRUD de referencia](CRUD_REFERENCE.md).
 
-## Endpoint REST
+Desde `apps/api`:
 
-Ejemplo de recorrido:
-
-```text
-POST /api/reservas
-      |
-      v
-CrearReservaRequest
-      |
-      v
-ReservaController
-      |
-      v
-ReservaService
-      |
-      +-> SocioRepository
-      +-> CanchaRepository
-      +-> ReservaRepository
-      |
-      v
-Reserva
+```powershell
+.\mvnw.cmd spotless:apply verify
 ```
 
-El Controller traduce HTTP.
-
-El Service ejecuta el caso de uso.
-
-La Entity representa dominio.
-
-El Repository accede a datos.
-
-## Errores
-
-Una excepción de dominio no debe construir directamente una respuesta HTTP.
-
-Ejemplo:
-
-```java
-throw new HorarioNoDisponibleException(...);
-```
-
-Boundary puede convertirla después en:
-
-```text
-409 Conflict
-```
-
-mediante un handler central.
-
-## Tests
-
-Backend:
+Desde `apps/web`:
 
 ```bash
-./mvnw test
-```
-
-Frontend:
-
-```bash
-pnpm typecheck
 pnpm lint
+pnpm typecheck
 pnpm build
 ```
 
-No dejar un PR con checks conocidos fallando.
-
-El test HTTP del health endpoint no necesita Docker. El arranque completo de la API sí necesita PostgreSQL disponible. Para comprobar la conexión entre aplicaciones, levantar ambas y abrir <http://localhost:5173>: debe mostrar que la API está disponible. También se puede consultar `http://localhost:4500/api/health` directamente.
-
-## Formato
-
-Formatear Java antes del PR.
-
-No depender de "Reformat Code" de un IDE como única fuente de formato.
-
-Desde `apps/api`, ejecutar `./mvnw spotless:apply` para formatear y `./mvnw spotless:check checkstyle:check` para verificar. En Windows, reemplazar `./mvnw` por `.\mvnw.cmd`.
-
-Frontend debe mantener el formatter/linter definido por el proyecto.
-
-## Demo con ngrok
-
-La configuración completa de Suscripciones y los tópicos del panel está en [MERCADO_PAGO.md](MERCADO_PAGO.md).
-
-Para exponer Spring Boot:
+Desde la raíz:
 
 ```bash
-ngrok http 4500
+docker compose config --quiet
+git diff --check
 ```
 
-ngrok entrega una URL HTTPS pública.
+`verify` incluye tests, empaquetado, Spotless y Checkstyle. El build web incluye
+Vitest. El endpoint `/api/health` comprueba la respuesta HTTP; el arranque completo
+con Flyway y validación JPA comprueba la conexión y el esquema.
 
-La URL cambia según la configuración y el plan de ngrok. No hardcodearla en código fuente.
+Los scripts `smoke_*.py` prueban recorridos HTTP con PostgreSQL. Su ejecución usa
+bases aisladas y no debe compartir datos con la demo. Ver [ENTREGA.md](ENTREGA.md),
+[RESERVAS.md](RESERVAS.md) y [SOCIOS_MEMBRESIAS.md](SOCIOS_MEMBRESIAS.md).
 
-Para webhooks de Mercado Pago, configurar temporalmente la URL pública del endpoint correspondiente.
+## Demostración remota
 
-Ejemplo conceptual:
-
-```text
-https://<tunnel>/api/webhooks/mercadopago
-```
-
-## Antes de abrir un PR
-
-Backend:
+Para publicar temporalmente la web con su proxy:
 
 ```bash
-cd apps/api
-./mvnw test
-./mvnw package
+ngrok http 5173
 ```
 
-Frontend:
+Agregar el hostname del túnel a `WEB_ALLOWED_HOSTS`, reiniciar Vite y configurar
+la URL pública de retorno de Mercado Pago. Para recibir webhooks, el túnel debe
+reenviar `/api/webhooks/mercadopago` a la API. La URL y la firma se configuran en
+el panel del proveedor.
 
-```bash
-cd apps/web
-pnpm typecheck
-pnpm lint
-pnpm build
-```
-
-Desde raíz:
-
-```bash
-docker compose config
-```
-
-Revisar además:
-
-```text
-git status
-git diff
-```
-
-No incluir archivos generados accidentalmente.
+Un servidor de archivos estáticos para `dist` necesita también el proxy `/api`
+y el soporte de sesión. Los túneles son temporales; su hostname no se guarda en
+el código ni constituye una configuración de producción.

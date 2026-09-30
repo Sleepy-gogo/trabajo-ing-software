@@ -56,7 +56,7 @@ def seed(database, password, base="http://localhost:4500"):
         verified = subprocess.run(["docker", "compose", "exec", "-T", "postgres", "psql", "-U", "sera", "-d", database, "-At", "-v", "ON_ERROR_STOP=1", "-c", f"SELECT count(*) FROM usuarios WHERE id='{uid}';"], cwd=ROOT, check=True, capture_output=True, text=True)
         if verified.stdout.strip() != "1":
             raise RuntimeError("La API no está conectada a la base local indicada. No se asignaron permisos ni se cargó la demo.")
-    # Bootstrap restricted to the fictitious administrator in local Docker.
+    # Asignación de roles limitada a las cuentas demo locales.
     subprocess.run(["docker", "compose", "exec", "-T", "postgres", "psql", "-U", "sera", "-d", database, "-v", "ON_ERROR_STOP=1", "-c", "UPDATE usuarios SET rol='ADMIN' WHERE email='admin@sera.local';"], cwd=ROOT, check=True, capture_output=True)
     subprocess.run(["docker", "compose", "exec", "-T", "postgres", "psql", "-U", "sera", "-d", database, "-v", "ON_ERROR_STOP=1", "-c", "UPDATE usuarios SET rol='STAFF' WHERE email='staff@sera.local';"], cwd=ROOT, check=True, capture_output=True)
     client.login("admin@sera.local", password)
@@ -102,8 +102,7 @@ def prepare_feedback(admin, database, password, base):
             "fecha": str(today + timedelta(days=1)), "desde": "10:00", "hasta": "11:00",
             "personas": 2, "medioPago": "EFECTIVO", "claveSolicitud": str(uuid.uuid5(uuid.NAMESPACE_URL, "sera-demo-reserva-utilizada"))}, 201)
         admin.call(f"/pagos/{reservation['pagoId']}/confirmacion-efectivo", "POST")
-        # La API permite reservar solo a futuro. El fixture representa una utilización
-        # de ayer; se ajusta exclusivamente esta reserva ficticia dentro de Docker.
+        # Solo esta reserva demo se ajusta a una fecha histórica.
         rid = str(uuid.UUID(reservation["id"]))
         aid = str(uuid.UUID(admin.call("/usuarios/me")["id"]))
         yesterday = today - timedelta(days=1)

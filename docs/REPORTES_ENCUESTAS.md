@@ -1,6 +1,6 @@
 # Reportes y encuestas
 
-Implementación del incremento 7, TRA-51 a TRA-54. La interfaz consume la API y no usa fixtures para estos módulos.
+Contratos, filtros y reglas de los módulos de reportes y encuestas.
 
 ## Reportes
 
@@ -62,7 +62,7 @@ El envío bloquea la definición de encuesta durante la transacción. La restric
 | GET | `/api/encuestas/{id}/reservas/{reservaId}` | Titular, definición y respuesta guardada |
 | POST | `/api/encuestas/{id}/reservas/{reservaId}/respuestas` | Titular, `{"respuestas":{"uuid-pregunta":"4"}}` |
 
-Las escrituras requieren CSRF como el resto de la aplicación. Las tablas nuevas se crean mediante `V20__reportes_y_encuestas.sql`, sin alterar migraciones anteriores.
+Las escrituras requieren CSRF. Las tablas forman parte de `V1__esquema_inicial.sql`.
 
 ## Verificación
 

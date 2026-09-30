@@ -1,8 +1,4 @@
-"""Prueba HTTP/PostgreSQL de reportes, encuestas y pagos en sera_cierre_test.
-
-Requiere una API en puerto 4501 conectada exclusivamente a sera_cierre_test.
-No usa Mercado Pago ni modifica la demo local. Crea fixtures con nombres únicos.
-"""
+"""Prueba HTTP de reportes y encuestas en sera_cierre_test, API 4501."""
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import json

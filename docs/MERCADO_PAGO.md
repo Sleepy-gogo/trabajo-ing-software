@@ -69,35 +69,28 @@ Sin credenciales reales no se puede ejecutar este recorrido contra Mercado Pago.
 Referencias: [cuentas de prueba](https://www.mercadopago.com.ar/developers/es/docs/subscriptions/additional-content/your-integrations/test/accounts), [aprobar un pago de prueba](https://www.mercadopago.com.ar/developers/es/docs/subscriptions/integration-test/payment-approval), [crear suscripción](https://www.mercadopago.com.ar/developers/es/reference/online-payments/subscriptions/create-preapproval/post), [webhooks](https://www.mercadopago.com.ar/developers/es/docs/links-and-debts/additional-content/your-integrations/notifications/webhooks), [factura autorizada](https://www.mercadopago.com.ar/developers/es/reference/online-payments/subscriptions/get-authorized-payment/get), [buscar facturas](https://www.mercadopago.com.ar/developers/es/reference/online-payments/subscriptions/authorized-payment-search/get).
 
 
-El 28/09/2026 se reprodujo el rechazo `Both payer and collector must be real or test users`
-al enviar un email de SERA normal con el vendedor de prueba. La misma solicitud
-con el email del comprador de prueba devolvió una suscripción `pending` y un
-`init_point` válido. La corrección no cambia el email del usuario ni aprueba pagos.
-El modo de prueba requiere el email `@testuser.com` real del comprador y un vendedor
-con la etiqueta `test_user`; no sustituye compradores de una cuenta vendedora real.
-Reiniciar la API cuando sea conveniente para cargar cambios de configuración.
+## Cuentas de prueba y recuperación
+
+Mercado Pago exige que vendedor y comprador pertenezcan al mismo entorno.
+Combinar un vendedor de prueba con un comprador normal provoca un rechazo del
+proveedor. `MP_TEST_PAYER_EMAIL` usa el email de la cuenta compradora de prueba,
+sin cambiar el email de SERA. El vendedor debe tener la etiqueta `test_user`.
+La configuración requiere reiniciar la API.
 
 Al abrir «Mi membresía» con un pago pendiente de Mercado Pago se consultan las facturas una vez.
 «Ya pagué, verificar pago» permite reintentar. Solo el titular puede verificar su membresía;
 la API consulta y valida el cobro remoto, sin confiar en parámetros de retorno. La búsqueda
-usa el tamaño de página predeterminado del proveedor y avanza por `offset`: durante la prueba
-el valor explícito `limit=20` devolvió HTTP 400, mientras omitirlo devolvió la factura aprobada.
+usa el tamaño de página predeterminado del proveedor y avanza por `offset`.
 La URL `back_url` permite volver a SERA; si el checkout no vuelve automáticamente, el usuario
 puede regresar a «Mi membresía». Esta recuperación no reemplaza la configuración de webhooks.
 
-Prueba del 28/09/2026: una factura `processed` con cobro `approved/accredited` de
-ARS 18.000 se recuperó mediante la verificación del titular. SERA dejó el pago aprobado
-y la membresía activa hasta el 28/10/2026. Repetir la verificación conservó el mismo
-vencimiento y comprobante; otro usuario recibió 403. No se verificó la entrega automática
-del webhook. La URL de retorno estaba configurada, pero el checkout no redirigió al usuario.
+Repetir la verificación de una factura aplicada conserva el vencimiento y el
+comprobante. La operación del titular rechaza consultas de otra cuenta con 403.
 
-En esa prueba la suscripción remota ya estaba `cancelled`, mientras SERA conservaba
-`pending`. La cancelación acepta `cancelled` y `canceled` al consultar al proveedor,
-normaliza a `canceled` en la entidad local y no repite la baja remota si ya terminó.
-El gateway envía `cancelled` y exige que la respuesta confirme el identificador y estado.
-Se recuperó el caso confirmando primero la baja remota, sincronizando únicamente el estado
-de esa suscripción y ejecutando la cancelación normal del titular. La membresía quedó
-`CANCELADA`; el pago aprobado se conserva en el historial.
+La cancelación acepta `cancelled` y `canceled` del proveedor y guarda `canceled`
+localmente. Si la suscripción remota ya está cancelada, no repite la baja. El
+gateway envía `cancelled` y exige una respuesta con el identificador y estado
+esperados. Los pagos aprobados se conservan en el historial.
 
 ## Protección de contrataciones anteriores
 

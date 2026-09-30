@@ -1,10 +1,4 @@
-/**
- * Tipos de dominio usados por el prototipo visual.
- *
- * Son DTOs del frontend, no representan necesariamente tablas del backend.
- * Las fechas se mantienen como ISO strings para que puedan viajar por JSON sin
- * conversiones implícitas cuando los mocks sean reemplazados por la API.
- */
+// Tipos de las vistas de referencia.
 
 export type IsoDate = string
 
@@ -164,7 +158,6 @@ export interface Payment {
 export interface SpaceImage {
   id: string
   alt: string
-  /** Placeholder until final photography is generated. */
   placeholder: string
 }
 

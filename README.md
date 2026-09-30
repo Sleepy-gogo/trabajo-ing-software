@@ -51,7 +51,6 @@ sera/
 │   └── TOOLING.md
 ├── .github/
 │   └── pull_request_template.md
-├── AGENTS.md
 ├── REPOSITORY_RULES.md
 ├── compose.yml
 └── README.md
@@ -95,6 +94,14 @@ Los controllers no acceden directamente a repositories. Las entidades no conocen
 
 ## Desarrollo local
 
+Para instalar y presentar el trabajo, seguir [la guía de entrega](docs/ENTREGA.md).
+Incluye scripts de diagnóstico, instalación, arranque, reinicio con respaldo y un recorrido para profesores.
+
+```powershell
+python scripts/sera.py setup
+python scripts/sera.py start --demo
+```
+
 Requisitos: JDK 21, Docker con Compose, Node.js 22.13+ dentro de la rama 22 o Node.js 24+ y pnpm. Ejecutar el backend desde `apps/api` para que encuentre el Compose de la raíz. Ver [la guía de desarrollo](docs/DEVELOPMENT.md) para configurar Java y los perfiles.
 
 1. Levantar PostgreSQL:
@@ -128,7 +135,7 @@ pnpm dev
 ```
 
 
-## Checks
+## Comprobaciones
 
 Desde `apps/api`, usar `./mvnw` en Linux/macOS o `.\mvnw.cmd` en Windows:
 
@@ -158,13 +165,11 @@ Antes de modificar la estructura del repositorio o agregar una dependencia impor
 - `docs/DEVELOPMENT.md`
 
 Para implementar una feature de punta a punta, usar como guía el [CRUD vertical de espacios](docs/CRUD_REFERENCE.md).
-El [estado actual y plan de implementación](docs/IMPLEMENTATION_PLAN.md) enumera los contratos ya declarados y el orden sugerido para conectar el frontend.
+Los [reportes y encuestas](docs/REPORTES_ENCUESTAS.md) documentan filtros, métricas, permisos y contratos del incremento 7.
 
-La definición previa del incremento de [socios y membresías](docs/SOCIOS_MEMBRESIAS.md) reparte los
-pendientes entre las tareas de Linear TRA-25 a TRA-29.
+La [guía de entrega](docs/ENTREGA.md) describe la demo funcional y los límites pendientes.
+Ver también el [modelo de socios y membresías](docs/SOCIOS_MEMBRESIAS.md).
 
-Los agentes de código también deben leer `AGENTS.md`.
-
-## Adelanto hasta el incremento 3
-
-Ver [guía de entrega y demo](docs/ENTREGA_INCREMENTO_3.md) y [modelo definitivo de socios y membresías](docs/SOCIOS_MEMBRESIAS.md).
+La [guía de usuario con capturas](docs/GUIA_USUARIO.md) explica los recorridos de
+usuarios, administración y personal de accesos, incluidos pagos, reservas,
+membresías, informes y encuestas.

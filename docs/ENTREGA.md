@@ -1,6 +1,6 @@
 # Instalación y presentación de SERA
 
-Esta guía permite instalar el proyecto, cargar una demo y repetir la presentación desde una base local limpia.
+Instalación local, carga de datos de demo y recorrido de presentación.
 
 ## Requisitos
 
@@ -43,13 +43,13 @@ La opción `--demo` pide una contraseña para las tres cuentas ficticias, de al 
 
 La carga crea tres espacios con horarios y tarifas, un nivel de membresía, una cuota y una reserva pagadas en efectivo, una encuesta y cuatro informes guardados. La reserva histórica se prepara como fixture local con ingreso de ayer; no representa una operación real ni requiere esperar a que pase un horario. Las cuentas tienen relación UNSE pendiente de verificación, por lo que se aplica la tarifa de externo hasta que administración la verifique.
 
-## Arranques posteriores y checks
+## Arranques posteriores y comprobaciones
 
 ```powershell
 python scripts/sera.py start
 ```
 
-Este comando conserva los datos y no pide una contraseña. Para ejecutar los checks, primero detener la aplicación con Ctrl+C:
+Este comando conserva los datos y no pide una contraseña. Para ejecutar las comprobaciones, primero detener la aplicación con Ctrl+C:
 
 ```powershell
 python scripts/sera.py verify
@@ -104,7 +104,7 @@ La demo completa se puede evaluar sin credenciales externas, usando efectivo con
 
 Mercado Pago está implementado para cuotas mediante Suscripciones y para reservas mediante Checkout Pro. Un regreso al sitio con `status=approved` no acredita el pago. La API consulta al proveedor y valida el cobro; el webhook requiere firma. Un cobro de reserva que llega después de cancelación o vencimiento queda para revisión y no recupera el horario.
 
-La configuración y las pruebas previas están en [MERCADO_PAGO.md](MERCADO_PAGO.md) y [RESERVAS.md](RESERVAS.md). La revisión de esta entrega usa tests con dobles para el proveedor y operaciones reales de efectivo contra PostgreSQL; no realiza nuevos cobros externos. Para una demo remota, seguir [DEVELOPMENT.md](DEVELOPMENT.md), exponer Vite con ngrok y permitir el hostname. `dist` necesita un servidor con proxy `/api`; un hosting estático aislado no conserva el flujo de sesión de esta configuración.
+La configuración está en [MERCADO_PAGO.md](MERCADO_PAGO.md) y [RESERVAS.md](RESERVAS.md). Los tests automatizados usan dobles del proveedor y operaciones de efectivo contra PostgreSQL. Para una demo remota, seguir [DEVELOPMENT.md](DEVELOPMENT.md), exponer Vite con ngrok y permitir el hostname. `dist` necesita un servidor con proxy `/api` para conservar el flujo de sesión.
 
 ## Prueba de integración aislada
 
@@ -131,6 +131,10 @@ credenciales de Mercado Pago: este smoke comprueba también el error de proveedo
 sin configurar y nunca debe iniciar cobros externos. No compartir el puerto 4501
 con la prueba anterior. La confirmación concurrente, el historial paginado y la
 renovación vencida se comprueban con operaciones HTTP y fixtures SQL aislados.
+
+La migración inicial consolidada requiere bases de prueba vacías. Las bases con
+el historial anterior no se actualizan automáticamente; ver
+[DEVELOPMENT.md](DEVELOPMENT.md#migraciones).
 
 ## Límites pendientes
 

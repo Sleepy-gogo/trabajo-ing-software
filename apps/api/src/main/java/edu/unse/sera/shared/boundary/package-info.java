@@ -1,2 +1,2 @@
-/** HTTP boundaries shared by the application. */
+/** Entradas HTTP compartidas. */
 package edu.unse.sera.shared.boundary;

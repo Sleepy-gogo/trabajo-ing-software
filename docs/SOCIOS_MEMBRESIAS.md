@@ -1,10 +1,9 @@
 # Socios y membresías
 
-## Modelo definitivo
+## Modelo
 
 Cada usuario tiene un socio, creado en la misma transacción que su cuenta. La relación con la UNSE
-queda `PENDIENTE` hasta su verificación manual por un administrador. Las cuentas anteriores reciben
-su socio mediante `V12`, con relación `EXTERNO` pendiente de confirmar.
+queda `PENDIENTE` hasta su verificación manual por un administrador.
 
 ```text
 Usuario 1 --- 1 Socio 1 --- 0..1 Membresia * --- 1 NivelMembresia

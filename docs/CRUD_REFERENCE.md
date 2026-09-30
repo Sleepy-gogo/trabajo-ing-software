@@ -1,6 +1,6 @@
 # CRUD vertical de referencia
 
-La funcionalidad `espacio` muestra una operación desde HTTP hasta PostgreSQL. Cubre nombre, descripción, capacidad, tarifa por hora, tipo, una ruta de imagen y disponibilidad semanal. El estado operativo, varias imágenes y las tarifas por categoría siguen pendientes.
+La funcionalidad `espacio` muestra una operación desde HTTP hasta PostgreSQL. Cubre nombre, descripción, capacidad, tarifa por hora, tipo, imagen, estado operativo, disponibilidad semanal, bloqueos y tarifas por relación UNSE.
 
 ## Recorrido
 
@@ -46,7 +46,7 @@ espacio/
     └── EspacioRepository.java
 ```
 
-También intervienen la migración `V1__create_espacios.sql` y el manejo común de errores bajo `shared/boundary`.
+También intervienen la migración `V1__esquema_inicial.sql` y el manejo común de errores bajo `shared/boundary`.
 
 ## Contrato HTTP
 
@@ -55,8 +55,8 @@ También intervienen la migración `V1__create_espacios.sql` y el manejo común 
 | `POST` | `/api/espacios` | Crea y responde `201` con `Location` |
 | `GET` | `/api/espacios` | Lista espacios |
 | `GET` | `/api/espacios/{id}` | Devuelve uno o responde `404` |
-| `PUT` | `/api/espacios/{id}` | Reemplaza nombre y descripción |
-| `DELETE` | `/api/espacios/{id}` | Elimina y responde `204` |
+| `PUT` | `/api/espacios/{id}` | Actualiza los datos del espacio |
+| `DELETE` | `/api/espacios/{id}` | Marca el espacio como inutilizable y responde `204` |
 
 Ejemplo de alta:
 
@@ -88,7 +88,7 @@ Content-Type: application/json
 
 ## Probarlo
 
-Desde la raíz del repositorio:
+Las escrituras requieren sesión de administrador y CSRF. Desde la raíz:
 
 ```powershell
 git clone git@github.com:Sleepy-gogo/trabajo-ing-software.git
@@ -98,20 +98,13 @@ cd apps/api
 .\mvnw.cmd spring-boot:run
 ```
 
-En otra terminal:
+Con la API iniciada, cargar las cuentas de demo según [ENTREGA.md](ENTREGA.md).
+Desde la interfaz de administración se puede crear, editar y deshabilitar un
+espacio. Para comprobar el contrato HTTP y sus permisos:
 
 ```powershell
-$espacio = Invoke-RestMethod -Method Post -Uri http://localhost:4500/api/espacios `
-  -ContentType "application/json" `
-  -Body '{"nombre":"Cancha cubierta","descripcion":"Piso de parquet","capacidad":20,"tarifaHora":1500.00,"tipo":"FUTSAL","rutaImagen":null}'
-
-Invoke-RestMethod http://localhost:4500/api/espacios
-
-Invoke-RestMethod -Method Put -Uri "http://localhost:4500/api/espacios/$($espacio.id)" `
-  -ContentType "application/json" `
-  -Body '{"nombre":"Cancha norte","descripcion":"Piso renovado","capacidad":20,"tarifaHora":1800.00,"tipo":"FUTSAL","rutaImagen":null}'
-
-Invoke-RestMethod -Method Delete -Uri "http://localhost:4500/api/espacios/$($espacio.id)"
+cd apps/api
+.\mvnw.cmd test -Dtest=EspacioControllerTest
 ```
 
 Antes de abrir el PR:

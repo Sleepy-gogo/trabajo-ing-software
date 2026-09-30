@@ -1,8 +1,4 @@
-"""Prueba el ciclo de membresías en API 4501 y la base aislada sera_membresias_test.
-
-La API debe arrancar sin credenciales MP. No cobra ni llama a Mercado Pago.
-Los fixtures SQL de historial y vencimiento solo se crean en la base de pruebas.
-"""
+"""Prueba HTTP de membresías en sera_membresias_test, API 4501 sin credenciales MP."""
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path

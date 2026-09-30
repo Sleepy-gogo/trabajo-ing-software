@@ -1,7 +1,4 @@
-"""Instalación, arranque, verificación y reinicio de la demo local de SERA.
-
-Usa Python estándar. Ejecutar desde cualquier directorio con Python 3.10+.
-"""
+"""Instalación y administración de la demo local; requiere Python 3.10+."""
 import argparse
 from datetime import datetime
 import getpass
@@ -88,8 +85,7 @@ def free_port(port):
 
 
 def local_environment():
-    # Esta automatización solo opera sobre la base local indicada, incluso si .env
-    # o la terminal tienen configuración para otra base.
+    # La conexión local tiene prioridad sobre el entorno.
     return {**os.environ, "SPRING_DATASOURCE_URL": "jdbc:postgresql://localhost:5432/sera",
             "SPRING_DATASOURCE_USERNAME": "sera", "SPRING_DATASOURCE_PASSWORD": "sera",
             "SPRING_PROFILES_ACTIVE": "dev", "SPRING_DOCKER_COMPOSE_ENABLED": "false",
@@ -139,8 +135,7 @@ def password():
 
 
 def reset_database():
-    # No acepta host, volumen ni nombre de base como parámetros. No elimina otras
-    # bases alojadas en el mismo contenedor.
+    # El reinicio afecta únicamente a la base local sera.
     docker("up", "-d", "--wait", "postgres")
     for port in (4500, 4501):
         free_port(port)

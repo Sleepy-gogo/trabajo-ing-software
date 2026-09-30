@@ -1,9 +1,4 @@
-"""Prueba HTTP del incremento 5 contra la base local aislada sera_reservas_test.
-
-Iniciar la API con Docker Compose support desactivado y esa base. Crea datos
-ficticios con un sufijo único; no borra registros. Mercado Pago se prueba con
-mocks en ReservaServiceTest, sin cobros externos.
-"""
+"""Prueba HTTP de reservas en sera_reservas_test, API 4501."""
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from pathlib import Path
@@ -38,7 +33,7 @@ def main():
             "password": PASSWORD, "relacionUnse": "EXTERNO"}, 201)
         actors.append((client, email, user["id"]))
     admin, email, admin_id = actors[0]
-    # Confirm the API writes to the isolated database before promoting its test account.
+    # Comprobar la base aislada antes de asignar permisos.
     assert sql(f"SELECT count(*) FROM usuarios WHERE id='{admin_id}'") == "1", "La API no usa la base de pruebas"
     sql(f"UPDATE usuarios SET rol='ADMIN' WHERE id='{admin_id}'")
     for client, email, _ in actors:
@@ -80,7 +75,7 @@ def main():
     assert cancelled["saldoTicket"] == 1000
     assert one.call(f"/reservas/{r['id']}/cancelacion", "POST")["saldoTicket"] == 1000
 
-    # A ticket can cover part of the price; abandoning the pending reservation restores it.
+    # Cancelar la reserva pendiente devuelve el saldo al ticket.
     partial = one.call("/reservas", "POST", data(10, 12, r["id"]), 201)
     assert partial["creditoAplicado"] == 1000 and partial["total"] == 2000
     assert one.call(f"/pagos/{partial['pagoId']}")["conceptoPago"] == "DIFERENCIA_TICKET"
@@ -95,12 +90,12 @@ def main():
             assert "recibido 409" in str(error), str(error)
             return None
 
-    # Two different users contend for one slot: exactly one succeeds.
+    # Dos usuarios compiten por el mismo horario; solo uno reserva.
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda c: attempt(c, data(15, 16)), [one, two]))
     assert sum(v is not None for v in results) == 1
 
-    # Two sessions for one owner contend for the same ticket at different times.
+    # Dos sesiones intentan aplicar el mismo ticket.
     another = Client("http://localhost:4501")
     another.login(actors[1][1], PASSWORD)
     with ThreadPoolExecutor(max_workers=2) as pool:
@@ -112,7 +107,7 @@ def main():
     assert winner["estado"] == "CONFIRMADA" and winner["pagoId"] is None
     assert one.call(f"/reservas/{r['id']}")["saldoTicket"] == 0
 
-    # Direct SQL also rejects overlap, proving the database constraint is active.
+    # La restricción de PostgreSQL también rechaza la superposición.
     try:
         sql(f"INSERT INTO reservas (id,usuario_id,espacio_id,fecha,desde,hasta,personas,tarifa_hora,relacion_aplicada,total,estado,codigo,vence_en,creada_en,ticket_origen_id,credito_aplicado,saldo_ticket,clave_solicitud,version) SELECT gen_random_uuid(),usuario_id,espacio_id,fecha,desde,hasta,personas,tarifa_hora,relacion_aplicada,total,estado,NULL,vence_en,creada_en,NULL,0,0,gen_random_uuid(),0 FROM reservas WHERE id='{winner['id']}'")
         raise AssertionError("PostgreSQL aceptó una superposición")

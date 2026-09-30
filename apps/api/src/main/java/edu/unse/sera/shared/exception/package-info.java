@@ -1,2 +1,2 @@
-/** Shared exception types. HTTP error mapping belongs in boundary. */
+/** Excepciones comunes; Boundary define la respuesta HTTP. */
 package edu.unse.sera.shared.exception;
