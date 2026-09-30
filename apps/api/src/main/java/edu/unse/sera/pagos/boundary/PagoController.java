@@ -1,6 +1,7 @@
 package edu.unse.sera.pagos.boundary;
 
 import edu.unse.sera.pagos.boundary.dto.SuscripcionResponse;
+import edu.unse.sera.pagos.control.CobroMembresiaDetalle;
 import edu.unse.sera.pagos.control.ConciliacionPagoService;
 import edu.unse.sera.pagos.control.PagoDetalle;
 import edu.unse.sera.pagos.control.PagoService;
@@ -36,6 +37,11 @@ public class PagoController {
   }
 
   public record IniciarPagoRequest(MedioPago medioPago, UUID claveSolicitud) {}
+
+  @GetMapping("/membresias/{id}")
+  public CobroMembresiaDetalle cobroMembresia(@PathVariable UUID id, Principal actor) {
+    return pagos.consultarCobroMembresia(id, UUID.fromString(actor.getName()));
+  }
 
   @PostMapping("/membresias/{id}")
   public PagoDetalle iniciar(

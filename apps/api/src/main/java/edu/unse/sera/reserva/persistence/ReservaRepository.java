@@ -10,6 +10,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
+  @Query(
+      "select r from Reserva r join fetch r.espacio where r.usuario.id = :usuario"
+          + " and r.estado = 'CONFIRMADA' and r.consumidaEn is not null order by r.fecha desc")
+  List<Reserva> utilizadas(UUID usuario);
+
   Optional<Reserva> findByCodigo(String codigo);
 
   @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

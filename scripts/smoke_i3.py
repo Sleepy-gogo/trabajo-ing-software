@@ -46,7 +46,7 @@ def check(password):
     renewed = member.call("/membresias", "POST", data, 201)
     assert renewed["id"] == membership["id"] and renewed["estado"] == "PENDIENTE_PAGO"
     assert len(admin.call(f"/socios/{socio['id']}/historial")) >= 4
-    # Verify optional membership on an admin-edited socio.
+    # Comprobar la membresía opcional al editar el socio.
     other = outsider.call("/socios/me")
     admin.call(f"/socios/{other['id']}", "PUT", {"relacionUnse": "EXTERNO", "estadoVerificacionUnse": "VERIFICADA", "identificadorUnse": None, "nivelMembresiaId": None, "estadoMembresia": None, "motivo": "Prueba I3 sin membresía"})
     space = admin.call("/espacios", "POST", {"nombre": f"Prueba I3 {suffix}", "descripcion": "Espacio para validación automática", "capacidad": 10, "tarifaHora": 1200, "tipo": "Prueba", "rutaImagen": None}, 201)
@@ -68,7 +68,7 @@ def check(password):
     admin.call(f"/espacios/{sid}/estado", "PUT", {"estado": "HABILITADO"})
     admin.call(f"/espacios/{sid}/bloqueos/{block['id']}", "DELETE", expected=204)
     assert len(member.call(f"/espacios/{sid}/calendario?fecha={date}")["franjas"]) == 1
-    # Independent sessions race for the same weekly range. The space row serializes writes.
+    # El bloqueo del espacio serializa altas del mismo rango horario.
     def race(_):
         c = Client(); c.login("admin@sera.local", password)
         try:

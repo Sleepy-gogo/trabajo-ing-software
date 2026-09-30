@@ -3,6 +3,7 @@ package edu.unse.sera.socio.control;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -144,7 +145,7 @@ class SocioServiceTest {
             new BigDecimal("1000.00"),
             membresia);
     membresia.activarPorPago();
-    when(membresias.findById(membresiaId)).thenReturn(Optional.of(membresia));
+    when(membresias.bloquearPorId(membresiaId)).thenReturn(Optional.of(membresia));
     when(pagos.findAllByMembresiaId(membresiaId)).thenReturn(List.of(aprobado, pendiente));
 
     service.cancelar(membresiaId, "Solicitud del titular", actor);
@@ -152,6 +153,26 @@ class SocioServiceTest {
     assertThat(aprobado.getEstado()).isEqualTo(EstadoPago.APROBADO);
     assertThat(pendiente.getEstado()).isEqualTo(EstadoPago.CANCELADO);
     assertThat(membresia.getEstado()).isEqualTo(EstadoMembresia.CANCELADA);
+  }
+
+  @Test
+  void falloAlCancelarSuscripcionConservaLaMembresiaYElPagoPendiente() {
+    UUID actor = UUID.randomUUID();
+    UUID membresiaId = UUID.randomUUID();
+    Socio socio =
+        new Socio(usuario(actor), RelacionUnse.EXTERNO, EstadoVerificacionUnse.PENDIENTE, null);
+    var membresia = new Membresia(socio, new NivelMembresia("General", "Acceso"));
+    ReflectionTestUtils.setField(membresia, "id", membresiaId);
+    when(membresias.bloquearPorId(membresiaId)).thenReturn(Optional.of(membresia));
+    doThrow(new edu.unse.sera.pagos.control.MercadoPagoNoDisponibleException())
+        .when(suscripcionesMercadoPago)
+        .cancelarVigente(membresiaId);
+
+    assertThatThrownBy(() -> service.cancelar(membresiaId, "Cancelar", actor))
+        .isInstanceOf(edu.unse.sera.pagos.control.MercadoPagoNoDisponibleException.class);
+    assertThat(membresia.getEstado()).isEqualTo(EstadoMembresia.PENDIENTE_PAGO);
+    verify(pagos, never()).findAllByMembresiaId(any());
+    verify(cambios, never()).save(any());
   }
 
   private Usuario usuario(UUID id) {

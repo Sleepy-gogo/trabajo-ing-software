@@ -1,342 +1,85 @@
 # Arquitectura
 
-## Vista general
-
-SERA usa un frontend React separado y una API REST Spring Boot.
-
-```text
-Browser
-   |
-   v
-React + Vite
-   |
-   | HTTP / JSON
-   v
-Spring Boot
-   |
-   v
-Spring Data JPA
-   |
-   v
-Hibernate
-   |
-   v
-JDBC
-   |
-   v
-PostgreSQL
-```
-
-Flyway también se conecta a PostgreSQL, pero cumple otro trabajo.
+SERA usa una API Spring Boot y una interfaz React. La comunicación usa REST y
+JSON; PostgreSQL almacena los datos. Flyway crea el esquema y Hibernate lo valida
+con `ddl-auto=validate`.
 
 ```text
-Spring Boot
-   |
-   +-> Hibernate/JPA -> operaciones de la aplicación -> PostgreSQL
-   |
-   +-> Flyway        -> migraciones de esquema       -> PostgreSQL
+Navegador → React / Vite → Spring Boot → Spring Data JPA → PostgreSQL
+                                   └→ Flyway: creación del esquema
 ```
 
-Flyway no pasa por Hibernate.
+## Organización BCE
 
-## Backend y BCE
+El paquete base es `edu.unse.sera`. Cada módulo reúne cuatro paquetes:
 
-El package base es `edu.unse.sera`, tomado del ZIP de Spring Initializr. `espacio` es la primera feature de referencia y `shared` contiene infraestructura común. Los demás módulos de negocio que aparecen en esta guía son ejemplos.
+| Paquete | Responsabilidad |
+| --- | --- |
+| `boundary` | Controllers, DTO de entrada/salida y traducción de errores a HTTP. |
+| `control` | Casos de uso, reglas de negocio y transacciones. |
+| `entity` | Estado del dominio, validaciones e invariantes. |
+| `persistence` | Repositories de Spring Data JPA y consultas. |
 
-`GET /api/health` devuelve un DTO con `{"status":"ok"}`. Confirma que la API responde y no consulta PostgreSQL. No mide la disponibilidad de la base de datos.
-
-BCE separa clases según su responsabilidad.
-
-### Boundary
-
-Boundary representa la frontera de la aplicación.
-
-En la API actual incluye:
+Los controllers llaman a Control y no acceden a repositories. La API recibe y
+devuelve DTO; las entidades JPA no cruzan la frontera HTTP. La inyección se realiza
+por constructor. No hay una capa DAO adicional.
 
 ```text
-Controller
-Request DTO
-Response DTO
-HTTP exception mapping
+POST /api/reservas → ReservaController → ReservaService → Reserva y repositories
 ```
 
-Ejemplo:
-
-```text
-POST /api/reservas
-        |
-        v
-ReservaController
-```
+Los módulos son `usuario`, `socio`, `membresia`, `espacio`, `disponibilidad`,
+`reserva`, `pagos`, `acceso`, `reporte` y `encuesta`. `shared` contiene configuración,
+errores comunes y el endpoint de salud.
 
-Boundary traduce HTTP a una llamada al caso de uso.
-
-### Control
+## Sesión y permisos
 
-Control implementa casos de uso.
+La autenticación usa una sesión HTTP. Las escrituras requieren CSRF. Los roles son
+`USUARIO`, `ADMIN` y `STAFF`; el backend verifica rol, estado de cuenta y titularidad
+en cada operación protegida. Las contraseñas se almacenan como hashes.
 
-En Spring se representa principalmente con services.
+`GET /api/health` devuelve `{"status":"ok"}`. Comprueba la respuesta HTTP de la API,
+sin consultar la base de datos.
 
-```text
-ReservaService.crearReserva(...)
-PagoService.registrarPago(...)
-SocioService.suspenderSocio(...)
-```
-
-Control coordina repositories y entidades.
+## Transacciones y concurrencia
 
-Una transacción de negocio suele comenzar aquí.
+Control define las transacciones. La confirmación de un pago, su aplicación a la
+membresía o reserva y el comprobante se guardan juntos.
 
-### Entity
+Las versiones JPA detectan ediciones concurrentes. Los bloqueos de fila protegen
+horarios, tickets, cobros y envíos de encuestas. Las restricciones únicas y la
+exclusión de horarios en PostgreSQL refuerzan esas reglas.
 
-Entity representa el dominio.
-
-```text
-Socio
-Reserva
-Cancha
-Pago
-Cuota
-```
-
-Una entidad puede proteger invariantes relacionadas con su estado.
-
-### Persistence
-
-Persistence encapsula acceso a datos.
-
-```text
-SocioRepository
-ReservaRepository
-PagoRepository
-```
-
-La implementación habitual usa Spring Data JPA.
-
-## Flujo de una request
-
-Ejemplo conceptual:
+## Pagos
 
-```text
-POST /api/reservas
-        |
-        v
-CrearReservaRequest
-        |
-        v
-ReservaController             Boundary
-        |
-        v
-ReservaService                Control
-        |
-        +-> SocioRepository
-        +-> CanchaRepository
-        +-> ReservaRepository
-        |
-        v
-Reserva                       Entity
-        |
-        v
-JPA / Hibernate
-        |
-        v
-PostgreSQL
-```
+El efectivo requiere confirmación administrativa. Para Mercado Pago, la API crea
+la suscripción mensual o el checkout de reserva y verifica el cobro remoto antes
+de aprobarlo. El retorno del navegador no acredita un pago.
 
-El response vuelve como DTO.
+Los webhooks requieren firma. La clave de solicitud, los identificadores externos
+únicos y el identificador de contratación evitan duplicados y aplicaciones de
+cobros antiguos. Los secretos del proveedor permanecen en el backend.
 
-```text
-Reserva
-   |
-   v
-ReservaResponse
-   |
-   v
-HTTP JSON
-```
+Ver [MERCADO_PAGO.md](MERCADO_PAGO.md), [SOCIOS_MEMBRESIAS.md](SOCIOS_MEMBRESIAS.md)
+y [RESERVAS.md](RESERVAS.md).
 
-## Dependencias permitidas
+## Reportes y encuestas
 
-Regla práctica:
+Los reportes usan consultas SQL sobre PostgreSQL y guardan instantáneas en
+`informes`. Consultar o exportar un informe conserva sus filtros y resultados.
 
-```text
-boundary    -> control
-boundary    -> boundary.dto
+Las encuestas relacionan definiciones y respuestas con reservas utilizadas.
+Control valida titularidad, período y valores. La combinación encuesta/reserva es
+única y el cierre comparte el bloqueo con los envíos.
 
-control     -> entity
-control     -> persistence
+Ver [REPORTES_ENCUESTAS.md](REPORTES_ENCUESTAS.md).
 
-persistence -> entity
+## Esquema y entornos
 
-entity      -> JDK
-entity      -> anotaciones de persistencia cuando sean necesarias
-```
+`V1__esquema_inicial.sql` contiene el esquema completo de la entrega. Los cambios
+posteriores deben agregarse como migraciones nuevas. Las bases creadas con el
+historial anterior requieren el procedimiento de [DEVELOPMENT.md](DEVELOPMENT.md).
 
-Evitar:
-
-```text
-entity      -> boundary
-entity      -> controller
-control     -> HTTP
-repository  -> controller
-controller  -> repository
-```
-
-## Package by feature
-
-No organizar todo el sistema con carpetas globales como:
-
-```text
-controllers/
-services/
-repositories/
-entities/
-```
-
-Preferir:
-
-```text
-socio/
-├── boundary/
-├── control/
-├── entity/
-└── persistence/
-
-reserva/
-├── boundary/
-├── control/
-├── entity/
-└── persistence/
-```
-
-Esto mantiene cerca las clases que cambian juntas.
-
-## DTO y Entity
-
-DTO y Entity no representan lo mismo.
-
-```text
-CrearSocioRequest
-```
-
-representa lo que la API acepta.
-
-```text
-Socio
-```
-
-representa el concepto del dominio y, de forma pragmática en este TP, también puede ser una entidad JPA.
-
-```text
-SocioResponse
-```
-
-representa lo que la API expone.
-
-No exponer automáticamente el modelo de persistencia.
-
-## DAO y Repository
-
-El proyecto usa Spring Data JPA.
-
-Por eso la abstracción principal de persistence será Repository.
-
-```text
-Control
-   |
-   v
-Repository
-   |
-   v
-Spring Data JPA
-```
-
-No crear simultáneamente:
-
-```text
-Control -> DAO -> Repository -> JPA
-```
-
-Eso repite responsabilidades.
-
-Si la cátedra exige una práctica específica con JDBC y DAO, tratarla como una necesidad separada y documentarla.
-
-## Transacciones
-
-Los casos de uso que modifican varias cosas de forma atómica deben usar una transacción.
-
-Ejemplo:
-
-```text
-Confirmar pago
-  1. verificar y aprobar el cobro
-  2. renovar la membresía una sola vez
-  3. guardar la fecha resultante en el pago
-```
-
-Debe ocurrir todo o nada.
-
-En Spring, la transacción se coloca normalmente en Control:
-
-```java
-@Transactional
-public void registrarPago(...) {
-    ...
-}
-```
-
-## Mercado Pago
-
-El frontend no decide si un pago está aprobado.
-
-Flujo esperado:
-
-```text
-React
-  |
-  | iniciar pago
-  v
-Spring Boot
-  |
-  | crea suscripción mensual pendiente
-  v
-Mercado Pago
-
-Mercado Pago
-  |
-  | webhook firmado de factura autorizada
-  v
-ngrok
-  |
-  v
-Spring Boot
-  |
-  v
-SuscripcionMercadoPagoService -> PagoService
-  |
-  v
-PostgreSQL
-```
-
-Los secretos de Mercado Pago solo existen en backend.
-El backend consulta la factura y el cobro en Mercado Pago antes de aprobar. La clave de solicitud,
-el ID externo único y el bloqueo de la membresía protegen los reintentos. El retorno del navegador
-solo lleva al usuario a consultar el estado; no confirma el pago.
-
-## PostgreSQL
-
-Flyway crea la tabla `espacios` mediante `V1__create_espacios.sql`. Hibernate usa `ddl-auto=validate` para comprobar que el modelo JPA coincide con el esquema. Cada cambio posterior del esquema debe sumar una migración nueva.
-
-Desarrollo:
-
-```text
-Docker Compose -> PostgreSQL local
-```
-
-Entorno remoto opcional:
-
-```text
-Neon -> PostgreSQL administrado
-```
-
-No hacer que todos los desarrolladores dependan de una única base remota para trabajar.
+Docker Compose proporciona PostgreSQL local. La API admite una conexión externa
+mediante variables de entorno; la automatización de la demo fija la conexión a
+la base local `sera`.

@@ -78,7 +78,10 @@ public class SuscripcionMercadoPago {
     if (nuevoEstado == null || nuevoEstado.isBlank()) {
       throw new IllegalArgumentException("El estado de la suscripción es obligatorio.");
     }
-    this.estado = "cancelled".equals(nuevoEstado) ? "canceled" : nuevoEstado;
+    // Una notificación anterior a la baja puede llegar después de la cancelación.
+    if (!"canceled".equals(estado)) {
+      this.estado = "cancelled".equals(nuevoEstado) ? "canceled" : nuevoEstado;
+    }
   }
 
   public UUID getId() {

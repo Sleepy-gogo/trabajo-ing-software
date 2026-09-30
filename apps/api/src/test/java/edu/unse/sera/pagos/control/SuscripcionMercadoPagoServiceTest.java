@@ -236,6 +236,34 @@ class SuscripcionMercadoPagoServiceTest {
   }
 
   @Test
+  void cuotaTardiaConservaContratacionYNivelOriginalTrasVolverAContratar() {
+    prepararFacturaAprobada();
+    UUID contratacionAnterior = pagoInicial.getContratacionId();
+    pagoInicial.aprobar("cobro-anterior", OffsetDateTime.parse("2026-09-27T11:00:00Z"));
+    var membresia = suscripcion.getMembresia();
+    membresia.cancelar();
+    var nuevoNivel = new NivelMembresia("Nuevo nivel", "Otros beneficios");
+    nuevoNivel.actualizar(
+        "Nuevo nivel",
+        "Otros beneficios",
+        java.util.Map.of(RelacionUnse.EXTERNO, new BigDecimal("2000.00")),
+        java.util.List.of("Acceso al nuevo nivel"),
+        true);
+    membresia.renovarSolicitud(nuevoNivel);
+    when(pagos.saveAndFlush(any(Pago.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    var nuevaCuota = org.mockito.ArgumentCaptor.forClass(Pago.class);
+
+    service.recibirFactura(123L);
+
+    verify(pagos).saveAndFlush(nuevaCuota.capture());
+    assertThat(nuevaCuota.getValue().getContratacionId()).isEqualTo(contratacionAnterior);
+    assertThat(nuevaCuota.getValue().getContratacionId())
+        .isNotEqualTo(membresia.getContratacionId());
+    assertThat(nuevaCuota.getValue().getNivelNombreAplicado()).isEqualTo("General");
+    assertThat(membresia.getProximoVencimiento()).isNull();
+  }
+
+  @Test
   void segundoCobroDeLaMismaFacturaQuedaAprobadoParaRevision() {
     prepararFacturaAprobada();
     pagoInicial.aprobar("cobro-anterior", OffsetDateTime.parse("2026-09-27T11:00:00Z"));
@@ -337,6 +365,8 @@ class SuscripcionMercadoPagoServiceTest {
     assertThat(suscripcion.getEstado()).isEqualTo("canceled");
     verify(mercadoPago, never()).cancelarSuscripcion(any());
     suscripcion.actualizarEstado("cancelled");
+    assertThat(suscripcion.getEstado()).isEqualTo("canceled");
+    suscripcion.actualizarEstado("authorized");
     assertThat(suscripcion.getEstado()).isEqualTo("canceled");
   }
 }

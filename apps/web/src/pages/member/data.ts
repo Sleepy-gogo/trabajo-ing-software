@@ -14,12 +14,7 @@ import {
   tickets,
 } from "@/mocks"
 
-/**
- * Small presentation helpers kept beside the member pages.
- *
- * The values come from the shared typed fixtures so swapping them for API
- * adapters later does not require changing the page structure.
- */
+// Datos de referencia para las vistas sin integración.
 export const member = currentMember
 export {
   currentMember,

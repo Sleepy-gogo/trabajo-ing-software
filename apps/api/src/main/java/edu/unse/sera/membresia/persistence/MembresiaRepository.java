@@ -22,28 +22,23 @@ public interface MembresiaRepository extends JpaRepository<Membresia, UUID> {
 
   boolean existsByIdAndSocioUsuarioId(UUID id, UUID usuarioId);
 
-  // 1. buscarMembresiaActiva(idUsuario)
   @Query(
       "SELECT m FROM Membresia m JOIN FETCH m.socio s JOIN FETCH m.nivelMembresia nm WHERE"
           + " s.usuario.id = :idUsuario AND m.estado = :estadoActiva")
   Optional<Membresia> buscarMembresiaPorUsuarioIdPorEstado(
       @Param("idUsuario") UUID idUsuario, @Param("estadoActiva") EstadoMembresia estadoActiva);
 
-  // 2. buscarMembresiaUsuario(idUsuario)
   @Query(
       "SELECT m FROM Membresia m JOIN FETCH m.socio s JOIN FETCH m.nivelMembresia nm WHERE s.usuario.id = :idUsuario")
   Optional<Membresia> buscarMembresiaPorUsuarioId(@Param("idUsuario") UUID idUsuario);
 
-  // 3. buscarMembresiaSocio(idSocio)
   @Query(
       "SELECT m FROM Membresia m JOIN FETCH m.socio s JOIN FETCH m.nivelMembresia nm WHERE s.id = :idSocio")
   Optional<Membresia> buscarMembresiaPorSocioId(@Param("idSocio") UUID idSocio);
 
-  // 4. verificarEstadoMembresia(idSocio)
   @Query("SELECT m.estado FROM Membresia m WHERE m.socio.id = :idSocio")
   Optional<EstadoMembresia> obtenerEstadoMembresiaPorSocioId(@Param("idSocio") UUID idSocio);
 
-  // 5. verificarMembresiaActivaOPendiente(idSocio)
   boolean existsBySocioIdAndEstadoIn(UUID socioId, List<EstadoMembresia> estados);
 
   List<Membresia> findAllByEstadoAndProximoVencimientoBefore(

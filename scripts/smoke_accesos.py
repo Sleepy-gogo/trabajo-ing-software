@@ -1,7 +1,4 @@
-"""Validación y consumo concurrente contra la API aislada en puerto 4501.
-
-Requiere sera_reservas_test. Crea solo fixtures propios; no toca la base de demo.
-"""
+"""Prueba de ingresos concurrentes en sera_reservas_test, API 4501."""
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import uuid
@@ -39,7 +36,7 @@ def main():
     r = operator.call(f"/reservas/{r['id']}")
     code = {"codigo": r["codigo"]}
     assert not operator.call("/accesos/validacion", "POST", code)["autorizado"]
-    # Move only this fixture into its active interval in the isolated database.
+    # Ajustar solo esta reserva de prueba al horario actual.
     sql(f"UPDATE reservas SET fecha='{now.date()}' WHERE id='{r['id']}'")
     assert operator.call(f"/reservas/{r['id']}")["estado"] == "EN_CURSO"
     assert operator.call("/accesos/validacion", "POST", code)["autorizado"]
@@ -54,7 +51,7 @@ def main():
     assert not operator.call("/accesos/validacion", "POST", code)["autorizado"]
     assert operator.call(f"/reservas/{r['id']}")["estado"] == "CONSUMIDA"
     assert sql(f"SELECT consumida_por FROM reservas WHERE id='{r['id']}'") == uid
-    print("PASS: próxima, en curso, consumo concurrente único, operador y rechazo de segundo acceso")
+    print("OK: próxima, en curso, consumo concurrente único, operador y rechazo de segundo acceso")
 
 
 if __name__ == "__main__":

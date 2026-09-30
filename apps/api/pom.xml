@@ -6,13 +6,13 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>4.1.1</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>edu.unse</groupId>
 	<artifactId>sera</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>SERA API</name>
-	<description>REST API for the SERA university software engineering project</description>
+	<description>API REST de SERA para el trabajo práctico de Ingeniería de Software</description>
 	<properties>
 		<java.version>21</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -108,7 +108,7 @@
 
 	<build>
 		<plugins>
-			<!-- format: mvnw spotless:apply; format-check: mvnw spotless:check -->
+			<!-- Formato: mvnw spotless:apply y spotless:check. -->
 			<plugin>
 				<groupId>com.diffplug.spotless</groupId>
 				<artifactId>spotless-maven-plugin</artifactId>
@@ -133,7 +133,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!-- checkstyle: mvnw checkstyle:check -->
+			<!-- Estilo: mvnw checkstyle:check. -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-checkstyle-plugin</artifactId>
@@ -168,7 +168,7 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
 					<systemPropertyVariables>
-						<!-- Avoid platform-specific timezone aliases rejected by PostgreSQL. -->
+						<!-- UTC evita alias de zona horaria incompatibles con PostgreSQL. -->
 						<user.timezone>UTC</user.timezone>
 					</systemPropertyVariables>
 				</configuration>

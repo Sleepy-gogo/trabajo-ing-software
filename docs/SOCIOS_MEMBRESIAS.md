@@ -1,10 +1,9 @@
 # Socios y membresías
 
-## Modelo definitivo
+## Modelo
 
 Cada usuario tiene un socio, creado en la misma transacción que su cuenta. La relación con la UNSE
-queda `PENDIENTE` hasta su verificación manual por un administrador. Las cuentas anteriores reciben
-su socio mediante `V12`, con relación `EXTERNO` pendiente de confirmar.
+queda `PENDIENTE` hasta su verificación manual por un administrador.
 
 ```text
 Usuario 1 --- 1 Socio 1 --- 0..1 Membresia * --- 1 NivelMembresia
@@ -98,3 +97,24 @@ mismo recorrido. Esto evita cargar las relaciones una por una para construir el 
 No se agregó una referencia inversa `Usuario.socio`: la sesión consulta usuarios en cada request y
 no necesita cargar el socio. `mappedBy` define el propietario de la relación, pero no resuelve por
 sí solo el problema de consultas N+1. El DTO de socios ya reúne los datos que necesita la pantalla.
+
+## Cancelación, cobros y nueva contratación
+
+`GET /api/pagos/membresias/{id}` devuelve el pago pendiente y la suscripción de la
+contratación actual. Solo admite al titular o a administración. Esta consulta no
+depende del filtro ni de la página del historial de pagos.
+
+La cancelación bloquea la membresía, confirma primero la baja remota cuando
+corresponde y cancela los pagos pendientes. Los aprobados y sus comprobantes se
+conservan. Una nueva contratación reutiliza la membresía del socio, pero renueva
+su identificador de contratación y empieza sin la vigencia anterior. No admite
+cuentas inactivas ni claves de pago de otra contratación.
+
+La interfaz actualiza estado, cobro pendiente e historial después de cancelar,
+contratar o confirmar un cobro. Permite verificar Mercado Pago con membresías
+activas o vencidas y evita iniciar efectivo si hay una suscripción vigente.
+
+`scripts/smoke_membresias.py` comprueba permisos, confirmación concurrente,
+cancelación repetida, nueva contratación, renovación y pendientes que no aparecen
+en la primera página del historial. Se ejecuta contra una base local de pruebas;
+no realiza cobros externos.
