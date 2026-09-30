@@ -40,3 +40,6 @@ Thumbs.db
 # Python demo helpers
 __pycache__/
 *.pyc
+
+# Local automation logs
+.sera/

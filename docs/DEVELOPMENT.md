@@ -1,5 +1,10 @@
 # Desarrollo local
 
+Para la entrega, se puede usar `python scripts/sera.py setup` y luego
+`python scripts/sera.py start --demo` desde la raíz. La [guía de entrega](ENTREGA.md)
+explica requisitos, diagnóstico, reinicio con respaldo y recorrido de presentación.
+Los comandos manuales de esta guía siguen disponibles para desarrollo.
+
 ## Requisitos
 
 Instalar:

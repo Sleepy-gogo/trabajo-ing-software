@@ -1,5 +1,10 @@
 # Tooling
 
+La automatización local vive en `scripts/sera.py`, con wrappers `sera.ps1` y
+`sera.sh`. Usa Python estándar para comprobar requisitos, instalar con pnpm y
+Maven Wrapper, iniciar servicios y reiniciar únicamente la base local con respaldo.
+Ver [ENTREGA.md](ENTREGA.md) para los comandos.
+
 ## Java
 
 Versión:

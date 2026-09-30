@@ -30,7 +30,7 @@ def main():
     suffix = uuid.uuid4().hex[:8]
     actors = []
     for i in range(3):
-        client = Client()
+        client = Client("http://localhost:4501")
         email = f"reserva-{suffix}-{i}@example.com"
         user = client.call("/auth/registro", "POST", {
             "nombreCompleto": f"Reserva Demo {i}", "email": email,
@@ -101,7 +101,7 @@ def main():
     assert sum(v is not None for v in results) == 1
 
     # Two sessions for one owner contend for the same ticket at different times.
-    another = Client()
+    another = Client("http://localhost:4501")
     another.login(actors[1][1], PASSWORD)
     with ThreadPoolExecutor(max_workers=2) as pool:
         futures = [pool.submit(attempt, one, data(17, 18, r["id"])),
@@ -114,7 +114,7 @@ def main():
 
     # Direct SQL also rejects overlap, proving the database constraint is active.
     try:
-        sql(f"INSERT INTO reservas SELECT gen_random_uuid(),usuario_id,espacio_id,fecha,desde,hasta,personas,tarifa_hora,relacion_aplicada,total,estado,NULL,vence_en,creada_en,NULL,0,0,gen_random_uuid(),0 FROM reservas WHERE id='{winner['id']}'")
+        sql(f"INSERT INTO reservas (id,usuario_id,espacio_id,fecha,desde,hasta,personas,tarifa_hora,relacion_aplicada,total,estado,codigo,vence_en,creada_en,ticket_origen_id,credito_aplicado,saldo_ticket,clave_solicitud,version) SELECT gen_random_uuid(),usuario_id,espacio_id,fecha,desde,hasta,personas,tarifa_hora,relacion_aplicada,total,estado,NULL,vence_en,creada_en,NULL,0,0,gen_random_uuid(),0 FROM reservas WHERE id='{winner['id']}'")
         raise AssertionError("PostgreSQL aceptó una superposición")
     except subprocess.CalledProcessError as error:
         assert "reservas_sin_superposicion" in error.stderr
