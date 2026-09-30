@@ -160,6 +160,9 @@ public class SocioService {
   public MembresiaDetalle contratar(UUID socioId, UUID nivelId, MedioPago medioPago, UUID actor) {
     Socio s = buscar(socioId);
     autorizar(s, actor);
+    if (s.getUsuario().getEstadoCuenta() != EstadoUsuario.ACTIVO) {
+      throw new IllegalStateException("La cuenta debe estar activa para contratar una membresía.");
+    }
     if (medioPago == null) {
       throw new IllegalArgumentException("Elegí un medio de pago.");
     }
@@ -189,7 +192,7 @@ public class SocioService {
   }
 
   public MembresiaDetalle cancelar(UUID id, String motivo, UUID actor) {
-    Membresia m = membresias.findById(id).orElseThrow(MembresiaNoEncontradaException::new);
+    Membresia m = membresias.bloquearPorId(id).orElseThrow(MembresiaNoEncontradaException::new);
     autorizar(m.getSocio(), actor);
     suscripcionesMercadoPago.cancelarVigente(m.getId());
     m.cancelar();

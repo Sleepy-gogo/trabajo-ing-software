@@ -1,12 +1,12 @@
 * text=auto
 
-# Prettier requires LF, including Windows checkouts.
+# Prettier requiere LF también en Windows.
 /apps/web/** text=auto eol=lf
 
-# Keep Unix shell wrappers usable on Linux and macOS.
+# Scripts Unix con LF.
 **/mvnw text eol=lf
 *.sh text eol=lf
 
-# Keep Windows command wrappers in their native line-ending format.
+# Scripts de Windows con CRLF.
 *.cmd text eol=crlf
 *.bat text eol=crlf

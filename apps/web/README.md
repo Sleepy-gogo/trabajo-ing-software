@@ -11,9 +11,11 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Abrir <http://localhost:5173> e iniciar sesión o registrar una cuenta. Ver [desarrollo local](../../docs/DEVELOPMENT.md) para iniciar backend y PostgreSQL, y [usuarios](../../docs/USUARIOS.md) para crear el primer administrador local. Las secciones de incrementos posteriores siguen en demostración.
+Abrir <http://localhost:5173> e iniciar sesión o registrar una cuenta. Ver
+[desarrollo local](../../docs/DEVELOPMENT.md) para iniciar la API y PostgreSQL, y la
+[guía de entrega](../../docs/ENTREGA.md) para cargar las cuentas de demo.
 
-## Checks
+## Comprobaciones
 
 ```bash
 pnpm format

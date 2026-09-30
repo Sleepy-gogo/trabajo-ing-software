@@ -92,7 +92,6 @@ public class EspacioService {
     return espacioRepository.findById(id).orElseThrow(() -> new EspacioNoEncontradoException(id));
   }
 
-  /** Reúne el listado administrativo y su búsqueda en un único caso de uso. */
   @Transactional(readOnly = true)
   public List<EspacioDetalle> listar(String criterio) {
     List<Espacio> espacios;

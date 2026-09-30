@@ -54,6 +54,7 @@ const adminNav = [
   { label: "Pagos", path: "/admin/payments", icon: CreditCard },
   { label: "Accesos", path: "/admin/access", icon: DoorOpen },
   { label: "Informes", path: "/admin/reports", icon: ChartNoAxesCombined },
+  { label: "Encuestas", path: "/admin/surveys", icon: ClipboardList },
 ]
 const memberNav = [
   { label: "Inicio", path: "/app", icon: House },
@@ -346,15 +347,13 @@ export function AppShell({
             role === "member" && "pb-28 lg:pb-10"
           )}
         >
-          {/\/(reports|surveys|settings)(\/|$)/.test(location.pathname) && (
+          {/\/settings(\/|$)/.test(location.pathname) && (
             <div
               role="note"
               className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
             >
-              <strong>Vista previa de próximos incrementos.</strong> Esta
-              sección usa datos de ejemplo y sus cambios no se guardan. La
-              entrega actual incluye usuarios, socios, membresías, pagos,
-              espacios, disponibilidad y reservas.
+              <strong>Vista previa de configuración.</strong> Los cambios de
+              esta sección todavía no se guardan.
             </div>
           )}
           {children ?? <Outlet />}

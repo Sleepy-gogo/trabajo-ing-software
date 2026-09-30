@@ -74,6 +74,9 @@ const UsersPage = lazy(() =>
   import("@/pages/admin").then((m) => ({ default: m.UsersPage }))
 )
 import { AccessPage } from "@/pages/staff"
+const AdminSurveysPage = lazy(() =>
+  import("@/pages/admin/surveys").then((m) => ({ default: m.AdminSurveysPage }))
+)
 
 export function App() {
   return (
@@ -133,6 +136,7 @@ export function App() {
             <Route element={<AdminSpacesPage />} path="spaces" />
             <Route element={<AdminSpaceDetailPage />} path="spaces/:id" />
             <Route element={<ReportsPage />} path="reports" />
+            <Route element={<AdminSurveysPage />} path="surveys" />
             <Route element={<RecentReportsPage />} path="reports/recent" />
             <Route element={<SettingsPage />} path="settings" />
           </Route>

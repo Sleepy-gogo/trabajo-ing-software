@@ -32,7 +32,7 @@ Suscripciones para membresías; las reservas usan Checkout Pro para un cobro ún
   cruzar medianoche. Todos los horarios corresponden a Argentina.
 - Puede reservar cualquier usuario activo, como indica CU-16. No se obliga a
   contratar membresía: no hay servicios restringidos por nivel en el modelo
-  actual. Se reutiliza la tarifa por relación UNSE verificada, sin inventar
+  actual. Se utiliza la tarifa por relación UNSE verificada, sin agregar
   descuentos adicionales por membresía. Esto precisa el texto genérico de TRA-41.
 - Los estados visibles Próxima (`CONFIRMADA`), En curso ahora (`EN_CURSO`) y
   Finalizada sin ingreso (`FINALIZADA`) se calculan por fecha y hora.
@@ -104,17 +104,12 @@ el destino antes de promover su cuenta ficticia a administrador. No borra datos.
 Las pruebas del proveedor con respuestas controladas cubren preferencia, firma,
 importe incorrecto, cobro repetido y cobro tardío.
 
-El 28/09/2026 se completó un Checkout Pro con las cuentas de prueba del equipo y
-una tarjeta de prueba de Mercado Pago. El pago fue aprobado y la verificación
-contra la API del proveedor confirmó la reserva y generó su QR. No se observó
-confirmación automática por webhook durante ese recorrido; revisar el tópico
-`payment`, la URL pública y la clave de firma en el panel antes de la presentación.
-Un segundo pago de prueba comprobó el retorno automático: SERA consultó al
-backend sin intervención del usuario y mostró la reserva confirmada con su QR.
-El botón manual queda disponible si esa consulta falla.
+El retorno del checkout consulta al backend para verificar el pago y actualizar
+la reserva. La verificación manual queda disponible si esa consulta falla. El
+webhook requiere el tópico `payment`, una URL pública y la clave de firma del
+panel de Mercado Pago.
 
-El mismo recorrido detectó que el perfil local no cargaba `apps/api/.env`. Ahora
-el perfil `dev` lo importa opcionalmente al iniciar desde `apps/api`.
+El perfil `dev` importa opcionalmente `apps/api/.env` al iniciar desde `apps/api`.
 El frontend genera `claveSolicitud` con `crypto.getRandomValues`, disponible en
 HTTP, y conserva la clave en los reintentos. Es una clave de idempotencia, no el ID
 de la entidad: JPA sigue generando los IDs de las reservas.
@@ -147,7 +142,7 @@ código, vuelve a validar con la hora del servidor y registra el primer ingreso 
 al operador autenticado. Un bloqueo de fila serializa confirmaciones concurrentes;
 reintentar devuelve el registro original. Una reserva consumida no habilita otro
 acceso y deja de mostrar un QR utilizable. Los carnets personales no se consumen.
-La migración V19 agrega ambos atributos sin modificar migraciones anteriores.
+El esquema guarda el instante del ingreso y el usuario responsable.
 Los listados y detalles de usuario y administración muestran estados con texto,
 iconos y colores distintos; se actualizan mediante las consultas periódicas existentes.
 

@@ -1,2 +1,2 @@
-/** Shared application infrastructure. */
+/** Infraestructura común. */
 package edu.unse.sera.shared;

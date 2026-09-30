@@ -272,6 +272,7 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
   const [selectedStart, setSelectedStart] = useState("")
   const [editing, setEditing] = useState(false)
   const [notice, setNotice] = useState("")
+  const [hoursNotice, setHoursNotice] = useState("")
   const [deleting, setDeleting] = useState<{
     kind: "schedule" | "block"
     id: string
@@ -317,6 +318,10 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
     onSuccess: refresh,
   })
   const hours = useMutation({
+    onMutate: () => {
+      setNotice("")
+      setHoursNotice("")
+    },
     mutationFn: (f: FormData) =>
       schedule
         ? spacesApi.updateAvailability(id, schedule.id, {
@@ -330,6 +335,7 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
           }),
     onSuccess: async () => {
       await refresh()
+      setHoursNotice(schedule ? "Horario actualizado." : "Horario agregado.")
       setSchedule(null)
     },
   })
@@ -434,7 +440,11 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                       ))}
                     </SelectField>
                     <ErrorMessage error={state.error} />
-                    <Button variant="outline" disabled={state.isPending}>
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      disabled={state.isPending}
+                    >
                       Guardar estado
                     </Button>
                   </form>
@@ -605,8 +615,10 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                           <Button
                             variant="ghost"
                             size="sm"
+                            disabled={hours.isPending}
                             onClick={() => {
                               hours.reset()
+                              setHoursNotice("")
                               setSchedule(h)
                             }}
                           >
@@ -625,11 +637,22 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                       </li>
                     ))}
                   </ul>
+                  <p
+                    role="status"
+                    className={
+                      hoursNotice
+                        ? "mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+                        : "sr-only"
+                    }
+                  >
+                    {hoursNotice}
+                  </p>
                   <form
                     key={schedule?.id ?? "new"}
                     className="space-y-4 border-t pt-4"
                     onSubmit={(e) => {
                       e.preventDefault()
+                      if (hours.isPending) return
                       hours.mutate(new FormData(e.currentTarget))
                     }}
                   >
@@ -650,6 +673,7 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                         label="Desde"
                         name="desde"
                         type="time"
+                        autoFocus={!!schedule}
                         required
                         defaultValue={
                           schedule?.horaDesde.slice(0, 5) ?? "08:00"
@@ -666,14 +690,23 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                       />
                     </div>
                     <ErrorMessage error={hours.error} />
-                    <Button disabled={hours.isPending}>
-                      {schedule ? "Guardar horario" : "Agregar horario"}
+                    <Button type="submit" disabled={hours.isPending}>
+                      {hours.isPending
+                        ? "Guardando horario…"
+                        : schedule
+                          ? "Guardar horario"
+                          : "Agregar horario"}
                     </Button>
                     {schedule && (
                       <Button
                         type="button"
                         variant="ghost"
-                        onClick={() => setSchedule(null)}
+                        disabled={hours.isPending}
+                        onClick={() => {
+                          hours.reset()
+                          setHoursNotice("")
+                          setSchedule(null)
+                        }}
                       >
                         Cancelar edición
                       </Button>
@@ -747,7 +780,7 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                       maxLength={500}
                     />
                     <ErrorMessage error={block.error} />
-                    <Button disabled={block.isPending || !date}>
+                    <Button type="submit" disabled={block.isPending || !date}>
                       Agregar bloqueo
                     </Button>
                   </form>
@@ -790,7 +823,9 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                       ))}
                     </div>
                     <ErrorMessage error={rates.error} />
-                    <Button disabled={rates.isPending}>Guardar tarifas</Button>
+                    <Button type="submit" disabled={rates.isPending}>
+                      Guardar tarifas
+                    </Button>
                   </form>
                 </SectionCard>
               </div>

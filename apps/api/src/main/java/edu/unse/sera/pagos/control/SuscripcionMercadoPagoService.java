@@ -4,7 +4,6 @@ import com.mercadopago.resources.preapproval.Preapproval;
 import edu.unse.sera.membresia.entity.EstadoMembresia;
 import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.membresia.persistence.MembresiaRepository;
-import edu.unse.sera.pagos.entity.ConceptoPago;
 import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
@@ -144,6 +143,7 @@ public class SuscripcionMercadoPagoService {
       throw new OperacionNoPermitidaException();
     }
     return suscripciones.findAllByMembresiaIdOrderByCreatedAtDesc(membresiaId).stream()
+        .filter(s -> membresia.getContratacionId().equals(s.getPagoInicial().getContratacionId()))
         .findFirst()
         .map(this::detalle)
         .orElseThrow(() -> new IllegalArgumentException("La membresía no tiene suscripción."));
@@ -251,14 +251,7 @@ public class SuscripcionMercadoPagoService {
         pagos.findByMercadoPagoFacturaIdAndEstado(factura.id(), EstadoPago.APROBADO).isPresent();
     Pago pago = suscripcion.getPagoInicial();
     if (pago.getEstado() != EstadoPago.PENDIENTE || facturaYaAplicada) {
-      pago =
-          pagos.saveAndFlush(
-              new Pago(
-                  ConceptoPago.CUOTA_MENSUAL,
-                  pago.getUsuario(),
-                  MedioPago.MERCADO_PAGO,
-                  suscripcion.getMonto(),
-                  suscripcion.getMembresia()));
+      pago = pagos.saveAndFlush(pago.nuevaCuotaSuscripcion());
     }
     pago.vincularMercadoPagoPaymentId(paymentId);
     pago.vincularFacturaMercadoPago(factura.id());

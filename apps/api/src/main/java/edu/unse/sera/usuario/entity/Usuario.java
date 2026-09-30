@@ -63,7 +63,6 @@ public class Usuario {
 
   protected Usuario() {}
 
-  /** Genera el QR dentro del dominio para que ningún cliente pueda elegirlo o reemplazarlo. */
   public Usuario(
       String nombreCompleto,
       String email,
@@ -77,7 +76,6 @@ public class Usuario {
     cambiarPasswordHash(passwordHash);
   }
 
-  /** Mantiene las mismas reglas para los datos editables durante el alta y la actualización. */
   public void actualizarDatos(String nombreCompleto, String email, int dni, RolUsuario rol) {
     this.nombreCompleto = normalizarNombre(nombreCompleto);
     this.email = normalizarEmail(email);
@@ -85,12 +83,10 @@ public class Usuario {
     this.rol = Objects.requireNonNull(rol, "El rol es obligatorio.");
   }
 
-  /** Permite suspender o reactivar una cuenta sin borrar su historial. */
   public void cambiarEstado(EstadoUsuario estadoCuenta) {
     this.estadoCuenta = Objects.requireNonNull(estadoCuenta);
   }
 
-  /** Recibe solo hashes para que la entidad nunca conserve una contraseña en texto plano. */
   public void cambiarPasswordHash(String passwordHash) {
     if (passwordHash == null || passwordHash.isBlank()) {
       throw new IllegalArgumentException("El hash de contraseña es obligatorio.");

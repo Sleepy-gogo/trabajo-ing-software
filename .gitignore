@@ -1,4 +1,4 @@
-# OS
+# Sistema operativo
 .DS_Store
 Thumbs.db
 
@@ -19,24 +19,31 @@ Thumbs.db
 **/.cache/
 **/.eslintcache/
 
-# Local source archive
+# Archivo local del proyecto
 /sera.zip
 
-# Environment and secrets
+# Entorno y credenciales
 .env
 .env.*
 !.env.example
 
-# Logs
+# Registros de ejecución
 *.log
 
-# Local databases / dumps
+# Respaldos de base de datos
 *.sql.dump
 *.dump
 
 # ngrok
 .ngrok2/
 
-# Python demo helpers
+# Caché de Python
 __pycache__/
 *.pyc
+
+# Archivos de ejecución local
+.sera/
+
+# Archivos temporales
+/plan.html
+/.github/modernize/

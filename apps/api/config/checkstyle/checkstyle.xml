@@ -11,7 +11,7 @@
     </module>
 
     <module name="TreeWalker">
-        <!-- Formatting is handled by google-java-format through Spotless. -->
+        <!-- Spotless aplica el formato de google-java-format. -->
         <module name="AvoidStarImport"/>
         <module name="RedundantImport"/>
         <module name="UnusedImports"/>
