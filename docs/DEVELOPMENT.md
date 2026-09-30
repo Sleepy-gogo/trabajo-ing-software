@@ -1,6 +1,6 @@
 # Desarrollo local
 
-La instalación automatizada y la carga de demo están en [ENTREGA.md](ENTREGA.md).
+La instalación automatizada y la carga de demo están en la [guía de instalación](INSTALACION_SERA.docx).
 Esta guía describe el arranque manual, la configuración y las comprobaciones.
 
 ## Requisitos
@@ -129,7 +129,7 @@ Vitest. El endpoint `/api/health` comprueba la respuesta HTTP; el arranque compl
 con Flyway y validación JPA comprueba la conexión y el esquema.
 
 Los scripts `smoke_*.py` prueban recorridos HTTP con PostgreSQL. Su ejecución usa
-bases aisladas y no debe compartir datos con la demo. Ver [ENTREGA.md](ENTREGA.md),
+bases aisladas y no debe compartir datos con la demo. Ver
 [RESERVAS.md](RESERVAS.md) y [SOCIOS_MEMBRESIAS.md](SOCIOS_MEMBRESIAS.md).
 
 ## Demostración remota

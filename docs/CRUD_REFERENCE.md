@@ -98,7 +98,7 @@ cd apps/api
 .\mvnw.cmd spring-boot:run
 ```
 
-Con la API iniciada, cargar las cuentas de demo según [ENTREGA.md](ENTREGA.md).
+Para iniciar la API y cargar las cuentas de demo, seguir la [guía de instalación](INSTALACION_SERA.docx).
 Desde la interfaz de administración se puede crear, editar y deshabilitar un
 espacio. Para comprobar el contrato HTTP y sus permisos:
 

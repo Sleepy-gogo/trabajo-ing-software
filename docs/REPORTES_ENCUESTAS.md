@@ -66,4 +66,4 @@ Las escrituras requieren CSRF. Las tablas forman parte de `V1__esquema_inicial.s
 
 ## Verificación
 
-Hay tests unitarios de preguntas, permisos y validaciones de Control, filtros/CSV/instantáneas, tests HTTP de autorización y CSRF, y tests React de generación, errores, publicación y envío real. `scripts/smoke_cierre.py` verifica las consultas SQL contra PostgreSQL y el recorrido HTTP de pago efectivo, renovación única, permisos, cuatro informes, CSV, historial, cierre, respuestas concurrentes y estadísticas. Su preparación está documentada en [ENTREGA.md](ENTREGA.md).
+Hay tests unitarios de preguntas, permisos y validaciones de Control, filtros/CSV/instantáneas, tests HTTP de autorización y CSRF, y tests React de generación, errores, publicación y envío real. `scripts/smoke_cierre.py` verifica las consultas SQL contra PostgreSQL y el recorrido HTTP de pago efectivo, renovación única, permisos, cuatro informes, CSV, historial, cierre, respuestas concurrentes y estadísticas.

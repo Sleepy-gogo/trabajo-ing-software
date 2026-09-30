@@ -94,7 +94,7 @@ Los controllers no acceden directamente a repositories. Las entidades no conocen
 
 ## Desarrollo local
 
-Para instalar y presentar el trabajo, seguir [la guía de entrega](docs/ENTREGA.md).
+Para instalar y presentar el trabajo, seguir [la guía de instalación](docs/INSTALACION_SERA.docx).
 Incluye scripts de diagnóstico, instalación, arranque, reinicio con respaldo y un recorrido para profesores.
 
 ```powershell
@@ -167,7 +167,7 @@ Antes de modificar la estructura del repositorio o agregar una dependencia impor
 Para implementar una feature de punta a punta, usar como guía el [CRUD vertical de espacios](docs/CRUD_REFERENCE.md).
 Los [reportes y encuestas](docs/REPORTES_ENCUESTAS.md) documentan filtros, métricas, permisos y contratos del incremento 7.
 
-La [guía de entrega](docs/ENTREGA.md) describe la demo funcional y los límites pendientes.
+La [guía de instalación](docs/INSTALACION_SERA.docx) describe la demo funcional y el recorrido de presentación.
 Ver también el [modelo de socios y membresías](docs/SOCIOS_MEMBRESIAS.md).
 
 La [guía de usuario con capturas](docs/GUIA_USUARIO.md) explica los recorridos de

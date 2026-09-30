@@ -25,7 +25,7 @@ BASE = "http://127.0.0.1:4500"
 def command(name):
     executable = shutil.which(name)
     if executable is None:
-        raise RuntimeError(f"Falta {name} en PATH. Consultá docs/ENTREGA.md.")
+        raise RuntimeError(f"Falta {name} en PATH. Consultá docs/INSTALACION_SERA.docx.")
     return executable
 
 

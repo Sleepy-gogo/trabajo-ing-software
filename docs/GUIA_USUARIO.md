@@ -4,7 +4,7 @@ SERA permite gestionar las membresías, los pagos, las reservas y los ingresos a
 
 Las capturas muestran cuentas y operaciones ficticias de la demo local. Los nombres, importes, fechas y horarios pueden cambiar en otra instalación. Seguí las etiquetas de los controles y el estado que muestra tu propia cuenta.
 
-Para instalar o iniciar el sistema, consultá la [guía de instalación y presentación](ENTREGA.md). Este documento se concentra en las operaciones que se realizan desde el navegador.
+Para instalar o iniciar el sistema, consultá la [guía de instalación y presentación](INSTALACION_SERA.docx). Este documento se concentra en las operaciones que se realizan desde el navegador.
 
 ## Índice
 
@@ -444,7 +444,7 @@ La sección **Configuración** conserva una vista previa cuyos cambios no se gua
 
 ## 13. Recorrido de demostración
 
-Después de cargar la demo con las instrucciones de [ENTREGA.md](ENTREGA.md), usá estas cuentas ficticias. La contraseña común es la elegida al cargar la demo; en la presentación local preparada es `SeraDemo2026!`.
+Después de cargar la demo con las instrucciones de la [guía de instalación](INSTALACION_SERA.docx), usá estas cuentas ficticias. La contraseña común es la elegida al cargar la demo; en la presentación local preparada es `SeraDemo2026!`.
 
 | Cuenta | Rol |
 | --- | --- |

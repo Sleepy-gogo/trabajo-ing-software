@@ -30,7 +30,7 @@ python scripts/sera.py verify
 Los wrappers `scripts/sera.ps1` y `scripts/sera.sh` llaman al mismo script.
 `doctor` comprueba requisitos; `setup` instala y verifica; `start` inicia la API
 y Vite; `verify` ejecuta las comprobaciones. El reinicio con respaldo está en
-[ENTREGA.md](ENTREGA.md).
+la [guía de instalación](INSTALACION_SERA.docx).
 
 ## Java
 
