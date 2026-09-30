@@ -8,6 +8,9 @@ import { MemberProfilePage } from "@/pages/member/profile"
 import { UsersPage } from "@/pages/admin/users"
 import { RequireSession } from "@/components/layout/require-session"
 import { usersApi, type User } from "@/lib/users-api"
+import { membersApi } from "@/lib/members-api"
+import { reservationsApi } from "@/lib/reservations-api"
+import { paymentsApi } from "@/lib/payments-api"
 
 const user: User = {
   id: "test-id",
@@ -149,15 +152,30 @@ describe("Incremento 1", () => {
 
   it("guarda el perfil sin enviar rol ni estado", async () => {
     vi.spyOn(usersApi, "me").mockResolvedValue(user)
+    vi.spyOn(membersApi, "me").mockResolvedValue(null)
+    vi.spyOn(reservationsApi, "list").mockResolvedValue([])
+    vi.spyOn(paymentsApi, "list").mockResolvedValue({
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      number: 0,
+    })
     const profile = vi
       .spyOn(usersApi, "profile")
       .mockResolvedValue({ ...user, nombreCompleto: "Ada editada" })
     const actor = mount(<MemberProfilePage />, "/app/profile")
+    expect(
+      await screen.findByRole("heading", { name: user.nombreCompleto })
+    ).toBeTruthy()
+    expect(screen.queryByLabelText("Nombre completo")).toBeNull()
+    await actor.click(screen.getByRole("button", { name: "Editar datos" }))
     const name = await screen.findByLabelText("Nombre completo")
     await actor.clear(name)
     await actor.type(name, "Ada editada")
     await actor.click(screen.getByRole("button", { name: "Guardar cambios" }))
     expect(await screen.findByText("Tus datos se guardaron.")).toBeTruthy()
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(screen.getByRole("heading", { name: "Ada editada" })).toBeTruthy()
     expect(profile.mock.calls[0][0]).toEqual({
       nombreCompleto: "Ada editada",
       email: user.email,
