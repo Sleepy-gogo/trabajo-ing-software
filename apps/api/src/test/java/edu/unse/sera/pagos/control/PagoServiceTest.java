@@ -15,6 +15,7 @@ import edu.unse.sera.pagos.entity.ConceptoPago;
 import edu.unse.sera.pagos.entity.EstadoPago;
 import edu.unse.sera.pagos.entity.MedioPago;
 import edu.unse.sera.pagos.entity.Pago;
+import edu.unse.sera.pagos.entity.SuscripcionMercadoPago;
 import edu.unse.sera.pagos.persistence.PagoRepository;
 import edu.unse.sera.pagos.persistence.SuscripcionMercadoPagoRepository;
 import edu.unse.sera.shared.exception.OperacionNoPermitidaException;
@@ -138,6 +139,56 @@ class PagoServiceTest {
     assertThat(pago.isRequiereRevision()).isTrue();
     assertThat(membresia.getEstado()).isEqualTo(EstadoMembresia.PENDIENTE_PAGO);
     assertThat(membresia.getProximoVencimiento()).isNull();
+  }
+
+  @Test
+  void consultaCobroActualSinDependerDelHistorialNiDeSuscripcionesAnteriores() {
+    Pago anterior = pendiente(MedioPago.MERCADO_PAGO);
+    var suscripcionAnterior = new SuscripcionMercadoPago(membresia, anterior);
+    membresia.cancelar();
+    membresia.renovarSolicitud(membresia.getNivelMembresia());
+    Pago actual = pendiente(MedioPago.EFECTIVO);
+    when(membresias.findById(membresiaId)).thenReturn(Optional.of(membresia));
+    when(pagos.findByMembresiaIdAndContratacionIdAndEstado(
+            membresiaId, membresia.getContratacionId(), EstadoPago.PENDIENTE))
+        .thenReturn(Optional.of(actual));
+    when(suscripciones.findAllByMembresiaIdOrderByCreatedAtDesc(membresiaId))
+        .thenReturn(List.of(suscripcionAnterior));
+
+    var cobro = service.consultarCobroMembresia(membresiaId, titular.getId());
+
+    assertThat(cobro.pagoPendiente().id()).isEqualTo(actual.getId());
+    assertThat(cobro.suscripcion()).isNull();
+    verify(pagos, never()).buscarHistorial(any(), any(), any());
+  }
+
+  @Test
+  void consultaCobroRechazaUsuarioAjeno() {
+    var ajeno = usuario(RolUsuario.USUARIO);
+    when(membresias.findById(membresiaId)).thenReturn(Optional.of(membresia));
+    when(usuarios.findById(ajeno.getId())).thenReturn(Optional.of(ajeno));
+
+    assertThatThrownBy(() -> service.consultarCobroMembresia(membresiaId, ajeno.getId()))
+        .isInstanceOf(OperacionNoPermitidaException.class);
+    verify(suscripciones, never()).findAllByMembresiaIdOrderByCreatedAtDesc(any());
+  }
+
+  @Test
+  void claveDeContratacionAnteriorNoRecuperaElPagoComoSiFueraNuevo() {
+    Pago anterior = pendiente(MedioPago.EFECTIVO);
+    membresia.cancelar();
+    membresia.renovarSolicitud(membresia.getNivelMembresia());
+    when(membresias.bloquearPorId(membresiaId)).thenReturn(Optional.of(membresia));
+    when(pagos.findByUsuarioIdAndClaveSolicitud(titular.getId(), anterior.getClaveSolicitud()))
+        .thenReturn(Optional.of(anterior));
+
+    assertThatThrownBy(
+            () ->
+                service.iniciarPagoCuota(
+                    membresiaId, titular.getId(), MedioPago.EFECTIVO, anterior.getClaveSolicitud()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("otra operación");
+    verify(pagos, never()).saveAndFlush(any());
   }
 
   @Test

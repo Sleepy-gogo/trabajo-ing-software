@@ -34,7 +34,7 @@ El webhook es un `POST` pÃºblico sin sesiÃ³n ni CSRF. Valida `x-signature` con e
 | MÃ©todo | Ruta | Uso |
 | --- | --- | --- |
 | `POST` | `/api/pagos/membresias/{id}/suscripcion` | Titular inicia o recupera el enlace de autorizaciÃ³n |
-| `POST` | `/api/pagos/membresias/{id}/verificacion` | Titular verifica cobros de su propia membresía |
+| `POST` | `/api/pagos/membresias/{id}/verificacion` | Titular verifica cobros de su propia membresÃ­a |
 | `GET` | `/api/pagos/membresias/{id}/suscripcion` | Titular consulta la suscripciÃ³n local |
 | `POST` | `/api/webhooks/mercadopago` | Mercado Pago envÃ­a notificaciones firmadas |
 | `POST` | `/api/pagos/membresias/{id}/conciliacion` | Administrador consulta facturas de la suscripciÃ³n si faltÃ³ un webhook |
@@ -77,24 +77,37 @@ El modo de prueba requiere el email `@testuser.com` real del comprador y un vend
 con la etiqueta `test_user`; no sustituye compradores de una cuenta vendedora real.
 Reiniciar la API cuando sea conveniente para cargar cambios de configuraciÃ³n.
 
-Al abrir «Mi membresía» con un pago pendiente de Mercado Pago se consultan las facturas una vez.
-«Ya pagué · Verificar pago» permite reintentar. Solo el titular puede verificar su membresía;
-la API consulta y valida el cobro remoto, sin confiar en parámetros de retorno. La búsqueda
-usa el tamaño de página predeterminado del proveedor y avanza por `offset`: durante la prueba
-el valor explícito `limit=20` devolvió HTTP 400, mientras omitirlo devolvió la factura aprobada.
-La URL `back_url` permite volver a SERA; si el checkout no vuelve automáticamente, el usuario
-puede regresar a «Mi membresía». Esta recuperación no reemplaza la configuración de webhooks.
+Al abrir Â«Mi membresÃ­aÂ» con un pago pendiente de Mercado Pago se consultan las facturas una vez.
+Â«Ya paguÃ©, verificar pagoÂ» permite reintentar. Solo el titular puede verificar su membresÃ­a;
+la API consulta y valida el cobro remoto, sin confiar en parÃ¡metros de retorno. La bÃºsqueda
+usa el tamaÃ±o de pÃ¡gina predeterminado del proveedor y avanza por `offset`: durante la prueba
+el valor explÃ­cito `limit=20` devolviÃ³ HTTP 400, mientras omitirlo devolviÃ³ la factura aprobada.
+La URL `back_url` permite volver a SERA; si el checkout no vuelve automÃ¡ticamente, el usuario
+puede regresar a Â«Mi membresÃ­aÂ». Esta recuperaciÃ³n no reemplaza la configuraciÃ³n de webhooks.
 
 Prueba del 28/09/2026: una factura `processed` con cobro `approved/accredited` de
-ARS 18.000 se recuperó mediante la verificación del titular. SERA dejó el pago aprobado
-y la membresía activa hasta el 28/10/2026. Repetir la verificación conservó el mismo
-vencimiento y comprobante; otro usuario recibió 403. No se verificó la entrega automática
-del webhook. La URL de retorno estaba configurada, pero el checkout no redirigió al usuario.
+ARS 18.000 se recuperÃ³ mediante la verificaciÃ³n del titular. SERA dejÃ³ el pago aprobado
+y la membresÃ­a activa hasta el 28/10/2026. Repetir la verificaciÃ³n conservÃ³ el mismo
+vencimiento y comprobante; otro usuario recibiÃ³ 403. No se verificÃ³ la entrega automÃ¡tica
+del webhook. La URL de retorno estaba configurada, pero el checkout no redirigiÃ³ al usuario.
 
-En esa prueba la suscripción remota ya estaba `cancelled`, mientras SERA conservaba
-`pending`. La cancelación acepta `cancelled` y `canceled` al consultar al proveedor,
-normaliza a `canceled` en la entidad local y no repite la baja remota si ya terminó.
-El gateway envía `cancelled` y exige que la respuesta confirme el identificador y estado.
-Se recuperó el caso confirmando primero la baja remota, sincronizando únicamente el estado
-de esa suscripción y ejecutando la cancelación normal del titular. La membresía quedó
+En esa prueba la suscripciÃ³n remota ya estaba `cancelled`, mientras SERA conservaba
+`pending`. La cancelaciÃ³n acepta `cancelled` y `canceled` al consultar al proveedor,
+normaliza a `canceled` en la entidad local y no repite la baja remota si ya terminÃ³.
+El gateway envÃ­a `cancelled` y exige que la respuesta confirme el identificador y estado.
+Se recuperÃ³ el caso confirmando primero la baja remota, sincronizando Ãºnicamente el estado
+de esa suscripciÃ³n y ejecutando la cancelaciÃ³n normal del titular. La membresÃ­a quedÃ³
 `CANCELADA`; el pago aprobado se conserva en el historial.
+
+## ProtecciÃ³n de contrataciones anteriores
+
+Las cuotas recurrentes conservan el identificador de contrataciÃ³n, nivel y
+relaciÃ³n UNSE del pago original de la suscripciÃ³n. Si llega una factura despuÃ©s
+de cancelar y volver a contratar, queda para revisiÃ³n y no activa la contrataciÃ³n
+nueva. Un evento remoto antiguo tampoco puede reabrir una suscripciÃ³n que SERA
+ya registrÃ³ como cancelada.
+
+La consulta del cobro actual separa la suscripciÃ³n y el pendiente del historial
+paginado. Â«Ya paguÃ©, verificar pagoÂ» tambiÃ©n permite recuperar renovaciones de
+membresÃ­as activas o vencidas. La cancelaciÃ³n fallida del proveedor conserva el
+estado local y muestra el error para reintentar.

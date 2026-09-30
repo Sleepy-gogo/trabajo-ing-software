@@ -1,4 +1,5 @@
 import { api } from "./users-api"
+import type { Subscription } from "./members-api"
 
 export type PaymentState = "PENDIENTE" | "APROBADO" | "RECHAZADO" | "CANCELADO"
 export type PaymentMethod = "EFECTIVO" | "MERCADO_PAGO"
@@ -25,8 +26,17 @@ export type PaymentPage = {
   totalPages: number
   number: number
 }
+export type MembershipBilling = {
+  pagoPendiente: Payment | null
+  suscripcion: Subscription | null
+}
 
 export const paymentsApi = {
+  membershipBilling: (membershipId: string, signal?: AbortSignal) =>
+    api<MembershipBilling>(
+      `/pagos/membresias/${encodeURIComponent(membershipId)}`,
+      { signal }
+    ),
   list: (page = 0, state?: PaymentState, signal?: AbortSignal) => {
     const params = new URLSearchParams({ pagina: String(page) })
     if (state) params.set("estado", state)

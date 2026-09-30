@@ -1,5 +1,5 @@
 import { createRequestKey } from "@/lib/request-key"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useSearchParams } from "react-router-dom"
 import { useSession } from "@/hooks/use-session"
@@ -63,6 +63,19 @@ export function MemberPaymentsPage() {
         ? 15_000
         : false,
   })
+  const billing = useQuery({
+    queryKey: ["membership-billing", member.data?.membresiaId],
+    queryFn: ({ signal }) =>
+      paymentsApi.membershipBilling(member.data!.membresiaId!, signal),
+    enabled: !!member.data?.membresiaId,
+  })
+  useEffect(() => {
+    if (payments.dataUpdatedAt > 0) {
+      // Una confirmación que llega por polling también debe actualizar la membresía.
+      void client.invalidateQueries({ queryKey: ["my-member"] })
+      void client.invalidateQueries({ queryKey: ["membership-billing"] })
+    }
+  }, [payments.dataUpdatedAt, client])
   const receipt = useQuery({
     queryKey: ["payment-receipt", session.data?.id, selected],
     queryFn: ({ signal }) => paymentsApi.receipt(selected!, signal),
@@ -84,7 +97,13 @@ export function MemberPaymentsPage() {
         "El pago en efectivo quedó pendiente de confirmación administrativa."
       )
       setSelected(payment.id)
-      await client.invalidateQueries({ queryKey: ["payments"] })
+      setState("TODOS")
+      setPage(0)
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["payments"] }),
+        client.invalidateQueries({ queryKey: ["membership-billing"] }),
+        client.invalidateQueries({ queryKey: ["my-member"] }),
+      ])
     },
   })
   const selectedPayment =
@@ -93,9 +112,10 @@ export function MemberPaymentsPage() {
     member.data?.membresiaId &&
     member.data.estadoMembresia !== "CANCELADA" &&
     member.data.estadoMembresia !== "SUSPENDIDA" &&
-    !payments.data?.content.some(
-      (p) => p.conceptoPago === "CUOTA_MENSUAL" && p.estado === "PENDIENTE"
-    )
+    billing.isSuccess &&
+    !billing.data.pagoPendiente &&
+    (!billing.data.suscripcion ||
+      billing.data.suscripcion.estado === "canceled")
 
   return (
     <>
@@ -103,7 +123,14 @@ export function MemberPaymentsPage() {
         title="Mis pagos"
         description="Consultá los pagos de membresías y reservas."
         actions={
-          <Button variant="outline" onClick={() => void payments.refetch()}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              void payments.refetch()
+              void member.refetch()
+              if (member.data?.membresiaId) void billing.refetch()
+            }}
+          >
             Actualizar
           </Button>
         }
@@ -244,12 +271,25 @@ export function MemberPaymentsPage() {
                 Solicitar pago en efectivo
               </Button>
             )}
-            {member.data?.estadoMembresia === "PENDIENTE_PAGO" && (
+            {billing.data?.pagoPendiente && (
+              <p className="mt-4 text-sm">
+                Ya tenés un pago de membresía pendiente de confirmación.
+              </p>
+            )}
+            {billing.data?.suscripcion &&
+              billing.data.suscripcion.estado !== "canceled" && (
+                <p className="mt-4 text-sm">
+                  Tu membresía usa Mercado Pago. Verificá el cobro o cancelá la
+                  suscripción desde Mi membresía para cambiar el medio de pago.
+                </p>
+              )}
+            <ErrorMessage error={billing.error} />
+            {member.data?.membresiaId && (
               <Link
                 className="mt-4 block text-sm text-primary underline"
                 to="/app/memberships/status"
               >
-                Continuar contratación
+                Mi membresía
               </Link>
             )}
           </SectionCard>

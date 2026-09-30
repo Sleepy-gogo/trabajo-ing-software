@@ -60,11 +60,14 @@ export function MembershipsPage() {
       // El alta local puede haber terminado aunque Mercado Pago rechace el checkout.
       await client.invalidateQueries({ queryKey: ["my-member"] })
       await client.invalidateQueries({ queryKey: ["payments"] })
+      await client.invalidateQueries({ queryKey: ["membership-billing"] })
     },
     onSuccess: async (subscription) => {
       await client.invalidateQueries({ queryKey: ["my-member"] })
       await client.invalidateQueries({ queryKey: ["payments"] })
-      if (subscription) window.location.assign(subscription.checkoutUrl)
+      await client.invalidateQueries({ queryKey: ["membership-billing"] })
+      if (subscription?.checkoutUrl)
+        window.location.assign(subscription.checkoutUrl)
       else navigate("/app/payments")
     },
   })
@@ -224,7 +227,6 @@ export function MembershipsPage() {
   )
 }
 export function MembershipStatusPage() {
-  const session = useSession()
   const client = useQueryClient()
   const pollingStarted = useRef<number | null>(null)
   useEffect(() => {
@@ -243,10 +245,11 @@ export function MembershipStatusPage() {
         ? 10_000
         : false,
   })
-  const payments = useQuery({
-    queryKey: ["payments", session.data?.id, "membership-status"],
-    queryFn: ({ signal }) => paymentsApi.list(0, undefined, signal),
-    enabled: !!session.data,
+  const billing = useQuery({
+    queryKey: ["membership-billing", member.data?.membresiaId],
+    queryFn: ({ signal }) =>
+      paymentsApi.membershipBilling(member.data!.membresiaId!, signal),
+    enabled: !!member.data?.membresiaId,
     refetchInterval: () =>
       member.data?.estadoMembresia === "PENDIENTE_PAGO" &&
       (pollingStarted.current === null ||
@@ -254,31 +257,49 @@ export function MembershipStatusPage() {
         ? 10_000
         : false,
   })
-  const pendingPayment = payments.data?.content.find(
-    (payment) =>
-      payment.idMembresia === member.data?.membresiaId &&
-      payment.estado === "PENDIENTE"
-  )
+  const pendingPayment = billing.data?.pagoPendiente
+  const subscription = billing.data?.suscripcion
+  const canVerify =
+    !!subscription?.preapprovalId &&
+    subscription.estado !== "canceled" &&
+    member.data?.estadoMembresia !== "CANCELADA"
+  const canResume =
+    pendingPayment?.medioPago === "MERCADO_PAGO" &&
+    (!subscription ||
+      subscription.estado === "rejected" ||
+      (subscription.estado === "pending" && !!subscription.preapprovalId))
   const cancel = useMutation({
     mutationFn: () => membersApi.cancel(member.data!.membresiaId!, reason),
+    onMutate: () => setNotice(""),
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["my-member"] })
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["my-member"] }),
+        client.invalidateQueries({ queryKey: ["payments"] }),
+        client.invalidateQueries({ queryKey: ["membership-billing"] }),
+      ])
       setNotice("La membresía fue cancelada.")
       setReason("")
     },
   })
   const verification = useMutation({
     mutationFn: () => membersApi.verifyPayment(member.data!.membresiaId!),
+    onMutate: () => setNotice(""),
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: ["my-member"] }),
         client.invalidateQueries({ queryKey: ["payments"] }),
+        client.invalidateQueries({ queryKey: ["membership-billing"] }),
       ])
       const current = client.getQueryData<Member | null>(["my-member"])
       setNotice(
-        current?.estadoMembresia === "ACTIVA"
-          ? "Pago confirmado. Tu membres�a est� activa."
-          : "Mercado Pago todav�a no confirm� el pago. Pod�s volver a verificar en unos momentos."
+        current?.estadoMembresia === "ACTIVA" &&
+          member.data?.estadoMembresia === "PENDIENTE_PAGO"
+          ? "Pago confirmado. Tu membresía está activa."
+          : current?.estadoMembresia === "ACTIVA"
+            ? "Verificación completada. Tu membresía está activa."
+            : current?.estadoMembresia === "CANCELADA"
+              ? "La membresía está cancelada. Consultá los cobros anteriores en Mis pagos."
+              : "Mercado Pago todavía no confirmó el pago. Podés volver a verificar en unos momentos."
       )
     },
   })
@@ -289,29 +310,45 @@ export function MembershipStatusPage() {
     if (
       id &&
       member.data?.estadoMembresia === "PENDIENTE_PAGO" &&
-      pendingPayment?.medioPago === "MERCADO_PAGO" &&
-      verifiedMembership.current !== id
+      canVerify &&
+      verifiedMembership.current !== `${id}:${subscription?.id}`
     ) {
-      verifiedMembership.current = id
+      verifiedMembership.current = `${id}:${subscription?.id}`
       verifyPayment()
     }
   }, [
     member.data?.membresiaId,
     member.data?.estadoMembresia,
-    pendingPayment?.medioPago,
+    canVerify,
+    subscription?.id,
     verifyPayment,
   ])
   const subscribe = useMutation({
     mutationFn: () => membersApi.startSubscription(member.data!.membresiaId!),
     onSuccess: (subscription) => {
-      window.location.assign(subscription.checkoutUrl)
+      if (subscription.checkoutUrl)
+        window.location.assign(subscription.checkoutUrl)
     },
+    onSettled: () =>
+      client.invalidateQueries({ queryKey: ["membership-billing"] }),
   })
   return (
     <>
       <PageHeader
         title="Mi membresía"
         description="Consultá tu nivel, estado y relación con la UNSE."
+        actions={
+          <Button
+            variant="outline"
+            onClick={() => {
+              setNotice("")
+              void member.refetch()
+              if (member.data?.membresiaId) void billing.refetch()
+            }}
+          >
+            Actualizar estado
+          </Button>
+        }
       />
       <p role="status" className="mb-4 text-sm text-emerald-800">
         {notice}
@@ -362,34 +399,44 @@ export function MembershipStatusPage() {
                   Tu solicitud está pendiente. Los beneficios se habilitan
                   cuando se confirme el primer pago.
                 </Note>
-                {payments.isPending ? (
+                {billing.isPending ? (
                   <p className="text-sm">Consultando el medio de pago…</p>
-                ) : payments.isError ? (
-                  <ErrorMessage error={payments.error} />
+                ) : billing.isError ? (
+                  <ErrorMessage error={billing.error} />
                 ) : pendingPayment?.medioPago === "MERCADO_PAGO" ? (
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-3">
-                      <Button
-                        disabled={subscribe.isPending || verification.isPending}
-                        onClick={() => subscribe.mutate()}
-                      >
-                        Continuar a Mercado Pago
-                      </Button>
-                      <Button
-                        variant="outline"
-                        disabled={verification.isPending || subscribe.isPending}
-                        onClick={() => verification.mutate()}
-                      >
-                        {verification.isPending
-                          ? "Verificando pago�"
-                          : "Ya pagu� � Verificar pago"}
-                      </Button>
+                      {canResume && (
+                        <Button
+                          disabled={
+                            subscribe.isPending ||
+                            verification.isPending ||
+                            cancel.isPending
+                          }
+                          onClick={() => subscribe.mutate()}
+                        >
+                          Continuar a Mercado Pago
+                        </Button>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Si Mercado Pago no te devuelve a SERA, volv� a esta
+                      Si Mercado Pago no te devuelve a SERA, volvé a esta
                       pantalla para verificar el pago.
                     </p>
-                    <ErrorMessage error={verification.error} />
+                    {subscription?.estado === "canceled" && (
+                      <p className="text-sm">
+                        La suscripción de Mercado Pago está cancelada. Cancelá
+                        esta solicitud para volver a contratar.
+                      </p>
+                    )}
+                    {subscription?.estado === "pending" &&
+                      !subscription.preapprovalId && (
+                        <p className="text-sm">
+                          La solicitud a Mercado Pago tiene un resultado
+                          incierto. Consultá con administración antes de iniciar
+                          otra suscripción.
+                        </p>
+                      )}
                   </div>
                 ) : pendingPayment?.medioPago === "EFECTIVO" ? (
                   <p className="text-sm">
@@ -397,14 +444,37 @@ export function MembershipStatusPage() {
                   </p>
                 ) : (
                   <p className="text-sm">
-                    No hay un pago pendiente. Consultá el historial o volvé a
-                    solicitar la membresía.
+                    No hay un pago pendiente. Podés solicitar efectivo desde Mis
+                    pagos, o cancelar esta solicitud para elegir otro medio.
                   </p>
                 )}
                 <ErrorMessage error={subscribe.error} />
               </div>
             )}
-            {member.data.estadoMembresia === "VENCIDA" && (
+            <ErrorMessage error={billing.error} />
+            {canVerify && (
+              <div className="mt-5 space-y-3">
+                <p className="text-sm">
+                  Tu membresía tiene una suscripción mensual de Mercado Pago.
+                  Verificá los cobros si el estado no se actualizó.
+                </p>
+                <Button
+                  variant="outline"
+                  disabled={
+                    verification.isPending ||
+                    subscribe.isPending ||
+                    cancel.isPending
+                  }
+                  onClick={() => verification.mutate()}
+                >
+                  {verification.isPending
+                    ? "Verificando pago…"
+                    : "Ya pagué, verificar pago"}
+                </Button>
+                <ErrorMessage error={verification.error} />
+              </div>
+            )}
+            {member.data.estadoMembresia === "VENCIDA" && !canVerify && (
               <Link
                 className="mt-5 inline-block text-primary underline"
                 to="/app/payments"
@@ -430,7 +500,11 @@ export function MembershipStatusPage() {
                 <Button
                   type="submit"
                   variant="outline"
-                  disabled={cancel.isPending}
+                  disabled={
+                    cancel.isPending ||
+                    subscribe.isPending ||
+                    verification.isPending
+                  }
                 >
                   Cancelar membresía
                 </Button>

@@ -73,6 +73,7 @@ public class PagoService {
     if (repetido.isPresent()) {
       Pago pago = repetido.get();
       if ((pago.getMembresia() == null || !membresiaId.equals(pago.getMembresia().getId()))
+          || !membresia.getContratacionId().equals(pago.getContratacionId())
           || medio != pago.getMedioPago()) {
         throw new IllegalStateException("La clave ya pertenece a otra operación.");
       }
@@ -169,6 +170,30 @@ public class PagoService {
     }
     pago.cancelarPendiente();
     return detalle(pago);
+  }
+
+  @Transactional(readOnly = true)
+  public CobroMembresiaDetalle consultarCobroMembresia(UUID membresiaId, UUID actorId) {
+    Membresia membresia =
+        membresias.findById(membresiaId).orElseThrow(MembresiaNoEncontradaException::new);
+    autorizar(membresia.getSocio().getUsuario().getId(), actorId);
+    PagoDetalle pendiente =
+        pagos
+            .findByMembresiaIdAndContratacionIdAndEstado(
+                membresiaId, membresia.getContratacionId(), EstadoPago.PENDIENTE)
+            .map(this::detalle)
+            .orElse(null);
+    SuscripcionMercadoPagoDetalle suscripcion =
+        suscripciones.findAllByMembresiaIdOrderByCreatedAtDesc(membresiaId).stream()
+            .filter(
+                s -> membresia.getContratacionId().equals(s.getPagoInicial().getContratacionId()))
+            .findFirst()
+            .map(
+                s ->
+                    new SuscripcionMercadoPagoDetalle(
+                        s.getId(), s.getPreapprovalId(), s.getEstado(), s.getCheckoutUrl()))
+            .orElse(null);
+    return new CobroMembresiaDetalle(pendiente, suscripcion);
   }
 
   @Transactional(readOnly = true)

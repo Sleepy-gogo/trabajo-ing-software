@@ -56,9 +56,9 @@ export type Audit = {
 }
 export type Subscription = {
   id: string
-  preapprovalId: string
+  preapprovalId: string | null
   estado: string
-  checkoutUrl: string
+  checkoutUrl: string | null
 }
 export type ContractedMembership = { id: string }
 export const membersApi = {
