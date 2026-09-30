@@ -323,7 +323,20 @@ El backend consulta la factura y el cobro en Mercado Pago antes de aprobar. La c
 el ID externo único y el bloqueo de la membresía protegen los reintentos. El retorno del navegador
 solo lleva al usuario a consultar el estado; no confirma el pago.
 
-## PostgreSQL
+## Reportes y encuestas
+
+`reporte` contiene Boundary para JSON/CSV, Control para filtros e instantáneas,
+Entity `Informe` y repositories para historial y consultas operativas. Las métricas
+de utilización se agregan en PostgreSQL. Cada informe guarda el resultado que se
+exporta, sin volver a consultar datos que podrían haber cambiado.
+
+`encuesta` contiene definiciones, preguntas y envíos asociados a reservas utilizadas.
+Control verifica titularidad, período, obligatoriedad y valores; la restricción
+única encuesta/reserva y el bloqueo transaccional protegen envíos concurrentes.
+La API transporta DTO y las entidades no conocen HTTP. Ver
+[REPORTES_ENCUESTAS.md](REPORTES_ENCUESTAS.md) para las decisiones funcionales.
+
+## PostgreSQL local
 
 Flyway crea la tabla `espacios` mediante `V1__create_espacios.sql`. Hibernate usa `ddl-auto=validate` para comprobar que el modelo JPA coincide con el esquema. Cada cambio posterior del esquema debe sumar una migración nueva.
 

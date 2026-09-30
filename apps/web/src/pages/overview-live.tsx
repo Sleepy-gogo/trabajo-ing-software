@@ -95,6 +95,18 @@ export function AdminDashboardPage() {
             description: "Administrá cuentas, permisos y datos personales.",
             to: "/admin/users",
           },
+          {
+            title: "Informes",
+            description:
+              "Consultá socios, reservas, pagos y uso de espacios; exportá los resultados en CSV.",
+            to: "/admin/reports",
+          },
+          {
+            title: "Encuestas",
+            description:
+              "Publicá preguntas y consultá respuestas de los usuarios que utilizaron un espacio.",
+            to: "/admin/surveys",
+          },
         ].map((v) => (
           <SectionCard key={v.to} title={v.title}>
             <p className="mb-5 text-sm text-muted-foreground">

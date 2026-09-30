@@ -1,296 +1,259 @@
-import { useMemo, useState } from "react"
-import { useParams, useSearchParams } from "react-router-dom"
-import { Check, ClipboardCheck, MessageSquareText, Star } from "lucide-react"
-
-import { EmptyState } from "@/components/shared"
+import { useState } from "react"
+import { Link, useParams, useSearchParams } from "react-router-dom"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { ClipboardCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { currentUser, getSurveyById, surveys } from "@/mocks"
-
-import { formatDate } from "./data"
 import {
-  Go,
-  InfoRows,
-  MemberHeading,
-  Notice,
-  Panel,
-  Result,
-  StateBadge,
-} from "./member-parts"
+  EmptyState,
+  PageHeader,
+  SectionCard,
+  StatusBadge,
+} from "@/components/shared"
+import { ErrorMessage, QueryState } from "@/components/shared/real-data"
+import { surveysApi, type Assignment } from "@/lib/surveys-api"
 
 export function MemberSurveysPage() {
   const { id } = useParams()
-  const [params, setParams] = useSearchParams()
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [error, setError] = useState("")
-  const userSurveys = surveys.filter(
-    (survey) => survey.userId === currentUser.id
-  )
-  const survey = id ? getSurveyById(id) : undefined
-  const state = params.get("state")
-
-  if (id && !survey) {
+  const [params] = useSearchParams()
+  const reservation = params.get("reserva")
+  const list = useQuery({
+    queryKey: ["my-surveys"],
+    queryFn: ({ signal }) => surveysApi.mine(signal),
+    enabled: !id,
+  })
+  const selected = useQuery({
+    queryKey: ["survey-assignment", id, reservation],
+    queryFn: ({ signal }) => surveysApi.get(id!, reservation!, signal),
+    enabled: !!id && !!reservation,
+  })
+  if (id) {
+    if (!reservation)
+      return (
+        <>
+          <PageHeader
+            title="Seleccioná una reserva"
+            description="Cada respuesta está asociada a una reserva utilizada."
+          />
+          <Button
+            nativeButton={false}
+            role="link"
+            render={<Link to="/app/surveys" />}
+          >
+            Ver mis encuestas
+          </Button>
+        </>
+      )
     return (
-      <Result
-        description="La encuesta puede haber vencido o no estar asociada a tu cuenta."
-        error
-        title="Encuesta no encontrada"
+      <QueryState
+        pending={selected.isPending}
+        error={selected.error}
+        retry={selected.refetch}
       >
-        <Go to="/app/surveys">Ver encuestas</Go>
-      </Result>
+        {selected.data && (
+          <SurveyForm key={`${id}-${reservation}`} assignment={selected.data} />
+        )}
+      </QueryState>
     )
   }
-
-  if (id && survey) {
-    return (
-      <SurveyForm
-        answers={answers}
-        error={error}
-        onAnswer={(questionId, value) => {
-          setAnswers((current) => ({ ...current, [questionId]: value }))
-          setError("")
-        }}
-        onBack={() => setParams({})}
-        onSubmit={() => {
-          const required = [
-            ...survey.preguntasGenerales,
-            ...survey.preguntasEspacio,
-          ]
-            .filter((question) => question.obligatoria)
-            .some((question) => !answers[question.id])
-          if (required) {
-            setError(
-              "Completá las preguntas obligatorias para enviar la encuesta."
-            )
-            return
-          }
-          setParams({ state: "submitted" })
-        }}
-        survey={survey}
-        submitted={state === "submitted"}
-      />
-    )
-  }
-
-  if (state === "submitted") {
-    return (
-      <Result
-        description="Gracias por compartir tu experiencia. Tu respuesta quedó registrada en esta demostración."
-        title="Encuesta enviada"
-      >
-        <Go to="/app/surveys">Volver a encuestas</Go>
-        <Go secondary to="/app">
-          Volver al inicio
-        </Go>
-      </Result>
-    )
-  }
-
-  const showEmpty = state === "empty" || userSurveys.length === 0
   return (
     <div>
-      <MemberHeading
-        description="Respondé encuestas sobre los espacios que ya utilizaste."
+      <PageHeader
         title="Mis encuestas"
+        description="Compartí tu experiencia después de registrar el ingreso a una reserva."
       />
-      {state === "loading" ? (
-        <Panel>
-          <div className="flex min-h-52 items-center justify-center text-sm text-muted-foreground">
-            Cargando encuestas…
+      <QueryState
+        pending={list.isPending}
+        error={list.error}
+        retry={list.refetch}
+      >
+        {list.data?.length ? (
+          <div className="grid gap-5 lg:grid-cols-2">
+            {list.data.map((item) => (
+              <SectionCard
+                key={`${item.encuesta.id}-${item.reservaId}`}
+                title={item.encuesta.titulo}
+                description={item.encuesta.descripcion}
+              >
+                <StatusBadge
+                  tone={
+                    item.estado === "RESPONDIDA"
+                      ? "success"
+                      : item.estado === "DISPONIBLE"
+                        ? "info"
+                        : "neutral"
+                  }
+                >
+                  {item.estado === "RESPONDIDA"
+                    ? "Respondida"
+                    : item.estado === "DISPONIBLE"
+                      ? "Disponible"
+                      : "Cerrada"}
+                </StatusBadge>
+                <p className="my-4 text-sm text-muted-foreground">
+                  {item.espacio} · Reserva del {item.fecha}
+                  <br />
+                  Período de respuesta: {item.encuesta.desde} a{" "}
+                  {item.encuesta.hasta}
+                </p>
+                <Button
+                  variant={item.estado === "DISPONIBLE" ? "default" : "outline"}
+                  nativeButton={false}
+                  role="link"
+                  render={
+                    <Link
+                      to={`/app/surveys/${item.encuesta.id}?reserva=${item.reservaId}`}
+                    />
+                  }
+                >
+                  {item.estado === "DISPONIBLE"
+                    ? "Responder encuesta"
+                    : "Ver encuesta"}
+                </Button>
+              </SectionCard>
+            ))}
           </div>
-        </Panel>
-      ) : showEmpty ? (
-        <Panel>
-          <EmptyState
-            icon={ClipboardCheck}
-            description="Las encuestas aparecen después de completar una reserva o utilizar un servicio."
-            title="No tenés encuestas pendientes"
-          />
-        </Panel>
-      ) : (
-        <div className="grid gap-5 lg:grid-cols-2">
-          {userSurveys.map((item) => (
-            <Panel key={item.id}>
-              <div className="flex items-start justify-between gap-4">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <MessageSquareText aria-hidden="true" className="size-5" />
-                </span>
-                <StateBadge state={item.estadoLabel} />
-              </div>
-              <h2 className="mt-5 text-lg font-semibold">{item.titulo}</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {item.descripcion}
-              </p>
-              <InfoRows
-                rows={[
-                  ["Espacio", item.spaceName],
-                  ["Disponible hasta", formatDate(item.fechaLimite)],
-                ]}
-              />
-              <div className="mt-5">
-                {item.estado === "disponible" ||
-                item.estado === "incompleta" ? (
-                  <Go to={"/app/surveys/" + item.id}>Responder encuesta</Go>
-                ) : (
-                  <Go secondary to={"/app/surveys/" + item.id}>
-                    Ver respuestas
-                  </Go>
-                )}
-              </div>
-            </Panel>
-          ))}
-        </div>
-      )}
+        ) : (
+          <SectionCard title="Encuestas">
+            <EmptyState
+              icon={ClipboardCheck}
+              title="No tenés encuestas"
+              description="Aparecen cuando administración publica una encuesta y registrás el ingreso a una reserva del espacio correspondiente."
+            />
+          </SectionCard>
+        )}
+      </QueryState>
     </div>
   )
 }
 
-type SurveyFormProps = {
-  answers: Record<string, string>
-  error: string
-  onAnswer: (questionId: string, value: string) => void
-  onBack: () => void
-  onSubmit: () => void
-  survey: NonNullable<ReturnType<typeof getSurveyById>>
-  submitted: boolean
-}
-
-function SurveyForm({
-  answers,
-  error,
-  onAnswer,
-  onBack,
-  onSubmit,
-  survey,
-  submitted,
-}: SurveyFormProps) {
-  const questions = useMemo(
-    () => [...survey.preguntasGenerales, ...survey.preguntasEspacio],
-    [survey]
+function SurveyForm({ assignment }: { assignment: Assignment }) {
+  const client = useQueryClient()
+  const [answers, setAnswers] = useState<Record<string, string>>(
+    assignment.respuestas
   )
-  const completed = submitted || survey.estado === "completada"
-
+  const [validation, setValidation] = useState<Error | null>(null)
+  const submit = useMutation({
+    mutationFn: () =>
+      surveysApi.respond(assignment.encuesta.id, assignment.reservaId, answers),
+    onSuccess: (data) => {
+      client.setQueryData(
+        ["survey-assignment", data.encuesta.id, data.reservaId],
+        data
+      )
+      void client.invalidateQueries({ queryKey: ["my-surveys"] })
+    },
+  })
+  const current = submit.data ?? assignment
+  const editable = current.estado === "DISPONIBLE" && !submit.isPending
+  function answer(id: string, value: string) {
+    setAnswers((a) => ({ ...a, [id]: value }))
+    setValidation(null)
+    submit.reset()
+  }
   return (
     <div>
-      <MemberHeading
-        back="/app/surveys"
-        description={survey.descripcion}
-        title={survey.titulo}
+      <PageHeader
+        title={current.encuesta.titulo}
+        description={`${current.espacio} · Reserva del ${current.fecha}. ${current.encuesta.descripcion}`}
+        actions={
+          <Button
+            variant="outline"
+            nativeButton={false}
+            role="link"
+            render={<Link to="/app/surveys" />}
+          >
+            Volver a encuestas
+          </Button>
+        }
       />
-      {completed ? (
-        <Result
-          description="Esta encuesta ya fue respondida para la reserva seleccionada."
-          title="Gracias por tu respuesta"
+      {current.estado === "RESPONDIDA" && (
+        <p
+          role="status"
+          className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
         >
-          <Go to="/app/surveys">Volver a encuestas</Go>
-          <Go secondary to="/app">
-            Volver al inicio
-          </Go>
-        </Result>
-      ) : (
-        <div className="mx-auto max-w-3xl space-y-5">
-          <Panel>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">{survey.spaceName}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Podés responder hasta el {formatDate(survey.fechaLimite)}.
-                </p>
-              </div>
-              <StateBadge state="Disponible" />
-            </div>
-          </Panel>
-          <Panel title="Sobre tu experiencia">
-            <div className="space-y-8">
-              {questions.map((question, index) => (
-                <div className="space-y-3" key={question.id}>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {index + 1}. {question.texto}
-                    </p>
-                    {question.obligatoria && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Respuesta obligatoria
-                      </p>
-                    )}
-                  </div>
-                  {question.tipo === "calificacion" ? (
-                    <div
-                      className="flex flex-wrap gap-2"
-                      role="radiogroup"
-                      aria-label={question.texto}
-                    >
-                      {[1, 2, 3, 4, 5].map((rating) => {
-                        const value = String(rating)
-                        const selected = answers[question.id] === value
-                        return (
-                          <Button
-                            aria-checked={selected}
-                            aria-label={rating + " de 5"}
-                            className="size-11 rounded-full p-0"
-                            key={rating}
-                            onClick={() => onAnswer(question.id, value)}
-                            role="radio"
-                            variant={selected ? "default" : "outline"}
-                          >
-                            <Star
-                              aria-hidden="true"
-                              className={
-                                selected ? "size-4 fill-current" : "size-4"
-                              }
-                            />
-                            <span className="sr-only">{rating}</span>
-                          </Button>
-                        )
-                      })}
-                    </div>
-                  ) : question.tipo === "opcion" ? (
-                    <div className="flex flex-wrap gap-2">
-                      {(question.opciones ?? []).map((option) => (
-                        <Button
-                          aria-pressed={answers[question.id] === option}
-                          key={option}
-                          onClick={() => onAnswer(question.id, option)}
-                          variant={
-                            answers[question.id] === option
-                              ? "default"
-                              : "outline"
-                          }
-                        >
-                          {option}
-                        </Button>
-                      ))}
-                    </div>
-                  ) : (
-                    <Textarea
-                      aria-label={question.texto}
-                      onChange={(event) =>
-                        onAnswer(question.id, event.target.value)
-                      }
-                      placeholder="Escribí un comentario (opcional)"
-                      value={answers[question.id] ?? ""}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </Panel>
-          {error && (
-            <Notice error title="Revisá tus respuestas">
-              {error}
-            </Notice>
-          )}
-          <div className="flex flex-wrap justify-between gap-3">
-            <Button onClick={onBack} variant="outline">
-              Volver
-            </Button>
-            <Button onClick={onSubmit}>
-              <Check aria-hidden="true" />
-              Enviar encuesta
-            </Button>
-          </div>
-        </div>
+          Tu respuesta quedó registrada. Podés consultarla a continuación.
+        </p>
       )}
+      {current.estado === "CERRADA" && (
+        <p role="status" className="mb-5 text-sm">
+          La encuesta está cerrada o fuera de su período de respuesta.
+        </p>
+      )}
+      <SectionCard
+        title="Sobre tu experiencia"
+        description={`Podés responder entre ${current.encuesta.desde} y ${current.encuesta.hasta}. Las respuestas no son anónimas.`}
+      >
+        <form
+          className="space-y-7"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (
+              current.encuesta.preguntas.some(
+                (p) => p.obligatoria && !answers[p.id]?.trim()
+              )
+            ) {
+              setValidation(
+                new Error("Completá todas las preguntas obligatorias.")
+              )
+              return
+            }
+            submit.mutate()
+          }}
+        >
+          {current.encuesta.preguntas.map((question, index) => (
+            <fieldset
+              key={question.id}
+              disabled={!editable}
+              className="space-y-3"
+            >
+              <legend className="mb-3 text-sm font-semibold">
+                {index + 1}. {question.texto}
+                {question.obligatoria ? " *" : " (opcional)"}
+              </legend>
+              {question.tipo === "TEXTO" ? (
+                <Textarea
+                  aria-label={question.texto}
+                  required={question.obligatoria}
+                  maxLength={2000}
+                  value={answers[question.id] ?? ""}
+                  onChange={(event) => answer(question.id, event.target.value)}
+                />
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {(question.tipo === "CALIFICACION"
+                    ? ["1", "2", "3", "4", "5"]
+                    : question.opciones
+                  ).map((value) => (
+                    <label
+                      key={value}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm has-checked:border-primary has-checked:bg-primary/5"
+                    >
+                      <input
+                        type="radio"
+                        name={question.id}
+                        value={value}
+                        required={question.obligatoria}
+                        checked={answers[question.id] === value}
+                        onChange={() => answer(question.id, value)}
+                      />
+                      {question.tipo === "CALIFICACION"
+                        ? `${value} de 5`
+                        : value}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </fieldset>
+          ))}
+          <ErrorMessage error={validation ?? submit.error} />
+          {current.estado === "DISPONIBLE" && (
+            <Button type="submit" disabled={submit.isPending}>
+              {submit.isPending ? "Enviando…" : "Enviar encuesta"}
+            </Button>
+          )}
+        </form>
+      </SectionCard>
     </div>
   )
 }
