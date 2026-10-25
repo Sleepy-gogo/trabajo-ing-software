@@ -5,10 +5,10 @@ import edu.unse.sera.usuario.boundary.dto.CambiarPasswordRequest;
 import edu.unse.sera.usuario.boundary.dto.CrearUsuarioRequest;
 import edu.unse.sera.usuario.boundary.dto.PerfilRequest;
 import edu.unse.sera.usuario.boundary.dto.UsuarioResponse;
-import edu.unse.sera.usuario.control.UsuarioDetalle;
 import edu.unse.sera.usuario.control.UsuarioService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -33,14 +33,14 @@ public class UsuarioController {
   }
 
   @GetMapping("/me")
-  public UsuarioResponse actual(java.security.Principal principal) {
-    return toResponse(usuarioService.consultarDetalle(UUID.fromString(principal.getName())));
+  public UsuarioResponse actual(Principal principal) {
+    return UsuarioResponse.from(
+        usuarioService.consultarDetalle(UUID.fromString(principal.getName())));
   }
 
   @PutMapping("/me")
-  public UsuarioResponse perfil(
-      java.security.Principal principal, @Valid @RequestBody PerfilRequest request) {
-    return toResponse(
+  public UsuarioResponse perfil(Principal principal, @Valid @RequestBody PerfilRequest request) {
+    return UsuarioResponse.from(
         usuarioService.actualizarPerfil(
             UUID.fromString(principal.getName()),
             request.nombreCompleto(),
@@ -51,7 +51,7 @@ public class UsuarioController {
   @PostMapping
   public ResponseEntity<UsuarioResponse> crear(@Valid @RequestBody CrearUsuarioRequest request) {
     UsuarioResponse response =
-        toResponse(
+        UsuarioResponse.from(
             usuarioService.registrarUsuario(
                 request.nombreCompleto(),
                 request.email(),
@@ -64,18 +64,18 @@ public class UsuarioController {
   @GetMapping
   public List<UsuarioResponse> listar(
       @RequestParam(name = "buscar", required = false) String criterio) {
-    return usuarioService.listar(criterio).stream().map(this::toResponse).toList();
+    return usuarioService.listar(criterio).stream().map(UsuarioResponse::from).toList();
   }
 
   @GetMapping("/{id}")
   public UsuarioResponse obtener(@PathVariable UUID id) {
-    return toResponse(usuarioService.consultarDetalle(id));
+    return UsuarioResponse.from(usuarioService.consultarDetalle(id));
   }
 
   @PutMapping("/{id}")
   public UsuarioResponse actualizar(
       @PathVariable UUID id, @Valid @RequestBody ActualizarUsuarioRequest request) {
-    return toResponse(
+    return UsuarioResponse.from(
         usuarioService.actualizarUsuario(
             id,
             request.nombreCompleto(),
@@ -96,18 +96,5 @@ public class UsuarioController {
   public ResponseEntity<Void> darDeBaja(@PathVariable UUID id) {
     usuarioService.darDeBaja(id);
     return ResponseEntity.noContent().build();
-  }
-
-  private UsuarioResponse toResponse(UsuarioDetalle usuario) {
-    return new UsuarioResponse(
-        usuario.id(),
-        usuario.nombreCompleto(),
-        usuario.email(),
-        usuario.dni(),
-        usuario.rol(),
-        usuario.qrUsuario(),
-        usuario.estadoCuenta(),
-        usuario.creadoEn(),
-        usuario.actualizadoEn());
   }
 }

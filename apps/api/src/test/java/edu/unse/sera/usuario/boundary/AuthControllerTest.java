@@ -1,5 +1,6 @@
 package edu.unse.sera.usuario.boundary;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,6 +20,8 @@ import edu.unse.sera.disponibilidad.control.DisponibilidadService;
 import edu.unse.sera.espacio.boundary.EspacioController;
 import edu.unse.sera.espacio.control.EspacioService;
 import edu.unse.sera.shared.config.SecurityConfig;
+import edu.unse.sera.socio.entity.RelacionUnse;
+import edu.unse.sera.usuario.boundary.dto.LoginRequest;
 import edu.unse.sera.usuario.control.UsuarioDetalle;
 import edu.unse.sera.usuario.control.UsuarioService;
 import edu.unse.sera.usuario.entity.EstadoUsuario;
@@ -32,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -191,6 +195,118 @@ class AuthControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.rol").value("USUARIO"));
     verify(usuarios).actualizarPerfil(usuario.id(), "Ada", "ada@example.com", 12345678);
+  }
+
+  @Test
+  void obtieneTokenCsrfAntesDeIniciarSesion() throws Exception {
+    mvc.perform(get("/api/auth/csrf"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.token").isNotEmpty())
+        .andExpect(jsonPath("$.headerName").value("X-CSRF-TOKEN"));
+    verifyNoInteractions(usuarios);
+  }
+
+  @Test
+  void registroPublicoConservaRelacionUnseSinPermitirRolAdministrativo() throws Exception {
+    when(usuarios.registrarUsuario(
+            any(),
+            any(),
+            anyInt(),
+            eq(RolUsuario.USUARIO),
+            any(),
+            eq(RelacionUnse.ESTUDIANTE),
+            eq("123")))
+        .thenReturn(detalle(RolUsuario.USUARIO));
+
+    mvc.perform(
+            post("/api/auth/registro")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+          {"nombreCompleto":"Ada", "email":"ada@example.com", "dni":12345678,
+           "password":"password-seguro", "relacionUnse":"ESTUDIANTE",
+           "identificadorUnse":"123", "rol":"ADMIN"}
+          """))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.rol").value("USUARIO"));
+    verify(usuarios)
+        .registrarUsuario(
+            "Ada",
+            "ada@example.com",
+            12345678,
+            RolUsuario.USUARIO,
+            "password-seguro",
+            RelacionUnse.ESTUDIANTE,
+            "123");
+  }
+
+  @Test
+  void loginSinSesionAnteriorCreaUnaNuevaConLaIdentidadAutenticada() {
+    var usuario = detalle(RolUsuario.USUARIO);
+    when(usuarios.autenticar("ada@example.com", "password-seguro"))
+        .thenReturn(Optional.of(usuario));
+    var request = new MockHttpServletRequest();
+
+    var respuesta =
+        new AuthController(usuarios)
+            .login(new LoginRequest("ada@example.com", "password-seguro"), request);
+
+    assertThat(respuesta.getStatusCode().value()).isEqualTo(200);
+    assertThat(request.getSession(false).getAttribute(SesionFilter.USUARIO_ID))
+        .isEqualTo(usuario.id());
+  }
+
+  @Test
+  void logoutSinSesionEsIdempotente() {
+    var request = new MockHttpServletRequest();
+    assertThat(new AuthController(usuarios).logout(request).getStatusCode().value()).isEqualTo(204);
+    assertThat(request.getSession(false)).isNull();
+    verifyNoInteractions(usuarios);
+  }
+
+  @Test
+  void rechazaLoginInvalidoAntesDeAutenticar() throws Exception {
+    mvc.perform(
+            post("/api/auth/login")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"sin-arroba\",\"password\":\"\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.campos.email").exists())
+        .andExpect(jsonPath("$.campos.password").exists());
+    verifyNoInteractions(usuarios);
+  }
+
+  @Test
+  void cambioDeRolSeAplicaEnLaSiguientePeticion() throws Exception {
+    var admin = detalle(RolUsuario.ADMIN);
+    var session = sesion(admin);
+    mvc.perform(get("/api/usuarios").session(session)).andExpect(status().isOk());
+    var usuario =
+        new UsuarioDetalle(
+            admin.id(),
+            admin.nombreCompleto(),
+            admin.email(),
+            admin.dni(),
+            RolUsuario.USUARIO,
+            admin.qrUsuario(),
+            admin.estadoCuenta(),
+            admin.creadoEn(),
+            admin.actualizadoEn());
+    when(usuarios.consultarActivo(admin.id())).thenReturn(Optional.of(usuario));
+
+    mvc.perform(get("/api/usuarios").session(session)).andExpect(status().isForbidden());
+    assertThat(session.isInvalid()).isFalse();
+  }
+
+  @Test
+  void unaSesionSinIdentidadValidaNoAutoriza() throws Exception {
+    var session = new MockHttpSession();
+    session.setAttribute(SesionFilter.USUARIO_ID, "id-incorrecto");
+
+    mvc.perform(get("/api/usuarios/me").session(session)).andExpect(status().isUnauthorized());
+    verifyNoInteractions(usuarios);
   }
 
   private MockHttpSession sesion(UsuarioDetalle usuario) {

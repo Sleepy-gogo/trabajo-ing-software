@@ -37,7 +37,6 @@ function AuthLayout({
       </a>
       <div className="mx-auto grid min-h-[calc(100svh-2rem)] max-w-[1600px] overflow-hidden bg-white sm:rounded-2xl lg:grid-cols-[0.95fr_1fr]">
         <aside className="relative hidden min-h-[760px] flex-col justify-between overflow-hidden bg-sidebar p-12 text-white lg:flex">
-          {/* COLLAGE VERTICAL: Las 3 imágenes una debajo de otra ocupando el 100% de la altura */}
           <div className="absolute inset-0 grid h-full w-full grid-rows-3">
             <img
               src="/poli1.jpg"
@@ -56,12 +55,9 @@ function AuthLayout({
             />
           </div>
 
-          {/* GRADIENTE OSCURO: para fundir las fotos y permitir leer el texto */}
           <div className="absolute inset-0 bg-[#10243a]/75 backdrop-contrast-125" />
 
-          {/* Contenido superior */}
           <div className="relative z-10 flex flex-col items-center text-center">
-            {/* NUEVO LOGO SERA (Reemplaza al SeraBrand de shadcn) */}
             <div className="flex flex-col items-center justify-center">
               <span className="text-5xl font-black tracking-tighter text-white">
                 SERA<span className="text-blue-500">.</span>
@@ -71,7 +67,6 @@ function AuthLayout({
               </span>
             </div>
 
-            {/* Títulos también centrados */}
             <div className="mt-16">
               <p className="text-6xl leading-none font-extrabold tracking-[-0.055em] xl:text-7xl">
                 Tu lugar
@@ -85,7 +80,6 @@ function AuthLayout({
             </div>
           </div>
 
-          {/* Contenido inferior */}
           <div className="relative z-10">
             <div className="mb-12 flex justify-center gap-10">
               {[
@@ -108,20 +102,13 @@ function AuthLayout({
               ))}
             </div>
             <div className="relative z-10">
-              <div className="mb-12 grid grid-cols-3 gap-5">
-                {/* ... (el código de Comunidad UNSE, Reservas y Carnet queda igual) ... */}
-              </div>
-
-              {/* ACÁ ESTÁ EL CAMBIO: Mantenemos la línea divisoria superior y agregamos tu logo */}
               <div className="flex items-center justify-between border-t border-white/15 pt-6">
-                {/* Logo UNSE a la izquierda */}
                 <img
                   src="/logo-unse_2.png"
                   alt="Universidad Nacional de Santiago del Estero"
                   className="h-[114px] w-auto object-contain"
                 />
 
-                {/* Logo Bienestar a la derecha */}
                 <img
                   src="/bienestar-transparente.png"
                   alt="Bienestar Estar Bien"
@@ -408,13 +395,7 @@ export function RegisterPage() {
                     required
                     maxLength={field.id === "dni" ? 8 : 100}
                     pattern={field.id === "dni" ? "[0-9]{1,8}" : undefined}
-                    inputMode={
-                      field.id === "dni"
-                        ? "numeric"
-                        : field.id === "phone"
-                          ? "tel"
-                          : "text"
-                    }
+                    inputMode={field.id === "dni" ? "numeric" : "text"}
                     className="h-11"
                   />
                 </div>

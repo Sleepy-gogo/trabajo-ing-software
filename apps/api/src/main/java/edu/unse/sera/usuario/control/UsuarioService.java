@@ -1,9 +1,14 @@
 package edu.unse.sera.usuario.control;
 
+import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
+import edu.unse.sera.socio.entity.RelacionUnse;
+import edu.unse.sera.socio.entity.Socio;
+import edu.unse.sera.socio.persistence.SocioRepository;
 import edu.unse.sera.usuario.entity.EstadoUsuario;
 import edu.unse.sera.usuario.entity.RolUsuario;
 import edu.unse.sera.usuario.entity.Usuario;
 import edu.unse.sera.usuario.persistence.UsuarioRepository;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -23,12 +28,12 @@ public class UsuarioService {
 
   private final UsuarioRepository usuarioRepository;
   private final PasswordEncoder passwordEncoder;
-  private final edu.unse.sera.socio.persistence.SocioRepository socios;
+  private final SocioRepository socios;
 
   public UsuarioService(
       UsuarioRepository usuarioRepository,
       PasswordEncoder passwordEncoder,
-      edu.unse.sera.socio.persistence.SocioRepository socios) {
+      SocioRepository socios) {
     this.usuarioRepository = usuarioRepository;
     this.passwordEncoder = passwordEncoder;
     this.socios = socios;
@@ -37,13 +42,7 @@ public class UsuarioService {
   public UsuarioDetalle registrarUsuario(
       String nombreCompleto, String email, int dni, RolUsuario rol, String rawPassword) {
     return registrarUsuario(
-        nombreCompleto,
-        email,
-        dni,
-        rol,
-        rawPassword,
-        edu.unse.sera.socio.entity.RelacionUnse.EXTERNO,
-        null);
+        nombreCompleto, email, dni, rol, rawPassword, RelacionUnse.EXTERNO, null);
   }
 
   public UsuarioDetalle registrarUsuario(
@@ -52,7 +51,7 @@ public class UsuarioService {
       int dni,
       RolUsuario rol,
       String rawPassword,
-      edu.unse.sera.socio.entity.RelacionUnse relacion,
+      RelacionUnse relacion,
       String identificador) {
     validarPassword(rawPassword);
     validarUnicidad(email, dni, null);
@@ -62,10 +61,10 @@ public class UsuarioService {
     try {
       usuarioRepository.saveAndFlush(usuario);
       socios.save(
-          new edu.unse.sera.socio.entity.Socio(
+          new Socio(
               usuario,
-              relacion == null ? edu.unse.sera.socio.entity.RelacionUnse.EXTERNO : relacion,
-              edu.unse.sera.socio.entity.EstadoVerificacionUnse.PENDIENTE,
+              relacion == null ? RelacionUnse.EXTERNO : relacion,
+              EstadoVerificacionUnse.PENDIENTE,
               identificador));
       return toResponse(usuario);
     } catch (DataIntegrityViolationException exception) {
@@ -74,17 +73,8 @@ public class UsuarioService {
   }
 
   @Transactional(readOnly = true)
-  public boolean validarCredenciales(String email, String rawPassword) {
-    return usuarioRepository
-        .findByEmailIgnoreCase(normalizarEmail(email))
-        .filter(usuario -> usuario.getEstadoCuenta() == EstadoUsuario.ACTIVO)
-        .map(usuario -> passwordEncoder.matches(rawPassword, usuario.getPasswordHash()))
-        .orElse(false);
-  }
-
-  @Transactional(readOnly = true)
   public Optional<UsuarioDetalle> autenticar(String email, String password) {
-    if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+    if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
       return Optional.empty();
     }
     return usuarioRepository
@@ -167,7 +157,7 @@ public class UsuarioService {
   }
 
   private void validarPassword(String password) {
-    if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+    if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
       throw new PasswordInvalidaException();
     }
   }
@@ -195,7 +185,7 @@ public class UsuarioService {
     return email.trim().toLowerCase(Locale.ROOT);
   }
 
-  public Optional<Integer> convertirDni(String valor) {
+  private Optional<Integer> convertirDni(String valor) {
     try {
       return Optional.of(Integer.valueOf(valor));
     } catch (NumberFormatException exception) {
@@ -204,30 +194,21 @@ public class UsuarioService {
   }
 
   private RuntimeException traducirConflictoDeUnicidad(DataIntegrityViolationException exception) {
-    Optional<ConstraintViolationException> violation = buscarConstraintViolation(exception);
-    if (violation.isEmpty()) {
-      return exception;
-    }
-
-    String constraintName = violation.get().getConstraintName();
-    if (EMAIL_UNIQUE_CONSTRAINT.equals(constraintName)) {
-      return new UsuarioDuplicadoException("email", exception);
-    }
-    if (DNI_UNIQUE_CONSTRAINT.equals(constraintName)) {
-      return new UsuarioDuplicadoException("dni", exception);
-    }
-    return exception;
-  }
-
-  private Optional<ConstraintViolationException> buscarConstraintViolation(Throwable exception) {
     Throwable cause = exception;
     while (cause != null) {
       if (cause instanceof ConstraintViolationException violation) {
-        return Optional.of(violation);
+        String constraintName = violation.getConstraintName();
+        if (EMAIL_UNIQUE_CONSTRAINT.equals(constraintName)) {
+          return new UsuarioDuplicadoException("email", exception);
+        }
+        if (DNI_UNIQUE_CONSTRAINT.equals(constraintName)) {
+          return new UsuarioDuplicadoException("dni", exception);
+        }
+        return exception;
       }
       cause = cause.getCause();
     }
-    return Optional.empty();
+    return exception;
   }
 
   private UsuarioDetalle toResponse(Usuario usuario) {
