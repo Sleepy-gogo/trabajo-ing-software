@@ -1,16 +1,19 @@
 package edu.unse.sera.usuario.persistence;
 
 import edu.unse.sera.usuario.entity.Usuario;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
   Optional<Usuario> findByQrUsuario(String qrUsuario);
 
-  @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-  @org.springframework.data.jpa.repository.Query("select u from Usuario u where u.id = :id")
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select u from Usuario u where u.id = :id")
   Optional<Usuario> bloquearPorId(UUID id);
 
   Optional<Usuario> findByEmailIgnoreCase(String email);

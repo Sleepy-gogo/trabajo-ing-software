@@ -5,19 +5,29 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import edu.unse.sera.socio.entity.RelacionUnse;
+import edu.unse.sera.socio.entity.Socio;
+import edu.unse.sera.socio.persistence.SocioRepository;
 import edu.unse.sera.usuario.entity.EstadoUsuario;
 import edu.unse.sera.usuario.entity.RolUsuario;
 import edu.unse.sera.usuario.entity.Usuario;
 import edu.unse.sera.usuario.persistence.UsuarioRepository;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,7 +38,7 @@ class UsuarioServiceTest {
 
   @Mock private UsuarioRepository usuarioRepository;
   @Mock private PasswordEncoder passwordEncoder;
-  @Mock private edu.unse.sera.socio.persistence.SocioRepository socios;
+  @Mock private SocioRepository socios;
 
   private UsuarioService usuarioService;
 
@@ -55,7 +65,7 @@ class UsuarioServiceTest {
     assertThat(detalle.email()).isEqualTo("ada@example.com");
     assertThat(detalle.estadoCuenta()).isEqualTo(EstadoUsuario.ACTIVO);
     verify(passwordEncoder).encode("password-seguro");
-    verify(socios).save(any(edu.unse.sera.socio.entity.Socio.class));
+    verify(socios).save(any(Socio.class));
     verify(usuarioRepository).saveAndFlush(any(Usuario.class));
   }
 
@@ -79,16 +89,10 @@ class UsuarioServiceTest {
   }
 
   @Test
-  void validaCredencialesSoloParaUsuariosActivos() {
-    Usuario usuario = crearUsuario();
-    when(usuarioRepository.findByEmailIgnoreCase("ada@example.com"))
-        .thenReturn(Optional.of(usuario));
-    when(passwordEncoder.matches("password-seguro", "hash")).thenReturn(true);
-
-    assertThat(usuarioService.validarCredenciales("ADA@example.com", "password-seguro")).isTrue();
-
-    usuario.cambiarEstado(EstadoUsuario.DESHABILITADO);
-    assertThat(usuarioService.validarCredenciales("ADA@example.com", "password-seguro")).isFalse();
+  void autenticarRechazaEmailInexistenteSinCompararPassword() {
+    assertThat(usuarioService.autenticar(" ADA@example.com ", "password-seguro")).isEmpty();
+    verify(usuarioRepository).findByEmailIgnoreCase("ada@example.com");
+    verifyNoInteractions(passwordEncoder);
   }
 
   @Test
@@ -240,6 +244,160 @@ class UsuarioServiceTest {
                     12345678,
                     RolUsuario.USUARIO,
                     "password-seguro"))
+        .isSameAs(violation);
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @EnumSource(RelacionUnse.class)
+  void registraLaRelacionDeclaradaYUsaExternoSiFalta(RelacionUnse relacion) {
+    when(passwordEncoder.encode("password-seguro")).thenReturn("hash");
+
+    usuarioService.registrarUsuario(
+        "Ada",
+        "ada@example.com",
+        12345678,
+        RolUsuario.USUARIO,
+        "password-seguro",
+        relacion,
+        "legajo-123");
+
+    var captor = ArgumentCaptor.forClass(Socio.class);
+    verify(socios).save(captor.capture());
+    assertThat(captor.getValue().getRelacionUnse())
+        .isEqualTo(relacion == null ? RelacionUnse.EXTERNO : relacion);
+    assertThat(captor.getValue().getIdentificadorUnse()).isEqualTo("legajo-123");
+  }
+
+  @Test
+  void rechazaDniDuplicadoAlRegistrar() {
+    when(usuarioRepository.existsByDni(12345678)).thenReturn(true);
+
+    assertThatThrownBy(
+            () ->
+                usuarioService.registrarUsuario(
+                    "Ada", "ada@example.com", 12345678, RolUsuario.USUARIO, "password-seguro"))
+        .isInstanceOf(UsuarioDuplicadoException.class)
+        .hasMessageContaining("dni");
+    verifyNoInteractions(passwordEncoder, socios);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"email", "dni"})
+  void rechazaDuplicadosAlEditarSinModificarElUsuario(String campo) {
+    UUID id = UUID.randomUUID();
+    Usuario usuario = crearUsuario();
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuario));
+    when(usuarioRepository.existsByEmailIgnoreCaseAndIdNot("otro@example.com", id))
+        .thenReturn(campo.equals("email"));
+    if (campo.equals("dni")) {
+      when(usuarioRepository.existsByDniAndIdNot(87654321, id)).thenReturn(true);
+    }
+
+    assertThatThrownBy(
+            () ->
+                usuarioService.actualizarUsuario(
+                    id,
+                    "Otro nombre",
+                    "otro@example.com",
+                    87654321,
+                    RolUsuario.ADMIN,
+                    EstadoUsuario.INACTIVO))
+        .isInstanceOf(UsuarioDuplicadoException.class)
+        .hasMessageContaining(campo);
+    assertThat(usuario.getNombreCompleto()).isEqualTo("Ada Lovelace");
+    assertThat(usuario.getEstadoCuenta()).isEqualTo(EstadoUsuario.ACTIVO);
+    verify(usuarioRepository, never()).flush();
+  }
+
+  @ParameterizedTest
+  @EnumSource(EstadoUsuario.class)
+  void consultaSesionSoloParaUnaCuentaActiva(EstadoUsuario estado) {
+    UUID id = UUID.randomUUID();
+    Usuario usuario = crearUsuario();
+    usuario.cambiarEstado(estado);
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuario));
+
+    assertThat(usuarioService.consultarActivo(id).isPresent())
+        .isEqualTo(estado == EstadoUsuario.ACTIVO);
+  }
+
+  @Test
+  void consultaDeSesionInexistenteDevuelveVacio() {
+    assertThat(usuarioService.consultarActivo(UUID.randomUUID())).isEmpty();
+  }
+
+  @Test
+  void consultaDetalleSinExponerElHash() {
+    UUID id = UUID.randomUUID();
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(crearUsuario()));
+
+    assertThat(usuarioService.consultarDetalle(id).email()).isEqualTo("ada@example.com");
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(strings = {"", "   "})
+  void listaTodosCuandoNoHayBusqueda(String criterio) {
+    when(usuarioRepository.findAllByOrderByNombreCompletoAsc()).thenReturn(List.of(crearUsuario()));
+
+    assertThat(usuarioService.listar(criterio))
+        .extracting(UsuarioDetalle::email)
+        .containsExactly("ada@example.com");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {" Ada ", "87654321", "99999999999999999999"})
+  void buscaPorTextoSiNoEncuentraUnDniExacto(String criterio) {
+    String texto = criterio.trim();
+    when(usuarioRepository
+            .findByNombreCompletoContainingIgnoreCaseOrEmailContainingIgnoreCaseOrderByNombreCompletoAsc(
+                texto, texto))
+        .thenReturn(List.of(crearUsuario()));
+
+    assertThat(usuarioService.listar(criterio)).hasSize(1);
+    verify(usuarioRepository)
+        .findByNombreCompletoContainingIgnoreCaseOrEmailContainingIgnoreCaseOrderByNombreCompletoAsc(
+            texto, texto);
+  }
+
+  @Test
+  void cambiaPasswordConElLimiteExactoDeBcryptSinGuardarTextoPlano() {
+    UUID id = UUID.randomUUID();
+    Usuario usuario = crearUsuario();
+    String password = "á".repeat(36);
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuario));
+    when(passwordEncoder.encode(password)).thenReturn("nuevo-hash");
+
+    usuarioService.actualizarPasswordUsuario(id, password);
+
+    assertThat(usuario.getPasswordHash()).isEqualTo("nuevo-hash");
+    when(usuarioRepository.findByEmailIgnoreCase("ada@example.com"))
+        .thenReturn(Optional.of(usuario));
+    when(passwordEncoder.matches(password, "nuevo-hash")).thenReturn(true);
+    assertThat(usuarioService.autenticar("ada@example.com", password)).isPresent();
+  }
+
+  @Test
+  void noActualizaUnaPasswordQueSupera72Bytes() {
+    assertThatThrownBy(
+            () -> usuarioService.actualizarPasswordUsuario(UUID.randomUUID(), "á".repeat(37)))
+        .isInstanceOf(PasswordInvalidaException.class);
+    verifyNoInteractions(usuarioRepository, passwordEncoder);
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(strings = {"otra_restriccion"})
+  void conservaLaExcepcionDeUnaRestriccionDesconocida(String restriccion) {
+    when(passwordEncoder.encode("password-seguro")).thenReturn("hash");
+    var violation = violacionDeUnicidad(restriccion);
+    when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenThrow(violation);
+
+    assertThatThrownBy(
+            () ->
+                usuarioService.registrarUsuario(
+                    "Ada", "ada@example.com", 12345678, RolUsuario.USUARIO, "password-seguro"))
         .isSameAs(violation);
   }
 

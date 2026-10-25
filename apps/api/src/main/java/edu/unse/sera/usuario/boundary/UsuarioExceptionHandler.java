@@ -1,6 +1,7 @@
 package edu.unse.sera.usuario.boundary;
 
 import edu.unse.sera.shared.boundary.dto.ApiError;
+import edu.unse.sera.usuario.control.PasswordInvalidaException;
 import edu.unse.sera.usuario.control.UsuarioDuplicadoException;
 import java.util.Map;
 import org.springframework.core.Ordered;
@@ -14,9 +15,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class UsuarioExceptionHandler {
 
-  @ExceptionHandler(edu.unse.sera.usuario.control.PasswordInvalidaException.class)
-  public ResponseEntity<ApiError> handlePasswordInvalida(
-      edu.unse.sera.usuario.control.PasswordInvalidaException exception) {
+  @ExceptionHandler(PasswordInvalidaException.class)
+  public ResponseEntity<ApiError> handlePasswordInvalida(PasswordInvalidaException exception) {
     return ResponseEntity.badRequest()
         .body(
             new ApiError(

@@ -141,7 +141,7 @@ Desde `apps/api`, usar `./mvnw` en Linux/macOS o `.\mvnw.cmd` en Windows:
 
 ```powershell
 .\mvnw.cmd spotless:apply
-.\mvnw.cmd spotless:check checkstyle:check test package
+.\mvnw.cmd clean verify
 ```
 
 Desde `apps/web`:
@@ -154,6 +154,9 @@ pnpm build
 ```
 
 Desde la raíz: `docker compose config`.
+
+El informe de cobertura se genera en `apps/api/target/site/jacoco/index.html`.
+`verify` exige 100% de líneas y ramas en autenticación, sesión y permisos.
 
 ## Documentación
 

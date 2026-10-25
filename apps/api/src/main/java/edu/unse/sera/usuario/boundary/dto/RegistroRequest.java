@@ -1,5 +1,6 @@
 package edu.unse.sera.usuario.boundary.dto;
 
+import edu.unse.sera.socio.entity.RelacionUnse;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -20,5 +21,5 @@ public record RegistroRequest(
     @NotBlank(message = "La contraseña es obligatoria.")
         @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres.")
         String password,
-    edu.unse.sera.socio.entity.RelacionUnse relacionUnse,
+    RelacionUnse relacionUnse,
     @Size(max = 50) String identificadorUnse) {}

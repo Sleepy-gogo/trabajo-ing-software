@@ -48,6 +48,15 @@ Spotless aplica google-java-format. Checkstyle verifica convenciones e imports.
 `verify` ejecuta tests, empaquetado y ambas comprobaciones. El IDE debe usar Java 21
 y respetar el formato del repositorio.
 
+JaCoCo 0.8.15 mide la cobertura al ejecutar `test`. El informe HTML queda en
+`apps/api/target/site/jacoco/index.html`; en la misma carpeta se generan XML y CSV.
+`verify` exige cero líneas y ramas sin cubrir en `usuario.control`,
+`usuario.boundary` y las clases `SecurityConfig` y `PasswordConfig`. El informe
+incluye todo el backend, aunque el umbral del 100% se aplica a ese alcance.
+Para medir desde cero, usar `.\mvnw.cmd clean verify` o `./mvnw clean verify`.
+GitHub Actions conserva los informes en el artefacto `backend-coverage` durante
+30 días.
+
 ## Interfaz web
 
 Desde `apps/web`:

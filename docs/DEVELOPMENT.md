@@ -128,6 +128,16 @@ git diff --check
 Vitest. El endpoint `/api/health` comprueba la respuesta HTTP; el arranque completo
 con Flyway y validación JPA comprueba la conexión y el esquema.
 
+Para repetir la medición de cobertura sin datos de ejecuciones anteriores:
+
+```powershell
+cd apps/api
+.\mvnw.cmd clean verify
+```
+
+Abrir `apps/api/target/site/jacoco/index.html` desde la raíz. El umbral del 100%
+de líneas y ramas se aplica a autenticación, sesión y permisos.
+
 Los scripts `smoke_*.py` prueban recorridos HTTP con PostgreSQL. Su ejecución usa
 bases aisladas y no debe compartir datos con la demo. Ver
 [RESERVAS.md](RESERVAS.md) y [SOCIOS_MEMBRESIAS.md](SOCIOS_MEMBRESIAS.md).
