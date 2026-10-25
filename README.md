@@ -157,8 +157,6 @@ Desde la raíz: `docker compose config`.
 
 El informe de cobertura se genera en `apps/api/target/site/jacoco/index.html`.
 `verify` exige 100% de líneas y ramas en autenticación, sesión y permisos.
-Ver el [informe de garantía de calidad](docs/GARANTIA_CALIDAD.md) para consultar
-el alcance y los casos de prueba.
 
 ## Documentación
 

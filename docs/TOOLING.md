@@ -55,8 +55,7 @@ JaCoCo 0.8.15 mide la cobertura al ejecutar `test`. El informe HTML queda en
 incluye todo el backend, aunque el umbral del 100% se aplica a ese alcance.
 Para medir desde cero, usar `.\mvnw.cmd clean verify` o `./mvnw clean verify`.
 GitHub Actions conserva los informes en el artefacto `backend-coverage` durante
-30 días. El diseño de casos y los resultados están en
-[GARANTIA_CALIDAD.md](GARANTIA_CALIDAD.md).
+30 días.
 
 ## Interfaz web
 

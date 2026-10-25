@@ -136,8 +136,7 @@ cd apps/api
 ```
 
 Abrir `apps/api/target/site/jacoco/index.html` desde la raíz. El umbral del 100%
-de líneas y ramas se aplica a autenticación, sesión y permisos. El informe de
-[garantía de calidad](GARANTIA_CALIDAD.md) detalla las clases y los casos probados.
+de líneas y ramas se aplica a autenticación, sesión y permisos.
 
 Los scripts `smoke_*.py` prueban recorridos HTTP con PostgreSQL. Su ejecución usa
 bases aisladas y no debe compartir datos con la demo. Ver
