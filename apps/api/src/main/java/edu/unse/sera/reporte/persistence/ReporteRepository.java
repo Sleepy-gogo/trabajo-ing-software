@@ -126,9 +126,6 @@ public interface ReporteRepository extends Repository<Reserva, UUID> {
       nativeQuery = true)
   List<Map<String, Object>> actividad(LocalDate desde, LocalDate hasta, String tipo);
 
-  // Consultas del panel de indicadores. Los ingresos usan pagos aprobados por fecha de
-  // aprobación; reservas, horas y demanda usan reservas confirmadas por fecha de la reserva.
-
   @Query(
       value =
           """
@@ -193,7 +190,6 @@ public interface ReporteRepository extends Repository<Reserva, UUID> {
       nativeQuery = true)
   List<Map<String, Object>> usoPorEspacio(LocalDate desde, LocalDate hasta);
 
-  /** Cada hora que ocupa una reserva suma una unidad: una reserva de 18 a 20 cuenta en 18 y 19. */
   @Query(
       value =
           """
@@ -220,10 +216,6 @@ public interface ReporteRepository extends Repository<Reserva, UUID> {
       nativeQuery = true)
   List<Map<String, Object>> sociosPorRelacion();
 
-  /**
-   * Membresías con una cuota aprobada que cubre la fecha indicada. Cada cuota aplicada cubre el mes
-   * anterior a su vencimiento resultante.
-   */
   @Query(
       value =
           """

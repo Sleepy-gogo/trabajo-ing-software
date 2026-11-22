@@ -93,4 +93,8 @@ Las escrituras requieren CSRF. Las tablas forman parte de `V1__esquema_inicial.s
 
 ## Verificación
 
-Hay tests unitarios del panel de indicadores (comparaciones, meses, conclusiones), del informe de actividad y del registro, tests HTTP del panel (ADMIN sí, USUARIO y STAFF no), tests React de los gráficos calculados con las filas guardadas y tests unitarios de preguntas, permisos y validaciones de Control, filtros/CSV/instantáneas, tests HTTP de autorización y CSRF, y tests React de generación, errores, publicación y envío real. `scripts/smoke_cierre.py` verifica las consultas SQL contra PostgreSQL y el recorrido HTTP de pago efectivo, renovación única, permisos, cuatro informes, CSV, historial, cierre, respuestas concurrentes y estadísticas.
+Hay tests unitarios del panel de indicadores, del informe y registro de actividad,
+y de las validaciones de encuestas, filtros, CSV e instantáneas. Los tests HTTP
+cubren los permisos del panel y CSRF. Los tests de React comprueban los gráficos
+con las filas guardadas, la generación de informes, los errores, la publicación
+y el envío de encuestas.

@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Panel de indicadores de administración. La configuración de seguridad lo limita a ADMIN. */
 @RestController
 @RequestMapping("/api/reportes/indicadores")
 public class IndicadoresController {

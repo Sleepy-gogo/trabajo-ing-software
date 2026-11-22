@@ -11,7 +11,6 @@ const formats: Record<SummaryChart["unit"], (value: number) => string> = {
   percent: (v) => `${v} %`,
 }
 
-/** Resumen y gráficos del informe, calculados con sus filas guardadas. */
 export function ReportCharts({ report }: { report: Report }) {
   const summary = summarize(report)
   return (

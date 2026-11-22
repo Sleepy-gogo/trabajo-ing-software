@@ -19,7 +19,6 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-/** Datos específicos de socio que complementan a un usuario registrado. */
 @Entity
 @Table(name = "socios")
 public class Socio {
@@ -80,17 +79,12 @@ public class Socio {
     return relacionUnse;
   }
 
-  /**
-   * Una persona externa no declara un vínculo con la UNSE, por lo que no hay nada que verificar.
-   * Las demás relaciones esperan la revisión de administración.
-   */
   public static EstadoVerificacionUnse verificacionInicial(RelacionUnse relacion) {
     return relacion == RelacionUnse.EXTERNO
         ? EstadoVerificacionUnse.VERIFICADA
         : EstadoVerificacionUnse.PENDIENTE;
   }
 
-  /** Solo una relación verificada habilita el ingreso de un usuario común al sistema. */
   public boolean habilitaIngreso() {
     return estadoVerificacionUnse == EstadoVerificacionUnse.VERIFICADA;
   }

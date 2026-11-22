@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Panel de indicadores de un período, comparado con el período anterior de igual duración. */
 public record IndicadoresDetalle(
     LocalDate desde,
     LocalDate hasta,
@@ -21,10 +20,6 @@ public record IndicadoresDetalle(
     List<String> conclusiones,
     List<ActividadDetalle> ultimasAcciones) {
 
-  /**
-   * Valor del período y del anterior. La variación es porcentual, salvo para la tasa de
-   * cancelación, donde es la diferencia en puntos. Es {@code null} si no hay base de comparación.
-   */
   public record Indicador(
       String clave,
       String nombre,
@@ -37,7 +32,6 @@ public record IndicadoresDetalle(
 
   public record UsoEspacio(String espacio, long reservas, BigDecimal horas, BigDecimal ingresos) {}
 
-  /** Día ISO (1 = lunes) y hora de inicio de la franja de una hora. */
   public record CeldaDemanda(int dia, int hora, long reservas) {}
 
   public record Asistencia(long terminadas, long conIngreso, BigDecimal porcentaje) {}

@@ -12,11 +12,6 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * Registro de una acción de un usuario. No referencia a la tabla de usuarios con una clave foránea:
- * el historial se conserva aunque la cuenta cambie, y los intentos fallidos pueden no corresponder
- * a ninguna cuenta.
- */
 @Entity
 @Table(name = "registros_actividad")
 public class RegistroActividad {

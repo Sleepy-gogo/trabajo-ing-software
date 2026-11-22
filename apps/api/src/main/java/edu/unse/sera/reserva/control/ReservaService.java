@@ -102,7 +102,6 @@ public class ReservaService {
     if (solicitud.claveSolicitud() == null || solicitud.medioPago() == null) {
       throw new IllegalArgumentException("Indicá el medio de pago y la clave de solicitud.");
     }
-    // El mismo orden de locks protege tanto el horario como el saldo de tickets.
     Usuario usuario = bloquearUsuario(actor);
     var existente = reservas.findByUsuarioIdAndClaveSolicitud(actor, solicitud.claveSolicitud());
     if (existente.isPresent()) {
@@ -202,7 +201,6 @@ public class ReservaService {
     return detalle(reserva);
   }
 
-  /** Describe la reserva sin datos de pago, por ejemplo "Cancha, 20/11/2026 de 18:00 a 19:00". */
   private static String describir(Reserva r) {
     return r.getEspacio().getNombre()
         + ", "
@@ -338,7 +336,6 @@ public class ReservaService {
   }
 
   private Reserva bloquear(UUID id) {
-    // Consultar solo el titular antes de tomar el lock evita cargar un estado desactualizado.
     UUID titular = reservas.titular(id).orElseThrow(ReservaNoEncontradaException::new);
     bloquearUsuario(titular);
     Reserva reserva = buscar(id);

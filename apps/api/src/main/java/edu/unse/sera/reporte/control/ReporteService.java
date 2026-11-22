@@ -89,7 +89,6 @@ public class ReporteService {
       throw new IllegalArgumentException(
           "El informe supera 5000 filas. Reducí el período o agregá filtros.");
     }
-    // Se convierten tipos JDBC a valores JSON antes de guardar la instantánea.
     List<Map<String, Object>> normalizadas = filas.stream().map(this::normalizar).toList();
     Map<String, Object> resumen = new LinkedHashMap<>();
     resumen.put("registros", filas.size());

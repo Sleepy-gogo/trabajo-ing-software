@@ -9,10 +9,6 @@ import {
 export const SERIES_1 = "#2a78d6"
 export const SERIES_2 = "#eb6834"
 
-/**
- * Barras horizontales de una sola serie, para comparar cantidades entre categorías. El título
- * de la tarjeta nombra la serie, así que no lleva leyenda.
- */
 export function HorizontalBars({
   data,
   label,

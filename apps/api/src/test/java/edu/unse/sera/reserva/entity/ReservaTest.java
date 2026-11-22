@@ -186,7 +186,6 @@ class ReservaTest {
             "EXTERNO",
             UUID.randomUUID(),
             ahora);
-    // La reserva pendiente retiene el horario como máximo hasta su inicio.
     assertThat(r.getVenceEn()).isEqualTo(ahora.plusMinutes(40));
   }
 

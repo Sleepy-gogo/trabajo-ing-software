@@ -54,7 +54,6 @@ export const reportStates: Record<ReportType, string[]> = {
   uso_servicios: [],
   actividad: Object.keys(activityLabels),
 }
-/** Etiqueta legible de un estado o tipo de acción de los filtros. */
 export function stateLabel(value: string) {
   return (
     activityLabels[value as keyof typeof activityLabels] ??

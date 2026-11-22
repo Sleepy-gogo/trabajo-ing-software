@@ -57,7 +57,6 @@ export function MembershipsPage() {
         : null
     },
     onError: async () => {
-      // El alta local puede haber terminado aunque Mercado Pago rechace el checkout.
       await client.invalidateQueries({ queryKey: ["my-member"] })
       await client.invalidateQueries({ queryKey: ["payments"] })
       await client.invalidateQueries({ queryKey: ["membership-billing"] })

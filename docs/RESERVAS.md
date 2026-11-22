@@ -111,8 +111,8 @@ tarifas nuevas no alteran el precio guardado de reservas anteriores.
 Desde `apps/api`: `./mvnw spotless:apply verify` (en Windows, `mvnw.cmd`).
 Desde `apps/web`: `pnpm typecheck`, `pnpm lint` y `pnpm build` (incluye Vitest).
 
-La prueba `python scripts/smoke_reservas.py` usa HTTP real y PostgreSQL. Preparar
-una base vacía `sera_reservas_test` en el Docker local e iniciar la API con:
+Para probar por HTTP con PostgreSQL, preparar una base vacía
+`sera_reservas_test` en el Docker local e iniciar la API con estos comandos.
 
 ```powershell
 $env:SPRING_DOCKER_COMPOSE_ENABLED='false'
@@ -121,8 +121,7 @@ $env:SPRING_DATASOURCE_URL='jdbc:postgresql://localhost:5432/sera_reservas_test'
 ```
 
 El soporte automático de Compose debe estar desactivado en esta prueba porque
-sus datos de conexión reemplazan la URL de la base aislada. El script comprueba
-el destino antes de promover su cuenta ficticia a administrador. No borra datos.
+sus datos de conexión reemplazan la URL de la base aislada.
 
 Las pruebas del proveedor con respuestas controladas cubren preferencia, firma,
 importe incorrecto, cobro repetido y cobro tardío.
@@ -173,7 +172,6 @@ iconos y colores distintos; se actualizan mediante las consultas periódicas exi
 Para probar ingreso simultáneo contra PostgreSQL, iniciar el JAR desde `apps/api`
 con `--server.port=4501 --spring.docker.compose.enabled=false` y
 `--spring.datasource.url=jdbc:postgresql://localhost:5432/sera_reservas_test`.
-Desde la raíz, ejecutar `python scripts/smoke_accesos.py` antes de las 23:00.
-El script comprueba la base aislada, crea sus propios datos, coloca su reserva
-ficticia en el horario actual y confirma dos ingresos concurrentes. Ambos deben
-conservar el mismo instante y operador; una validación posterior rechaza el QR.
+Crear una reserva de prueba confirmada en el horario actual y enviar dos
+confirmaciones concurrentes con el mismo código. Ambas deben devolver el mismo
+instante y operador. Una validación posterior debe rechazar el QR.

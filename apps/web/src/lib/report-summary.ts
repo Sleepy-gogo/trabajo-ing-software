@@ -19,7 +19,6 @@ const text = (value: unknown) =>
     .replace(/^./, (c) => c.toUpperCase()) || "Sin dato"
 const number = (value: unknown) => Number(value ?? 0) || 0
 
-/** Agrupa filas por una columna y suma un valor (o cuenta filas), de mayor a menor. */
 export function groupBy(
   rows: Row[],
   key: string,
@@ -38,10 +37,6 @@ export function groupBy(
 
 const inactive = new Set(["CANCELADA", "VENCIDA"])
 
-/**
- * Resumen y datos de los gráficos de un informe. Se calculan con las filas guardadas, así que
- * un informe abierto más tarde muestra los mismos valores que su tabla.
- */
 export function summarize(report: Report): ReportSummary {
   const rows = report.filas
   const count = { label: "Registros", value: String(rows.length) }

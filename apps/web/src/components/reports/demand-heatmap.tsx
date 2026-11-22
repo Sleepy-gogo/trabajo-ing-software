@@ -11,7 +11,6 @@ const dayNames = [
   "domingo",
 ]
 
-/** Mapa de calor de una sola tonalidad: más oscuro significa más reservas en esa hora. */
 export function DemandHeatmap({
   cells,
 }: {

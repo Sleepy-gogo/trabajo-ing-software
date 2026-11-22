@@ -24,7 +24,6 @@ import { reservationsApi, type BookingInput } from "@/lib/reservations-api"
 import type { PaymentMethod } from "@/lib/payments-api"
 import { ApiError } from "@/lib/users-api"
 
-/** Duración pedida desde la consulta del espacio; si falta o no es válida, una hora. */
 function requestedHours(value: string | null) {
   const hours = Number(value)
   return Number.isInteger(hours) && hours >= 1 && hours <= 24 ? hours : 1
@@ -47,7 +46,6 @@ export function BookingPage() {
     hours: requestedHours(params.get("hours")),
   }))
   const { start, hours } = selection
-  // Si la consulta del espacio ya trajo el horario, el formulario arranca con todo elegido.
   const [editingSlot, setEditingSlot] = useState(
     () => !(params.get("space") && params.get("date") && params.get("start"))
   )
@@ -75,7 +73,6 @@ export function BookingPage() {
   const slots = calendar.data?.franjas ?? []
   const fits = selectionFits(slots, start, hours)
   const end = endTime(start, hours)
-  // Un horario que llegó elegido pero ya no está libre vuelve a mostrar el selector.
   if (!editingSlot && calendar.data && !calendar.isFetching && !fits)
     setEditingSlot(true)
   const showEditor = editingSlot

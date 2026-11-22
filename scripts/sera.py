@@ -85,7 +85,6 @@ def free_port(port):
 
 
 def local_environment():
-    # La conexión local tiene prioridad sobre el entorno.
     return {**os.environ, "SPRING_DATASOURCE_URL": "jdbc:postgresql://localhost:5432/sera",
             "SPRING_DATASOURCE_USERNAME": "sera", "SPRING_DATASOURCE_PASSWORD": "sera",
             "SPRING_PROFILES_ACTIVE": "dev", "SPRING_DOCKER_COMPOSE_ENABLED": "false",
@@ -101,7 +100,6 @@ def stop(process):
     if process.poll() is not None:
         return
     if os.name == "nt":
-        # Solo procesos hijos iniciados por esta ejecución.
         subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False)
     else:
         os.killpg(process.pid, signal.SIGTERM)
@@ -135,7 +133,6 @@ def password():
 
 
 def reset_database():
-    # El reinicio afecta únicamente a la base local sera.
     docker("up", "-d", "--wait", "postgres")
     for port in (4500, 4501):
         free_port(port)
@@ -211,7 +208,6 @@ def main():
         if args.confirm != "REINICIAR-SERA-LOCAL":
             parser.error("reset-demo requiere --confirm REINICIAR-SERA-LOCAL. Borra los datos de la base local sera y guarda un respaldo.")
         demo_password = password()
-        # Validar artefactos y puertos antes del cambio destructivo.
         if len(list((API / "target").glob("sera-*.jar"))) != 1:
             raise RuntimeError("Ejecutá setup o verify antes de reiniciar la base.")
         if not args.once:

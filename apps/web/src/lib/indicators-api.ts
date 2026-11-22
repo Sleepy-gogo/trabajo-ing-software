@@ -72,7 +72,6 @@ function iso(date: Date) {
   return date.toISOString().slice(0, 10)
 }
 
-/** Período que termina hoy (fecha de Argentina) para cada opción del panel. */
 export function periodRange(period: PeriodKey, today: string) {
   const end = new Date(`${today}T12:00:00Z`)
   const start = new Date(end)

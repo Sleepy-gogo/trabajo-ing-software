@@ -61,10 +61,6 @@ public class CalendarioService {
     return consultar(id, fecha, usuarioId, OffsetDateTime.now(Reserva.ZONA));
   }
 
-  /**
-   * Calcula las franjas libres de una fecha. Las de hoy empiezan desde el primer horario que
-   * respeta la anticipación mínima de una reserva hecha en {@code ahora}.
-   */
   @Transactional(readOnly = true)
   public Calendario consultar(UUID id, LocalDate fecha, UUID usuarioId, OffsetDateTime ahora) {
     var espacio = espacios.findById(id).orElseThrow(() -> new EspacioNoEncontradoException(id));

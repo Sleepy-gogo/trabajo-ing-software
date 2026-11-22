@@ -217,7 +217,6 @@ export function ReservationDetails({
     )
       return
     verifiedReturn.current = attempt
-    // El ID de retorno no acredita el pago; la API verifica el cobro.
     verifyPayment(id)
   }, [r.id, r.medioPago, r.estadoPago, returnPaymentId, verifyPayment])
   const future = r.cancelable

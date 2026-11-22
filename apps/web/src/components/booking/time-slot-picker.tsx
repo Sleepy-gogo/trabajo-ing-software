@@ -13,10 +13,6 @@ import {
 export type SlotSelection = { start: string; hours: number }
 type Slot = { desde: string; hasta: string }
 
-/**
- * Selector único de horario: los inicios del día como botones y la duración con "−" y "+".
- * Marca el rango completo y nunca descarta el inicio al cambiar la duración.
- */
 export function TimeSlotPicker({
   slots,
   value,

@@ -19,7 +19,6 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-/** Membresía contratada por un socio. Su vencimiento determina la vigencia. */
 @Entity
 @Table(name = "membresias")
 public class Membresia {

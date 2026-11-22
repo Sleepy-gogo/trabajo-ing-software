@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-/** Acceso a persistencia de niveles de membresía. */
 public interface NivelMembresiaRepository extends JpaRepository<NivelMembresia, UUID> {
   boolean existsByNombreIgnoreCaseAndIdNot(String nombre, UUID id);
 

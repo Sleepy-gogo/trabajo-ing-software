@@ -1,5 +1,3 @@
--- Historial de actividad de los usuarios. usuario_id no tiene clave foránea para conservar
--- el registro de intentos de inicio de sesión con correos que no pertenecen a ninguna cuenta.
 CREATE TABLE registros_actividad (
     id UUID NOT NULL,
     usuario_id UUID,

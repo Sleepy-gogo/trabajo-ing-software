@@ -24,10 +24,6 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Calcula el panel de indicadores de administración. Las consultas agregan los datos en PostgreSQL;
- * este servicio arma las comparaciones y las conclusiones en texto.
- */
 @Service
 @Transactional(readOnly = true)
 public class IndicadoresService {
@@ -179,7 +175,6 @@ public class IndicadoresService {
         .toList();
   }
 
-  /** Muestra al menos los últimos seis meses para que la tendencia se pueda leer. */
   private List<IngresoMensual> ingresosPorMes(LocalDate desde, LocalDate hasta) {
     YearMonth ultimo = YearMonth.from(hasta);
     YearMonth primero = YearMonth.from(desde);

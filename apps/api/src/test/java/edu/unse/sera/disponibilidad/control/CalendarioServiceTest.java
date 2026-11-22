@@ -96,7 +96,6 @@ class CalendarioServiceTest {
   void hoyNoOfreceHorariosQueEmpiezanEnMenosDeCuarentaMinutos() {
     LocalDate hoy = LocalDate.of(2026, 11, 19);
     abiertoTodoElDia();
-    // A las 10:00:30 el primer inicio admitido es 10:41 (40 minutos, redondeado al minuto).
     var franjas = service.consultar(id, hoy, actor, instante(hoy, 10, 0, 30)).franjas();
     assertThat(franjas).containsExactly(new CalendarioService.Franja(LocalTime.of(10, 41), FIN));
   }

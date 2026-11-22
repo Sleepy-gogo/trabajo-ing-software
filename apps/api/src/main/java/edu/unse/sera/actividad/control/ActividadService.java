@@ -19,10 +19,6 @@ public class ActividadService {
     this.registros = registros;
   }
 
-  /**
-   * Guarda la acción en una transacción propia. Así queda registrado también un intento de inicio
-   * de sesión rechazado, aunque la operación que lo originó termine con una excepción.
-   */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void registrar(UUID usuarioId, String email, TipoActividad tipo, String detalle) {
     registros.save(

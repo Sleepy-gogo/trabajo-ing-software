@@ -161,7 +161,6 @@ public class Pago {
     this.estado = EstadoPago.PENDIENTE;
   }
 
-  /** Las cuotas recurrentes conservan la contratación y tarifa de la suscripción original. */
   public Pago nuevaCuotaSuscripcion() {
     if (concepto != ConceptoPago.CUOTA_MENSUAL || medioPago != MedioPago.MERCADO_PAGO) {
       throw new IllegalStateException("El pago no pertenece a una suscripción mensual.");

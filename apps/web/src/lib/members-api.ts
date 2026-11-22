@@ -116,7 +116,6 @@ export const membersApi = {
   audit: (id: string, signal?: AbortSignal) =>
     api<Audit[]>(`/socios/${id}/historial`, { signal }),
 }
-/** Quien se declara externo no tiene una relación con la UNSE que verificar. */
 export function needsVerification(relation: Relationship) {
   return relation !== "EXTERNO"
 }

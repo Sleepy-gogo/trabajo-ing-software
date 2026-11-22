@@ -212,7 +212,6 @@ export function LoginPage() {
       navigate(destination, { replace: true })
     },
     onError: (error) => {
-      // Con la relación sin verificar, el servidor explica qué tiene que hacer la persona.
       const unverified =
         error instanceof ApiError && error.code === "relacion_no_verificada"
       setBlocked(unverified)

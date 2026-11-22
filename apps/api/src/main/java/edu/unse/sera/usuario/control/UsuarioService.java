@@ -74,11 +74,6 @@ public class UsuarioService {
     }
   }
 
-  /**
-   * Comprueba las credenciales y registra el intento en el historial de actividad. Un usuario común
-   * necesita además una relación con la UNSE verificada. El motivo del bloqueo solo se informa
-   * cuando la contraseña es correcta, para no revelar el estado de una cuenta ajena.
-   */
   @Transactional(readOnly = true)
   public Optional<UsuarioDetalle> autenticar(String email, String password) {
     String emailNormalizado = normalizarEmail(email);
@@ -134,7 +129,6 @@ public class UsuarioService {
         .map(this::toResponse);
   }
 
-  /** ADMIN y STAFF no dependen de una relación declarada: sus roles los asigna administración. */
   private Optional<EstadoVerificacionUnse> relacionSinVerificar(Usuario usuario) {
     if (usuario.getRol() != RolUsuario.USUARIO) {
       return Optional.empty();

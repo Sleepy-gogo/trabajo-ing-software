@@ -2,7 +2,6 @@ package edu.unse.sera.usuario.control;
 
 import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 
-/** La persona declaró una relación con la UNSE que administración todavía no confirmó. */
 public class RelacionNoVerificadaException extends RuntimeException {
   private final EstadoVerificacionUnse estado;
 

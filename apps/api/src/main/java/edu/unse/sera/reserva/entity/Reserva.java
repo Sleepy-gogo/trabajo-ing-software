@@ -30,7 +30,6 @@ import java.util.UUID;
 public class Reserva {
   public static final ZoneId ZONA = ZoneId.of("America/Argentina/Buenos_Aires");
 
-  /** Tiempo mínimo entre el momento de reservar y el inicio del horario elegido. */
   public static final Duration ANTICIPACION_MINIMA = Duration.ofMinutes(40);
 
   private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
@@ -140,11 +139,6 @@ public class Reserva {
     }
   }
 
-  /**
-   * Primer inicio admitido para una reserva hecha en {@code ahora}, en la hora local del
-   * polideportivo y redondeado hacia arriba al minuto. Incluye la fecha porque cerca de la
-   * medianoche el primer horario posible ya corresponde al día siguiente.
-   */
   public static LocalDateTime inicioMasTemprano(OffsetDateTime ahora) {
     LocalDateTime limite =
         ahora.atZoneSameInstant(ZONA).toLocalDateTime().plus(ANTICIPACION_MINIMA);

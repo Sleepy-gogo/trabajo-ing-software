@@ -1,17 +1,13 @@
-# Sistema operativo
 .DS_Store
 Thumbs.db
 
-# IDE
 .idea/
 *.iml
 .vscode/
 
-# Java / Maven
 **/target/
 *.class
 
-# Node
 **/node_modules/
 **/dist/
 **/.vite/
@@ -19,31 +15,24 @@ Thumbs.db
 **/.cache/
 **/.eslintcache/
 
-# Archivo local del proyecto
 /sera.zip
 
-# Entorno y credenciales
 .env
 .env.*
 !.env.example
 
-# Registros de ejecución
 *.log
 
-# Respaldos de base de datos
 *.sql.dump
 *.dump
 
-# ngrok
 .ngrok2/
 
-# Caché de Python
 __pycache__/
 *.pyc
 
-# Archivos de ejecución local
 .sera/
 
-# Archivos temporales
 /plan.html
 /.github/modernize/
+~$*.docx

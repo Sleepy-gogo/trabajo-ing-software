@@ -132,8 +132,3 @@ cuentas inactivas ni claves de pago de otra contratación.
 La interfaz actualiza estado, cobro pendiente e historial después de cancelar,
 contratar o confirmar un cobro. Permite verificar Mercado Pago con membresías
 activas o vencidas y evita iniciar efectivo si hay una suscripción vigente.
-
-`scripts/smoke_membresias.py` comprueba permisos, confirmación concurrente,
-cancelación repetida, nueva contratación, renovación y pendientes que no aparecen
-en la primera página del historial. Se ejecuta contra una base local de pruebas;
-no realiza cobros externos.
