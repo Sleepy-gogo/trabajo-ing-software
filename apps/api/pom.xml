@@ -160,7 +160,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!-- Formato: mvnw spotless:apply y spotless:check. -->
 			<plugin>
 				<groupId>com.diffplug.spotless</groupId>
 				<artifactId>spotless-maven-plugin</artifactId>
@@ -185,7 +184,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!-- Estilo: mvnw checkstyle:check. -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-checkstyle-plugin</artifactId>
@@ -220,7 +218,6 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
 					<systemPropertyVariables>
-						<!-- UTC evita alias de zona horaria incompatibles con PostgreSQL. -->
 						<user.timezone>UTC</user.timezone>
 					</systemPropertyVariables>
 				</configuration>

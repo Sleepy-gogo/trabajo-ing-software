@@ -6,7 +6,6 @@ import edu.unse.sera.socio.entity.RelacionUnse;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/** Proyección de lectura que combina usuario, socio, nivel y membresía. */
 public record SocioDetalle(
     UUID id,
     UUID usuarioId,

@@ -1,5 +1,7 @@
 package edu.unse.sera.socio.control;
 
+import edu.unse.sera.actividad.control.ActividadService;
+import edu.unse.sera.actividad.entity.TipoActividad;
 import edu.unse.sera.membresia.control.MembresiaDetalle;
 import edu.unse.sera.membresia.control.MembresiaNoEncontradaException;
 import edu.unse.sera.membresia.entity.EstadoMembresia;
@@ -39,6 +41,7 @@ public class SocioService {
   private final UsuarioService usuarios;
   private final PagoRepository pagos;
   private final SuscripcionMercadoPagoService suscripcionesMercadoPago;
+  private final ActividadService actividad;
 
   public SocioService(
       SocioRepository socios,
@@ -47,7 +50,8 @@ public class SocioService {
       CambioSocioRepository cambios,
       UsuarioService usuarios,
       PagoRepository pagos,
-      SuscripcionMercadoPagoService suscripcionesMercadoPago) {
+      SuscripcionMercadoPagoService suscripcionesMercadoPago,
+      ActividadService actividad) {
     this.socios = socios;
     this.membresias = membresias;
     this.niveles = niveles;
@@ -55,6 +59,7 @@ public class SocioService {
     this.usuarios = usuarios;
     this.pagos = pagos;
     this.suscripcionesMercadoPago = suscripcionesMercadoPago;
+    this.actividad = actividad;
   }
 
   private Socio buscar(UUID id) {
@@ -93,7 +98,7 @@ public class SocioService {
     if (socios.findByUsuarioId(usuarioId).isPresent()) {
       throw new IllegalStateException("La persona ya está registrada como socio.");
     }
-    Socio s = new Socio(usuario, relacion, EstadoVerificacionUnse.PENDIENTE, identificador);
+    Socio s = new Socio(usuario, relacion, Socio.verificacionInicial(relacion), identificador);
     socios.save(s);
     auditar(s, actor, "Alta de socio", "Sin membresía");
     return detalle(s);
@@ -112,9 +117,13 @@ public class SocioService {
   }
 
   @Transactional(readOnly = true)
-  public List<SocioDetalle> listar(String criterio, EstadoMembresia estado, RelacionUnse relacion) {
+  public List<SocioDetalle> listar(
+      String criterio,
+      EstadoMembresia estado,
+      RelacionUnse relacion,
+      EstadoVerificacionUnse verificacion) {
     String q = criterio == null ? "" : criterio.trim().toLowerCase(java.util.Locale.ROOT);
-    return socios.buscar(q, estado, relacion).stream().map(this::detalle).toList();
+    return socios.buscar(q, estado, relacion, verificacion).stream().map(this::detalle).toList();
   }
 
   public SocioDetalle actualizar(
@@ -128,10 +137,25 @@ public class SocioService {
       UUID actor) {
     Socio s = buscar(id);
     String antes = resumen(s);
-    if (usuarios.buscar(actor).getRol() != RolUsuario.ADMIN) {
+    var administrador = usuarios.buscar(actor);
+    if (administrador.getRol() != RolUsuario.ADMIN) {
       throw new OperacionNoPermitidaException();
     }
+    EstadoVerificacionUnse verificacionAnterior = s.getEstadoVerificacionUnse();
     s.actualizarDatos(relacion, verificacion, identificador);
+    if (verificacionAnterior != verificacion) {
+      actividad.registrar(
+          actor,
+          administrador.getEmail(),
+          TipoActividad.VERIFICACION_ACTUALIZADA,
+          s.getUsuario().getNombreCompleto()
+              + " ("
+              + s.getUsuario().getEmail()
+              + "): "
+              + etiqueta(verificacionAnterior)
+              + " → "
+              + etiqueta(verificacion));
+    }
     if (s.getMembresia() != null) {
       if (nivelId == null || estado == null) {
         throw new IllegalArgumentException("Indicá nivel y estado de la membresía existente.");
@@ -210,6 +234,14 @@ public class SocioService {
                 new CambioSocioDetalle(
                     c.getId(), c.getResponsableId(), c.getMotivo(), c.getDetalle(), c.getFecha()))
         .toList();
+  }
+
+  private static String etiqueta(EstadoVerificacionUnse estado) {
+    return switch (estado) {
+      case PENDIENTE -> "pendiente";
+      case VERIFICADA -> "verificada";
+      case RECHAZADA -> "rechazada";
+    };
   }
 
   private String resumen(Socio s) {

@@ -70,7 +70,6 @@ public class MercadoPagoGateway {
     try {
       comprador = emailComprador(email);
     } catch (RuntimeException e) {
-      // No se envió el alta: corregir la configuración permite reintentar sin duplicar.
       throw new MercadoPagoSolicitudRechazadaException(e.getMessage(), e);
     }
     var solicitud =

@@ -1,5 +1,10 @@
 import { SelectField, Field } from "@/components/shared/real-data"
-import { relationships, label, type Relationship } from "@/lib/members-api"
+import {
+  relationships,
+  label,
+  needsVerification,
+  type Relationship,
+} from "@/lib/members-api"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ApiError, usersApi } from "@/lib/users-api"
 import { homeFor } from "@/hooks/use-session"
@@ -192,6 +197,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [error, setError] = useState("")
+  const [blocked, setBlocked] = useState(false)
   const client = useQueryClient()
   const login = useMutation({
     mutationFn: usersApi.login,
@@ -205,17 +211,24 @@ export function LoginPage() {
           : homeFor(user.rol)
       navigate(destination, { replace: true })
     },
-    onError: (error) =>
+    onError: (error) => {
+      const unverified =
+        error instanceof ApiError && error.code === "relacion_no_verificada"
+      setBlocked(unverified)
       setError(
-        error instanceof ApiError && Object.keys(error.fields).length
+        !unverified &&
+          error instanceof ApiError &&
+          Object.keys(error.fields).length
           ? Object.values(error.fields).join(" ")
           : error.message
-      ),
+      )
+    },
   })
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (login.isPending) return
     setError("")
+    setBlocked(false)
     const data = new FormData(event.currentTarget)
     login.mutate({
       email: String(data.get("email")).trim(),
@@ -257,7 +270,11 @@ export function LoginPage() {
           <p
             id="login-error"
             role="alert"
-            className="rounded-lg bg-rose-50 p-3 text-xs leading-relaxed text-rose-800"
+            className={
+              blocked
+                ? "rounded-lg bg-amber-50 p-3 text-xs leading-relaxed text-amber-900"
+                : "rounded-lg bg-rose-50 p-3 text-xs leading-relaxed text-rose-800"
+            }
           >
             {error}
           </p>
@@ -295,6 +312,8 @@ export function LoginPage() {
 export function RegisterPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
+  const [relation, setRelation] = useState<Relationship>("EXTERNO")
+  const pending = needsVerification(relation)
   const registration = useMutation({
     mutationFn: usersApi.register,
     onSuccess: () => setSuccess(true),
@@ -323,7 +342,7 @@ export function RegisterPage() {
     setError("")
     if (registration.isPending) return
     registration.mutate({
-      relacionUnse: String(data.get("relacionUnse")) as Relationship,
+      relacionUnse: relation,
       identificadorUnse: String(data.get("identificadorUnse") || ""),
       nombreCompleto: `${String(data.get("first-name")).trim()} ${String(data.get("last-name")).trim()}`,
       email: String(data.get("email")).trim(),
@@ -335,8 +354,16 @@ export function RegisterPage() {
     <AuthLayout wide>
       {success ? (
         <FeedbackState
-          title="Tu cuenta está lista"
-          description="Tu cuenta se registró. Iniciá sesión para consultar y actualizar tus datos."
+          title={
+            pending
+              ? "Tu cuenta espera la verificación"
+              : "Tu cuenta está lista"
+          }
+          description={
+            pending
+              ? `Registramos tu cuenta como ${label(relation).toLowerCase()}. Administración tiene que verificar tu relación con la UNSE y vas a poder iniciar sesión cuando la confirme.`
+              : "Tu cuenta se registró como externa y ya podés usarla. Iniciá sesión para reservar espacios y contratar membresías."
+          }
           action={
             <Button
               nativeButton={false}
@@ -418,7 +445,11 @@ export function RegisterPage() {
               <SelectField
                 label="Relación con la UNSE"
                 name="relacionUnse"
-                defaultValue="EXTERNO"
+                value={relation}
+                onChange={(event) => {
+                  setRelation(event.target.value as Relationship)
+                  setError("")
+                }}
               >
                 {relationships.map((r) => (
                   <option key={r} value={r}>
@@ -432,9 +463,17 @@ export function RegisterPage() {
                 maxLength={50}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Tu relación con la UNSE quedará pendiente de verificación por
-              administración.
+            <p
+              role="note"
+              className={
+                pending
+                  ? "rounded-lg bg-amber-50 p-3 text-xs leading-relaxed text-amber-900"
+                  : "rounded-lg bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-900"
+              }
+            >
+              {pending
+                ? "Administración tiene que verificar tu relación con la UNSE. Hasta que la confirme no vas a poder iniciar sesión."
+                : "Como externo no hay una relación que verificar: vas a poder usar tu cuenta apenas la crees."}
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <PasswordInput id="password" autoComplete="new-password" />

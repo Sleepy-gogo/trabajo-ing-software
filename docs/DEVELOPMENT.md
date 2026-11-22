@@ -138,9 +138,8 @@ cd apps/api
 Abrir `apps/api/target/site/jacoco/index.html` desde la raíz. El umbral del 100%
 de líneas y ramas se aplica a autenticación, sesión y permisos.
 
-Los scripts `smoke_*.py` prueban recorridos HTTP con PostgreSQL. Su ejecución usa
-bases aisladas y no debe compartir datos con la demo. Ver
-[RESERVAS.md](RESERVAS.md) y [SOCIOS_MEMBRESIAS.md](SOCIOS_MEMBRESIAS.md).
+Para probar recorridos HTTP con PostgreSQL, usar una base aislada de la demo.
+Ver [RESERVAS.md](RESERVAS.md) y [SOCIOS_MEMBRESIAS.md](SOCIOS_MEMBRESIAS.md).
 
 ## Demostración remota
 

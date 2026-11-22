@@ -8,6 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import edu.unse.sera.actividad.control.ActividadService;
+import edu.unse.sera.actividad.entity.TipoActividad;
 import edu.unse.sera.membresia.entity.EstadoMembresia;
 import edu.unse.sera.membresia.entity.Membresia;
 import edu.unse.sera.membresia.entity.NivelMembresia;
@@ -51,6 +53,7 @@ class SocioServiceTest {
   @Mock private UsuarioService usuarios;
   @Mock private PagoRepository pagos;
   @Mock private SuscripcionMercadoPagoService suscripcionesMercadoPago;
+  @Mock private ActividadService actividad;
 
   private SocioService service;
 
@@ -58,7 +61,14 @@ class SocioServiceTest {
   void setUp() {
     service =
         new SocioService(
-            socios, membresias, niveles, cambios, usuarios, pagos, suscripcionesMercadoPago);
+            socios,
+            membresias,
+            niveles,
+            cambios,
+            usuarios,
+            pagos,
+            suscripcionesMercadoPago,
+            actividad);
   }
 
   @Test
@@ -71,6 +81,7 @@ class SocioServiceTest {
         service.registrar(usuarioId, RelacionUnse.EXTERNO, null, null, usuarioId);
 
     assertThat(detalle.membresiaId()).isNull();
+    assertThat(detalle.estadoVerificacionUnse()).isEqualTo(EstadoVerificacionUnse.VERIFICADA);
     verify(socios).save(any(Socio.class));
     verify(membresias, never()).save(any());
     verify(pagos, never()).save(any());
@@ -173,6 +184,92 @@ class SocioServiceTest {
     assertThat(membresia.getEstado()).isEqualTo(EstadoMembresia.PENDIENTE_PAGO);
     verify(pagos, never()).findAllByMembresiaId(any());
     verify(cambios, never()).save(any());
+  }
+
+  @Test
+  void altaDeUnEstudianteQuedaPendienteDeVerificacion() {
+    UUID usuarioId = UUID.randomUUID();
+    when(usuarios.buscar(usuarioId)).thenReturn(usuario(usuarioId));
+
+    SocioDetalle detalle =
+        service.registrar(usuarioId, RelacionUnse.ESTUDIANTE, "LU-1", null, usuarioId);
+
+    assertThat(detalle.estadoVerificacionUnse()).isEqualTo(EstadoVerificacionUnse.PENDIENTE);
+  }
+
+  @Test
+  void registraElCambioDeVerificacionEnLaActividad() {
+    UUID socioId = UUID.randomUUID();
+    UUID admin = UUID.randomUUID();
+    Usuario administrador = usuario(admin);
+    ReflectionTestUtils.setField(administrador, "email", "admin@example.com");
+    ReflectionTestUtils.setField(administrador, "rol", RolUsuario.ADMIN);
+    Socio socio =
+        new Socio(
+            usuario(UUID.randomUUID()),
+            RelacionUnse.ESTUDIANTE,
+            EstadoVerificacionUnse.PENDIENTE,
+            null);
+    when(socios.findById(socioId)).thenReturn(Optional.of(socio));
+    when(usuarios.buscar(admin)).thenReturn(administrador);
+
+    service.actualizar(
+        socioId,
+        RelacionUnse.ESTUDIANTE,
+        EstadoVerificacionUnse.RECHAZADA,
+        null,
+        null,
+        null,
+        "Legajo inexistente",
+        admin);
+    service.actualizar(
+        socioId,
+        RelacionUnse.EXTERNO,
+        EstadoVerificacionUnse.RECHAZADA,
+        null,
+        null,
+        null,
+        "Cambio de relación",
+        admin);
+    service.actualizar(
+        socioId,
+        RelacionUnse.EXTERNO,
+        EstadoVerificacionUnse.VERIFICADA,
+        null,
+        null,
+        null,
+        "Corrección",
+        admin);
+
+    verify(actividad)
+        .registrar(
+            admin,
+            "admin@example.com",
+            TipoActividad.VERIFICACION_ACTUALIZADA,
+            "Ada Lovelace (ada@example.com): pendiente → rechazada");
+    verify(actividad)
+        .registrar(
+            admin,
+            "admin@example.com",
+            TipoActividad.VERIFICACION_ACTUALIZADA,
+            "Ada Lovelace (ada@example.com): rechazada → verificada");
+    verify(actividad, org.mockito.Mockito.times(2)).registrar(any(), any(), any(), any());
+  }
+
+  @Test
+  void listaSociosFiltradosPorVerificacion() {
+    when(socios.buscar("", null, null, EstadoVerificacionUnse.PENDIENTE))
+        .thenReturn(
+            List.of(
+                new Socio(
+                    usuario(UUID.randomUUID()),
+                    RelacionUnse.DOCENTE,
+                    EstadoVerificacionUnse.PENDIENTE,
+                    null)));
+
+    assertThat(service.listar(null, null, null, EstadoVerificacionUnse.PENDIENTE))
+        .extracting(SocioDetalle::estadoVerificacionUnse)
+        .containsExactly(EstadoVerificacionUnse.PENDIENTE);
   }
 
   private Usuario usuario(UUID id) {

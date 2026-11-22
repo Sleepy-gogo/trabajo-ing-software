@@ -1,7 +1,7 @@
 export { MemberCardPage, MemberHomePage } from "../overview-live"
 export { MemberPaymentsPage } from "./membership-payments"
+export { BookingPage } from "./booking"
 export {
-  BookingPage,
   MemberReservationDetailPage,
   MemberReservationsPage,
 } from "./reservations"

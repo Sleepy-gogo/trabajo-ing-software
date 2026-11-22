@@ -121,7 +121,6 @@ public class PagoService {
     return confirmarPago(pagoId, "SERA-" + pagoId, OffsetDateTime.now(ZoneOffset.UTC));
   }
 
-  /** Solo la integración verificada con el proveedor llama este método para Mercado Pago. */
   public PagoDetalle confirmarPago(UUID pagoId, String comprobante, OffsetDateTime fechaPago) {
     Pago pago = buscar(pagoId);
     if (pago.getReservaId() != null) {

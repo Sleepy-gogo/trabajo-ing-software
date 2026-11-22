@@ -21,14 +21,17 @@ export type UserInput = Profile & {
 export class ApiError extends Error {
   status: number
   fields: Record<string, string>
+  code: string
   constructor(
     status: number,
     message: string,
-    fields: Record<string, string> = {}
+    fields: Record<string, string> = {},
+    code = ""
   ) {
     super(message)
     this.status = status
     this.fields = fields
+    this.code = code
   }
 }
 
@@ -60,13 +63,15 @@ export async function api<T>(
   })
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {
+      codigo?: string
       mensaje?: string
       campos?: Record<string, string>
     } | null
     throw new ApiError(
       response.status,
       body?.mensaje ?? "No se pudo completar la operación.",
-      body?.campos
+      body?.campos,
+      body?.codigo
     )
   }
   if (response.status === 204) return undefined as T

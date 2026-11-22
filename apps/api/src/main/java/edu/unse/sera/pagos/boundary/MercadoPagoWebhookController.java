@@ -57,9 +57,7 @@ public class MercadoPagoWebhookController {
           return ResponseEntity.badRequest().build();
         }
       }
-      default -> {
-        // Otros tópicos no modifican pagos locales.
-      }
+      default -> {}
     }
     return ResponseEntity.ok().build();
   }

@@ -17,15 +17,22 @@ import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Entity
 @Table(name = "reservas")
 public class Reserva {
   public static final ZoneId ZONA = ZoneId.of("America/Argentina/Buenos_Aires");
+
+  public static final Duration ANTICIPACION_MINIMA = Duration.ofMinutes(40);
+
+  private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -122,6 +129,21 @@ public class Reserva {
       throw new IllegalArgumentException(
           "Elegí un horario futuro, con duración en horas completas y dentro del mismo día.");
     }
+    LocalDateTime limite = inicioMasTemprano(ahora);
+    if (fecha.atTime(desde).isBefore(limite)) {
+      throw new IllegalArgumentException(
+          "Las reservas se hacen con al menos 40 minutos de anticipación. Elegí un horario desde"
+              + " las "
+              + limite.format(HORA)
+              + ".");
+    }
+  }
+
+  public static LocalDateTime inicioMasTemprano(OffsetDateTime ahora) {
+    LocalDateTime limite =
+        ahora.atZoneSameInstant(ZONA).toLocalDateTime().plus(ANTICIPACION_MINIMA);
+    LocalDateTime minuto = limite.truncatedTo(ChronoUnit.MINUTES);
+    return minuto.isBefore(limite) ? minuto.plusMinutes(1) : minuto;
   }
 
   public void aplicarTicket(Reserva origen) {

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { Plus, Pencil } from "lucide-react"
 import {
   membersApi,
@@ -27,17 +27,25 @@ import {
 } from "@/components/shared/real-data"
 import { RecordTable } from "./common"
 
+const verificationStates = ["PENDIENTE", "VERIFICADA", "RECHAZADA"]
+
 export function MembersPage() {
   const [search, setSearch] = useState("")
   const [state, setState] = useState("")
   const [relation, setRelation] = useState("")
+  const [params, setParams] = useSearchParams()
+  const requestedVerification = params.get("verificacion") ?? ""
+  const verification = verificationStates.includes(requestedVerification)
+    ? requestedVerification
+    : ""
   const [selected, setSelected] = useState<Member | null>(null)
   const [open, setOpen] = useState(false)
   const [notice, setNotice] = useState("")
   const client = useQueryClient()
   const members = useQuery({
-    queryKey: ["members", search, state, relation],
-    queryFn: ({ signal }) => membersApi.list(search, state, relation, signal),
+    queryKey: ["members", search, state, relation, verification],
+    queryFn: ({ signal }) =>
+      membersApi.list(search, state, relation, signal, verification),
   })
   const levels = useQuery({
     queryKey: ["levels", "admin"],
@@ -124,7 +132,7 @@ export function MembersPage() {
       <p role="status" className="mb-4 text-sm text-emerald-800">
         {notice}
       </p>
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+      <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Field
           label="Buscar socio"
           placeholder="Nombre, DNI o email"
@@ -156,6 +164,23 @@ export function MembersPage() {
           {relationships.map((r) => (
             <option key={r} value={r}>
               {label(r)}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label="Verificación de la relación"
+          value={verification}
+          onChange={(e) => {
+            const next = new URLSearchParams(params)
+            if (e.target.value) next.set("verificacion", e.target.value)
+            else next.delete("verificacion")
+            setParams(next, { replace: true })
+          }}
+        >
+          <option value="">Todas</option>
+          {verificationStates.map((v) => (
+            <option key={v} value={v}>
+              {label(v)}
             </option>
           ))}
         </SelectField>

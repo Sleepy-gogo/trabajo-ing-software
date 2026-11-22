@@ -49,16 +49,20 @@ def seed(database, password, base="http://localhost:4500"):
     for email, name, dni in accounts:
         try:
             user = client.login(email, password)
-        except RuntimeError:
-            user = client.call("/auth/registro", "POST", {"nombreCompleto": name, "email": email, "dni": dni, "password": password, "relacionUnse": "ESTUDIANTE"}, 201)
+        except RuntimeError as error:
+            if "relacion_no_verificada" in str(error):
+                verify_demo_accounts(database, accounts)
+                user = client.login(email, password)
+            else:
+                user = client.call("/auth/registro", "POST", {"nombreCompleto": name, "email": email, "dni": dni, "password": password, "relacionUnse": "ESTUDIANTE"}, 201)
         import uuid
         uid = str(uuid.UUID(user["id"]))
         verified = subprocess.run(["docker", "compose", "exec", "-T", "postgres", "psql", "-U", "sera", "-d", database, "-At", "-v", "ON_ERROR_STOP=1", "-c", f"SELECT count(*) FROM usuarios WHERE id='{uid}';"], cwd=ROOT, check=True, capture_output=True, text=True)
         if verified.stdout.strip() != "1":
             raise RuntimeError("La API no está conectada a la base local indicada. No se asignaron permisos ni se cargó la demo.")
-    # Asignación de roles limitada a las cuentas demo locales.
     subprocess.run(["docker", "compose", "exec", "-T", "postgres", "psql", "-U", "sera", "-d", database, "-v", "ON_ERROR_STOP=1", "-c", "UPDATE usuarios SET rol='ADMIN' WHERE email='admin@sera.local';"], cwd=ROOT, check=True, capture_output=True)
     subprocess.run(["docker", "compose", "exec", "-T", "postgres", "psql", "-U", "sera", "-d", database, "-v", "ON_ERROR_STOP=1", "-c", "UPDATE usuarios SET rol='STAFF' WHERE email='staff@sera.local';"], cwd=ROOT, check=True, capture_output=True)
+    verify_demo_accounts(database, accounts)
     client.login("admin@sera.local", password)
     levels = client.call("/niveles-membresia?soloDisponibles=false")
     if not any(n["nombre"] == "Comunidad UNSE" for n in levels):
@@ -76,6 +80,14 @@ def seed(database, password, base="http://localhost:4500"):
         client.call(f"/espacios/{sid}/tarifas", "PUT", {"tarifas": {"ESTUDIANTE": rate / 2, "DOCENTE": rate * .75, "EXTERNO": rate}})
     prepare_feedback(client, database, password, base)
     print("Demo preparada: admin@sera.local, socio@sera.local y staff@sera.local. Usan la contraseña indicada.", flush=True)
+
+
+def verify_demo_accounts(database, accounts):
+    """Verifica la relación UNSE solo de las cuentas demo, igual que la asignación de roles."""
+    emails = ", ".join(f"'{email}'" for email, _, _ in accounts)
+    sql = ("UPDATE socios SET estado_verificacion_unse='VERIFICADA', updated_at=now() "
+           f"WHERE estado_verificacion_unse <> 'VERIFICADA' AND usuario_id IN (SELECT id FROM usuarios WHERE email IN ({emails}));")
+    subprocess.run(["docker", "compose", "exec", "-T", "postgres", "psql", "-U", "sera", "-d", database, "-v", "ON_ERROR_STOP=1", "-c", sql], cwd=ROOT, check=True, capture_output=True)
 
 
 def prepare_feedback(admin, database, password, base):
@@ -102,7 +114,6 @@ def prepare_feedback(admin, database, password, base):
             "fecha": str(today + timedelta(days=1)), "desde": "10:00", "hasta": "11:00",
             "personas": 2, "medioPago": "EFECTIVO", "claveSolicitud": str(uuid.uuid5(uuid.NAMESPACE_URL, "sera-demo-reserva-utilizada"))}, 201)
         admin.call(f"/pagos/{reservation['pagoId']}/confirmacion-efectivo", "POST")
-        # Solo esta reserva demo se ajusta a una fecha histórica.
         rid = str(uuid.UUID(reservation["id"]))
         aid = str(uuid.UUID(admin.call("/usuarios/me")["id"]))
         yesterday = today - timedelta(days=1)

@@ -30,6 +30,12 @@ Suscripciones para membresías; las reservas usan Checkout Pro para un cobro ún
   ocurre antes. Un proceso periódico libera los vencimientos.
 - Se aceptan horas completas de duración, dentro de una franja disponible y sin
   cruzar medianoche. Todos los horarios corresponden a Argentina.
+- Anticipación mínima (SM-01): una reserva debe empezar al menos 40 minutos después
+  del momento en que se crea. La regla vive en `Reserva.validarHorario` y el mensaje
+  indica el primer horario posible, redondeado hacia arriba al minuto ("Elegí un
+  horario desde las 10:40"). `CalendarioService.consultar` recorta las franjas de hoy
+  con el mismo límite, calculado con fecha y hora: cerca de medianoche no ofrece
+  horarios del día que termina. Las fechas siguientes no cambian.
 - Puede reservar cualquier usuario activo, como indica CU-16. No se obliga a
   contratar membresía: no hay servicios restringidos por nivel en el modelo
   actual. Se utiliza la tarifa por relación UNSE verificada, sin agregar
@@ -67,10 +73,27 @@ Mercado Pago; nunca confía en el estado enviado por el navegador. Si la sesión
 el login conserva la ruta de la reserva y el número de pago. Los rechazos permiten reintentar dentro del plazo.
 No se implementan reembolsos automáticos ni conciliación masiva de reservas.
 
+## Selector de horario (SM-03)
+
+La consulta del espacio y el formulario de reserva usan el mismo componente
+`components/booking/time-slot-picker.tsx`. Muestra los inicios del día como botones
+y la duración con "−" y "+", marca el rango completo y no borra el inicio al cambiar
+la duración. El máximo depende de las horas libres a continuación del inicio
+(`maxHoursFrom` en `lib/booking-times.ts`); sin más horas libres, "+" se deshabilita
+y se explica. Si se elige un inicio donde la duración no entra, se ajusta a la máxima
+con un aviso.
+
+La consulta pasa `space`, `date`, `start` y `hours` al formulario
+(`pages/member/booking.tsx`), que llega con el horario elegido y solo pide personas,
+medio de pago y ticket. "Cambiar horario" vuelve a mostrar el selector. Al cambiar la
+fecha se consulta el nuevo día: si el rango sigue libre se conserva; si no, se limpia
+y se avisa.
+
 ## Recorrido para la presentación
 
-1. Ingresar como usuario y abrir Espacios → Reservar este espacio.
-2. Elegir fecha, horario y personas. Revisar tarifa, ticket y saldo a pagar.
+1. Ingresar como usuario y abrir Espacios. Elegir fecha, inicio y duración.
+2. Reservar este espacio: el formulario llega con el horario elegido. Indicar
+   personas y medio de pago. Revisar tarifa, ticket y saldo a pagar.
 3. Crear la reserva. El horario desaparece de la disponibilidad de otros usuarios.
 4. Pagar con Mercado Pago, o elegir efectivo y confirmarlo desde Administración
    → Pagos. El detalle muestra el código y QR al confirmar.
@@ -88,8 +111,8 @@ tarifas nuevas no alteran el precio guardado de reservas anteriores.
 Desde `apps/api`: `./mvnw spotless:apply verify` (en Windows, `mvnw.cmd`).
 Desde `apps/web`: `pnpm typecheck`, `pnpm lint` y `pnpm build` (incluye Vitest).
 
-La prueba `python scripts/smoke_reservas.py` usa HTTP real y PostgreSQL. Preparar
-una base vacía `sera_reservas_test` en el Docker local e iniciar la API con:
+Para probar por HTTP con PostgreSQL, preparar una base vacía
+`sera_reservas_test` en el Docker local e iniciar la API con estos comandos.
 
 ```powershell
 $env:SPRING_DOCKER_COMPOSE_ENABLED='false'
@@ -98,8 +121,7 @@ $env:SPRING_DATASOURCE_URL='jdbc:postgresql://localhost:5432/sera_reservas_test'
 ```
 
 El soporte automático de Compose debe estar desactivado en esta prueba porque
-sus datos de conexión reemplazan la URL de la base aislada. El script comprueba
-el destino antes de promover su cuenta ficticia a administrador. No borra datos.
+sus datos de conexión reemplazan la URL de la base aislada.
 
 Las pruebas del proveedor con respuestas controladas cubren preferencia, firma,
 importe incorrecto, cobro repetido y cobro tardío.
@@ -150,7 +172,6 @@ iconos y colores distintos; se actualizan mediante las consultas periódicas exi
 Para probar ingreso simultáneo contra PostgreSQL, iniciar el JAR desde `apps/api`
 con `--server.port=4501 --spring.docker.compose.enabled=false` y
 `--spring.datasource.url=jdbc:postgresql://localhost:5432/sera_reservas_test`.
-Desde la raíz, ejecutar `python scripts/smoke_accesos.py` antes de las 23:00.
-El script comprueba la base aislada, crea sus propios datos, coloca su reserva
-ficticia en el horario actual y confirma dos ingresos concurrentes. Ambos deben
-conservar el mismo instante y operador; una validación posterior rechaza el QR.
+Crear una reserva de prueba confirmada en el horario actual y enviar dos
+confirmaciones concurrentes con el mismo código. Ambas deben devolver el mismo
+instante y operador. Una validación posterior debe rechazar el QR.

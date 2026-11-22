@@ -1,6 +1,7 @@
 package edu.unse.sera.socio.persistence;
 
 import edu.unse.sera.membresia.entity.EstadoMembresia;
+import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
 import edu.unse.sera.socio.entity.Socio;
 import java.util.List;
@@ -25,6 +26,7 @@ public interface SocioRepository extends JpaRepository<Socio, UUID> {
    left join fetch s.membresia m left join fetch m.nivelMembresia n
    where (:relacion is null or s.relacionUnse = :relacion)
    and (:estado is null or m.estado = :estado)
+   and (:verificacion is null or s.estadoVerificacionUnse = :verificacion)
    and (:criterio = '' or lower(u.nombreCompleto) like concat('%', :criterio, '%')
       or lower(u.email) like concat('%', :criterio, '%') or cast(u.dni as string) = :criterio)
    order by u.nombreCompleto
@@ -32,5 +34,6 @@ public interface SocioRepository extends JpaRepository<Socio, UUID> {
   List<Socio> buscar(
       @Param("criterio") String criterio,
       @Param("estado") EstadoMembresia estado,
-      @Param("relacion") RelacionUnse relacion);
+      @Param("relacion") RelacionUnse relacion,
+      @Param("verificacion") EstadoVerificacionUnse verificacion);
 }

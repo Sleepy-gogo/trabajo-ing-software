@@ -19,7 +19,6 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-/** Datos específicos de socio que complementan a un usuario registrado. */
 @Entity
 @Table(name = "socios")
 public class Socio {
@@ -78,6 +77,16 @@ public class Socio {
 
   public RelacionUnse getRelacionUnse() {
     return relacionUnse;
+  }
+
+  public static EstadoVerificacionUnse verificacionInicial(RelacionUnse relacion) {
+    return relacion == RelacionUnse.EXTERNO
+        ? EstadoVerificacionUnse.VERIFICADA
+        : EstadoVerificacionUnse.PENDIENTE;
+  }
+
+  public boolean habilitaIngreso() {
+    return estadoVerificacionUnse == EstadoVerificacionUnse.VERIFICADA;
   }
 
   public RelacionUnse relacionParaTarifa() {

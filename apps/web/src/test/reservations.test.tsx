@@ -4,10 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 import {
-  BookingPage,
   MemberReservationsPage,
   ReservationDetails,
 } from "@/pages/member/reservations"
+import { BookingPage } from "@/pages/member/booking"
 import { reservationsApi, type Reservation } from "@/lib/reservations-api"
 import { calendarApi, spacesApi } from "@/lib/spaces-api"
 import { MemberServiceDetailPage } from "@/pages/spaces-live"
@@ -155,17 +155,13 @@ describe("Reservas conectadas", () => {
     const date = await screen.findByLabelText("Fecha de consulta")
     await user.clear(date)
     await user.type(date, "2099-10-01")
-    await user.click(await screen.findByRole("radio", { name: "10:00" }))
+    await user.click(await screen.findByRole("button", { name: "10:00" }))
     await user.click(
       screen.getByRole("link", { name: "Reservar este espacio" })
     )
     expect(
-      (
-        (await screen.findByLabelText(
-          "Horario disponible"
-        )) as HTMLSelectElement
-      ).value
-    ).toBe("10:00")
+      (await screen.findAllByText(/10:00 a 11:00/)).length
+    ).toBeGreaterThan(0)
     const review = await screen.findByRole("button", {
       name: "Revisar reserva",
     })

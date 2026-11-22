@@ -13,7 +13,6 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/** Acceso a persistencia de membresías contratadas. */
 public interface MembresiaRepository extends JpaRepository<Membresia, UUID> {
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)

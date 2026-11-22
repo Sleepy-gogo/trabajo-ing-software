@@ -67,9 +67,6 @@ const RecentReportsPage = lazy(() =>
 const ReportsPage = lazy(() =>
   import("@/pages/admin").then((m) => ({ default: m.ReportsPage }))
 )
-const SettingsPage = lazy(() =>
-  import("@/pages/admin").then((m) => ({ default: m.SettingsPage }))
-)
 const UsersPage = lazy(() =>
   import("@/pages/admin").then((m) => ({ default: m.UsersPage }))
 )
@@ -138,7 +135,6 @@ export function App() {
             <Route element={<ReportsPage />} path="reports" />
             <Route element={<AdminSurveysPage />} path="surveys" />
             <Route element={<RecentReportsPage />} path="reports/recent" />
-            <Route element={<SettingsPage />} path="settings" />
           </Route>
         </Route>
         <Route element={<Navigate replace to="/app/profile" />} path="*" />

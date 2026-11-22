@@ -1,5 +1,6 @@
 package edu.unse.sera.reporte.control;
 
+import edu.unse.sera.actividad.entity.TipoActividad;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
@@ -7,7 +8,8 @@ import java.util.UUID;
 public record ReporteFiltros(
     String tipo, LocalDate desde, LocalDate hasta, String estado, String relacion, UUID espacioId) {
   public ReporteFiltros {
-    if (tipo == null || !Set.of("socios", "reservas", "pagos", "uso_servicios").contains(tipo)) {
+    if (tipo == null
+        || !Set.of("socios", "reservas", "pagos", "uso_servicios", "actividad").contains(tipo)) {
       throw new IllegalArgumentException("Elegí un tipo de informe válido.");
     }
     if (desde == null
@@ -40,6 +42,10 @@ public record ReporteFiltros(
                   "EN_CURSO",
                   "CONSUMIDA");
           case "pagos" -> Set.of("PENDIENTE", "APROBADO", "RECHAZADO", "CANCELADO");
+          case "actividad" ->
+              java.util.Arrays.stream(TipoActividad.values())
+                  .map(Enum::name)
+                  .collect(java.util.stream.Collectors.toSet());
           default -> Set.of();
         };
     if (!estado.isEmpty() && !estados.contains(estado)) {
@@ -50,6 +56,10 @@ public record ReporteFiltros(
     }
     if (tipo.equals("socios") && espacioId != null) {
       throw new IllegalArgumentException("El informe de socios no filtra por espacio.");
+    }
+    if (tipo.equals("actividad") && (!relacion.isEmpty() || espacioId != null)) {
+      throw new IllegalArgumentException(
+          "El informe de actividad solo filtra por período y tipo de acción.");
     }
   }
 }

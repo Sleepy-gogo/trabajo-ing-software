@@ -22,7 +22,6 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-/** Plan contratable con precios por relación UNSE, beneficios y condiciones. */
 @Entity
 @Table(name = "nivel_membresias")
 public class NivelMembresia {

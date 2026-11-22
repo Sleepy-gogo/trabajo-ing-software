@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,6 +79,9 @@ public class AuthController {
   public ResponseEntity<Void> logout(HttpServletRequest request) {
     var session = request.getSession(false);
     if (session != null) {
+      if (session.getAttribute(SesionFilter.USUARIO_ID) instanceof UUID id) {
+        usuarios.registrarCierreSesion(id);
+      }
       session.invalidate();
     }
     return ResponseEntity.noContent().build();

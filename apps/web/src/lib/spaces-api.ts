@@ -45,7 +45,6 @@ export type UpdateAvailabilityInput = Pick<
   "horaDesde" | "horaHasta"
 >
 
-/** Contrato HTTP de espacios y horarios. */
 export const spacesApi = {
   list: (search = "", signal?: AbortSignal) => {
     const query = search.trim()

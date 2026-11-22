@@ -71,7 +71,6 @@ export function MemberPaymentsPage() {
   })
   useEffect(() => {
     if (payments.dataUpdatedAt > 0) {
-      // Una confirmación que llega por polling también debe actualizar la membresía.
       void client.invalidateQueries({ queryKey: ["my-member"] })
       void client.invalidateQueries({ queryKey: ["membership-billing"] })
     }

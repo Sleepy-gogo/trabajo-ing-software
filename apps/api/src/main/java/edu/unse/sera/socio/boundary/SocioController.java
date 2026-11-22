@@ -7,6 +7,7 @@ import edu.unse.sera.socio.boundary.dto.SocioResponse;
 import edu.unse.sera.socio.control.CambioSocioDetalle;
 import edu.unse.sera.socio.control.SocioDetalle;
 import edu.unse.sera.socio.control.SocioService;
+import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -56,8 +57,9 @@ public class SocioController {
   public List<SocioResponse> listar(
       @RequestParam(required = false) String buscar,
       @RequestParam(required = false) EstadoMembresia estadoMembresia,
-      @RequestParam(required = false) RelacionUnse relacionUnse) {
-    return service.listar(buscar, estadoMembresia, relacionUnse).stream()
+      @RequestParam(required = false) RelacionUnse relacionUnse,
+      @RequestParam(required = false) EstadoVerificacionUnse verificacion) {
+    return service.listar(buscar, estadoMembresia, relacionUnse, verificacion).stream()
         .map(this::response)
         .toList();
   }

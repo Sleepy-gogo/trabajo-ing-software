@@ -1,17 +1,9 @@
 import type { ReactNode } from "react"
-import {
-  ImageIcon,
-  Search,
-  Inbox,
-  CheckCircle2,
-  AlertCircle,
-  X,
-} from "lucide-react"
+import { Inbox, CheckCircle2, AlertCircle, X } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Sheet,
   SheetContent,
@@ -172,39 +164,6 @@ export function StatusBadge({
   )
 }
 
-export function ImagePlaceholder({
-  label,
-  className,
-  asset,
-  icon: Icon = ImageIcon,
-}: {
-  label: string
-  className?: string
-  asset?: string
-  icon?: LucideIcon
-}) {
-  return (
-    <div
-      data-image-placeholder={asset ?? label}
-      role="img"
-      aria-label={`Imagen pendiente: ${label}`}
-      className={cn(
-        "relative flex aspect-[16/10] items-center justify-center overflow-hidden bg-slate-100 text-slate-400",
-        className
-      )}
-    >
-      <div
-        aria-hidden="true"
-        className="absolute inset-5 rounded-md border border-current/15"
-      />
-      <div className="relative flex flex-col items-center gap-2 px-5 text-center">
-        <Icon aria-hidden="true" className="size-8 stroke-1" />
-        <span className="text-xs font-medium">{label}</span>
-      </div>
-    </div>
-  )
-}
-
 export function EmptyState({
   title = "No hay resultados",
   description = "Probá con otros filtros para encontrar lo que buscás.",
@@ -256,37 +215,6 @@ export function FeedbackState({
         {description}
       </p>
       {action}
-    </div>
-  )
-}
-
-export function DataToolbar({
-  search,
-  onSearchChange,
-  placeholder = "Buscar por nombre, DNI o email…",
-  children,
-}: {
-  search?: string
-  onSearchChange?: (value: string) => void
-  placeholder?: string
-  children?: ReactNode
-}) {
-  return (
-    <div className="mb-5 flex flex-wrap items-center gap-3">
-      <div className="relative min-w-48 flex-1 sm:max-w-sm">
-        <Search
-          aria-hidden="true"
-          className="absolute top-3 left-3 size-4 text-muted-foreground"
-        />
-        <Input
-          aria-label={placeholder}
-          className="h-10 bg-card pl-9"
-          placeholder={placeholder}
-          value={search}
-          onChange={(event) => onSearchChange?.(event.target.value)}
-        />
-      </div>
-      {children}
     </div>
   )
 }

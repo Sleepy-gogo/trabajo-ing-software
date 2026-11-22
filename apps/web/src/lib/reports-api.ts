@@ -1,6 +1,9 @@
 import { api } from "./users-api"
 
-export type ReportType = "socios" | "reservas" | "pagos" | "uso_servicios"
+import { activityLabels } from "./indicators-api"
+
+export type ReportType =
+  "socios" | "reservas" | "pagos" | "uso_servicios" | "actividad"
 export type ReportFilters = {
   tipo: ReportType
   desde: string
@@ -25,6 +28,7 @@ export const reportLabels: Record<ReportType, string> = {
   reservas: "Reservas",
   pagos: "Pagos",
   uso_servicios: "Uso de servicios",
+  actividad: "Actividad",
 }
 export const reportStates: Record<ReportType, string[]> = {
   socios: [
@@ -48,6 +52,13 @@ export const reportStates: Record<ReportType, string[]> = {
   ],
   pagos: ["PENDIENTE", "APROBADO", "RECHAZADO", "CANCELADO"],
   uso_servicios: [],
+  actividad: Object.keys(activityLabels),
+}
+export function stateLabel(value: string) {
+  return (
+    activityLabels[value as keyof typeof activityLabels] ??
+    value.replaceAll("_", " ").toLowerCase()
+  )
 }
 export const reportsApi = {
   generate: (data: ReportFilters) =>

@@ -2,8 +2,26 @@
 
 ## Modelo
 
-Cada usuario tiene un socio, creado en la misma transacción que su cuenta. La relación con la UNSE
-queda `PENDIENTE` hasta su verificación manual por un administrador.
+Cada usuario tiene un socio, creado en la misma transacción que su cuenta. `Socio.verificacionInicial`
+decide el estado de la relación con la UNSE: quien se declara `EXTERNO` queda `VERIFICADA` porque no
+hay nada que verificar; cualquier otra relación queda `PENDIENTE` hasta su verificación manual por un
+administrador. La migración `V2__verificar_relaciones_externas.sql` pasó a `VERIFICADA` los externos
+que habían quedado pendientes con la regla anterior; las demás relaciones no cambian.
+
+## Ingreso con la relación verificada (SM-02)
+
+Un usuario común (`USUARIO`) solo puede iniciar sesión con la relación `VERIFICADA`
+(`Socio.habilitaIngreso`). `UsuarioService.autenticar` comprueba primero la contraseña y la cuenta
+activa: con datos incorrectos responde el 401 de siempre, sin revelar el estado de la relación. Con
+la contraseña correcta y la relación pendiente o rechazada lanza `RelacionNoVerificadaException`,
+que `UsuarioExceptionHandler` traduce a 403 con código `relacion_no_verificada`, un mensaje para cada
+caso y `campos.verificacion`. ADMIN y STAFF no pasan por este control. `consultarActivo`, usado por
+`SesionFilter` en cada request, aplica la misma condición: si administración rechaza la relación de
+alguien con la sesión abierta, la sesión se cierra en la siguiente petición.
+
+El registro muestra un aviso distinto según la relación elegida. En el inicio de administración, el
+contador "Relaciones por verificar" lleva a `/admin/members?verificacion=PENDIENTE`. La demo local
+(`scripts/demo.py`) verifica por SQL a sus cuentas ficticias, igual que asigna los roles.
 
 ```text
 Usuario 1 --- 1 Socio 1 --- 0..1 Membresia * --- 1 NivelMembresia
@@ -56,7 +74,8 @@ vinculado a una suscripción de Mercado Pago no vence mientras esa suscripción 
 - Las transiciones no permitidas devuelven 409.
 
 Las altas, cambios administrativos, cancelaciones y nuevas contrataciones guardan motivo,
-responsable, fecha y detalle en `cambios_socios`. Los cambios de socio y membresía son
+responsable, fecha y detalle en `cambios_socios`. Un cambio en la verificación queda además en el
+registro de actividad (`VERIFICACION_ACTUALIZADA`, ver [REPORTES_ENCUESTAS.md](REPORTES_ENCUESTAS.md)). Los cambios de socio y membresía son
 transaccionales. Las versiones de JPA detectan ediciones concurrentes.
 
 ## Niveles y precios
@@ -77,7 +96,7 @@ El módulo de pagos aplica la misma verificación al iniciar cada cobro y congel
 | GET | `/api/niveles-membresia/{id}` | Autenticado |
 | POST, PUT, DELETE | `/api/niveles-membresia` y `/{id}` | Administrador |
 | GET | `/api/socios/me` | Socio de la sesión, 204 si no existe |
-| GET | `/api/socios?buscar=&estadoMembresia=&relacionUnse=` | Administrador |
+| GET | `/api/socios?buscar=&estadoMembresia=&relacionUnse=&verificacion=` | Administrador |
 | GET, PUT | `/api/socios/{id}` | Administrador |
 | GET | `/api/socios/{id}/historial` | Administrador |
 | POST | `/api/membresias` | Titular del socio o administrador |
@@ -113,8 +132,3 @@ cuentas inactivas ni claves de pago de otra contratación.
 La interfaz actualiza estado, cobro pendiente e historial después de cancelar,
 contratar o confirmar un cobro. Permite verificar Mercado Pago con membresías
 activas o vencidas y evita iniciar efectivo si hay una suscripción vigente.
-
-`scripts/smoke_membresias.py` comprueba permisos, confirmación concurrente,
-cancelación repetida, nueva contratación, renovación y pendientes que no aparecen
-en la primera página del historial. Se ejecuta contra una base local de pruebas;
-no realiza cobros externos.

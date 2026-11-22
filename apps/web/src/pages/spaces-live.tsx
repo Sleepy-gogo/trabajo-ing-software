@@ -9,7 +9,12 @@ import {
   ArrowRight,
   Clock,
 } from "lucide-react"
-import { availableStarts } from "@/lib/booking-times"
+import { endTime, hoursLabel, selectionFits } from "@/lib/booking-times"
+import {
+  TimeSlotPicker,
+  type SlotSelection,
+} from "@/components/booking/time-slot-picker"
+import { useDateChangeCheck } from "@/components/booking/use-date-change-check"
 import {
   spacesApi,
   calendarApi,
@@ -19,7 +24,7 @@ import {
   type Availability,
 } from "@/lib/spaces-api"
 import { relationships, label } from "@/lib/members-api"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, formatDate } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import {
   PageHeader,
@@ -269,7 +274,12 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
   const { id = "" } = useParams()
   const client = useQueryClient()
   const [date, setDate] = useState(today)
-  const [selectedStart, setSelectedStart] = useState("")
+  const [selection, setSelection] = useState<SlotSelection>({
+    start: "",
+    hours: 1,
+  })
+  const [dateNotice, setDateNotice] = useState("")
+  const checkDate = useDateChangeCheck()
   const [editing, setEditing] = useState(false)
   const [notice, setNotice] = useState("")
   const [hoursNotice, setHoursNotice] = useState("")
@@ -357,9 +367,28 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
     onSuccess: refresh,
   })
   const s = space.data
-  const starts = availableStarts(calendar.data?.franjas ?? [], 1)
+  const slots = calendar.data?.franjas ?? []
   const canReserve =
-    !calendar.isFetching && !calendar.isError && starts.includes(selectedStart)
+    !calendar.isFetching &&
+    !calendar.isError &&
+    selectionFits(slots, selection.start, selection.hours)
+  const selectedEnd = endTime(selection.start, selection.hours)
+  async function changeDate(next: string) {
+    setDate(next)
+    setDateNotice("")
+    if (admin) return
+    const result = await checkDate(id, next, selection)
+    if (result === "clear") {
+      setSelection((current) => ({ ...current, start: "" }))
+      setDateNotice(
+        `El horario de ${selection.start} a ${selectedEnd} no está libre el ${formatDate(next)}. Elegí otro horario.`
+      )
+    } else if (result === "keep" && selection.start) {
+      setDateNotice(
+        `El horario de ${selection.start} a ${selectedEnd} sigue libre el ${formatDate(next)}.`
+      )
+    }
+  }
   return (
     <>
       <Link
@@ -455,7 +484,7 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                 description={
                   admin
                     ? "Horarios libres, descontando reservas y bloqueos."
-                    : "Elegí una fecha y un horario de inicio."
+                    : "Elegí la fecha, el horario de inicio y la duración."
                 }
                 className={admin ? undefined : "order-1 lg:order-2"}
               >
@@ -466,10 +495,7 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                     min={today()}
                     required
                     value={date}
-                    onChange={(e) => {
-                      setDate(e.target.value)
-                      setSelectedStart("")
-                    }}
+                    onChange={(e) => void changeDate(e.target.value)}
                   />
                   {calendar.data && !calendar.isError && (
                     <div className="sm:text-right">
@@ -506,42 +532,26 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                       ))}
                     </div>
                   ) : (
-                    starts.length > 0 && (
-                      <fieldset className="mt-5">
-                        <legend className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                          <Clock className="size-4" aria-hidden="true" />
-                          Horarios de inicio
-                        </legend>
-                        <p className="mb-4 text-xs text-muted-foreground">
-                          Para una reserva de 1 hora. Podés cambiar la duración
-                          en el siguiente paso.
+                    <div className="mt-5 space-y-4">
+                      {dateNotice && (
+                        <p
+                          role="status"
+                          className="rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-700"
+                        >
+                          {dateNotice}
                         </p>
-                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-5">
-                          {starts.map((time) => (
-                            <label
-                              key={time}
-                              className="relative cursor-pointer"
-                            >
-                              <input
-                                type="radio"
-                                name="start"
-                                value={time}
-                                checked={selectedStart === time}
-                                onChange={() => setSelectedStart(time)}
-                                className="peer sr-only"
-                              />
-                              <span className="flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-card text-sm font-medium tabular-nums transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary hover:border-primary/50">
-                                {time}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </fieldset>
-                    )
+                      )}
+                      <TimeSlotPicker
+                        slots={slots}
+                        value={selection}
+                        onChange={(next) => {
+                          setSelection(next)
+                          setDateNotice("")
+                        }}
+                      />
+                    </div>
                   )}
-                  {(admin
-                    ? calendar.data?.franjas.length === 0
-                    : starts.length === 0) && (
+                  {admin && calendar.data?.franjas.length === 0 && (
                     <div role="status" className="py-8 text-center">
                       <Clock
                         className="mx-auto mb-3 size-6 text-muted-foreground"
@@ -561,11 +571,10 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                     <p role="status" className="text-sm text-muted-foreground">
                       {canReserve ? (
                         <>
-                          Inicio{" "}
                           <span className="font-semibold text-foreground tabular-nums">
-                            {selectedStart}
+                            {selection.start} a {selectedEnd}
                           </span>{" "}
-                          · 1 hora
+                          · {hoursLabel(selection.hours)}
                         </>
                       ) : (
                         "Seleccioná un horario para continuar."
@@ -578,7 +587,7 @@ export function SpaceDetail({ admin = false }: { admin?: boolean }) {
                         role="link"
                         render={
                           <Link
-                            to={`/app/reservations/new?space=${s.id}&date=${date}&start=${selectedStart}`}
+                            to={`/app/reservations/new?${new URLSearchParams({ space: s.id, date, start: selection.start, hours: String(selection.hours) })}`}
                           />
                         }
                       >

@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-/** Datos que Control recibe para crear o modificar un nivel. */
 public record NivelMembresiaDatos(
     String nombre,
     String descripcion,

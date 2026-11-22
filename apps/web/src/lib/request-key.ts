@@ -1,4 +1,3 @@
-// getRandomValues funciona también sin HTTPS.
 export function createRequestKey(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16))
   bytes[6] = (bytes[6] & 0x0f) | 0x40

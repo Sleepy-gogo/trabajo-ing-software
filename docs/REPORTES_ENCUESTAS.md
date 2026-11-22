@@ -11,9 +11,10 @@ Solo `ADMIN` puede generar, consultar o exportar informes. Las consultas se ejec
 | `socios` | Fecha de alta del socio | Situación actual de cuenta/membresía | Datos de socio, relación declarada y nivel actual |
 | `reservas` | Fecha de utilización prevista | Estado visible actual, incluida `CONSUMIDA` | Titular, espacio, horario, personas e importe |
 | `pagos` | Fecha de creación de la orden | Estado actual del pago | Importe aprobado, medio, concepto y revisión pendiente |
-| `uso_servicios` | Fecha de la reserva | Solo reservas confirmadas | Cantidad de reservas, ingresos registrados, horas reservadas y personas declaradas en reservas utilizadas |
+| `uso_servicios` | Fecha de la reserva | Solo reservas confirmadas | Cantidad de reservas, reservas terminadas, ingresos registrados, horas reservadas y personas declaradas en reservas utilizadas |
+| `actividad` | Fecha de la acción | Tipo de acción (`INICIO_SESION`, `INICIO_SESION_FALLIDO`, `INICIO_SESION_BLOQUEADO`, `CIERRE_SESION`, `RESERVA_CREADA`, `RESERVA_CANCELADA`, `VERIFICACION_ACTUALIZADA`, `INFORME_GENERADO`) | Fecha y hora, acción, correo, nombre y detalle |
 
-Las fechas se interpretan en `America/Argentina/Buenos_Aires`. Desde y hasta son inclusivos. Relación UNSE y espacio son filtros opcionales; socios no admite espacio y utilización no admite estado. El estado de membresía respeta el vencimiento efectivo aunque el proceso periódico todavía no haya actualizado la fila.
+Las fechas se interpretan en `America/Argentina/Buenos_Aires`. Desde y hasta son inclusivos. Relación UNSE y espacio son filtros opcionales; socios no admite espacio, utilización no admite estado y actividad solo filtra por período y tipo de acción. El estado de membresía respeta el vencimiento efectivo aunque el proceso periódico todavía no haya actualizado la fila.
 
 Las horas reservadas incluyen reservas confirmadas futuras y finalizadas. Un ingreso requiere `consumida_en`, por lo que el fin del horario no se cuenta como asistencia. El número de personas se toma de lo declarado en la reserva y no representa una medición individual. No se presenta un porcentaje de ocupación porque no hay una definición funcional de su denominador.
 
@@ -39,7 +40,33 @@ Ejemplo de request:
 }
 ```
 
+Cada informe muestra arriba de la tabla un resumen y gráficos según su tipo: socios por estado y por relación; reservas por estado y por espacio, con el importe total sin canceladas ni vencidas; pagos con importe aprobado por concepto y por medio, y pagos que requieren revisión; uso de servicios con horas y asistencia (ingresos sobre reservas terminadas) por espacio; actividad por tipo de acción. Se calculan en la interfaz (`lib/report-summary.ts`) con las filas guardadas, así que un informe abierto más tarde muestra los mismos valores que su tabla.
+
 El CSV usa UTF-8 con BOM, comas, comillas escapadas y líneas CRLF. Los importes tienen dos decimales. Los textos que podrían interpretarse como fórmulas se exportan como texto. La interfaz permite imprimir mediante el diálogo del navegador.
+
+## Registro de actividad (SM-05)
+
+El módulo `actividad` (BCE) guarda en `registros_actividad` quién hizo cada acción, cuál, cuándo y un detalle breve. Registran `UsuarioService` (inicio de sesión, intentos fallidos y bloqueados por la verificación de SM-02, cierre de sesión desde `AuthController.logout`), `ReservaService` (creación y cancelación, con espacio y horario), `SocioService` (cambio de verificación) y `ReporteService` (informe generado). El detalle nunca incluye contraseñas ni datos de pago; un intento fallido indica solo el motivo, como "Contraseña incorrecta".
+
+`ActividadService.registrar` usa una transacción propia (`REQUIRES_NEW`), por lo que el intento bloqueado queda guardado aunque el login termine con una excepción. `usuario_id` no tiene clave foránea a propósito: un intento fallido puede usar un correo sin cuenta, el historial se conserva si la cuenta cambia, y `ReservaService` bloquea la fila del usuario durante la transacción, de modo que una clave foránea haría esperar a la transacción nueva. La tabla se crea en `V3__crear_registros_actividad.sql`, con un `CHECK` alineado con `TipoActividad`. La consulta es el informe `actividad`, que reutiliza historial, CSV e impresión.
+
+## Panel de indicadores (SM-04)
+
+`GET /api/reportes/indicadores?desde=&hasta=` (solo `ADMIN`, hasta dos años) devuelve el panel del inicio de administración. `IndicadoresService` compara el período con el anterior de igual duración y `ReporteRepository` agrega los datos con SQL nativo:
+
+| Dato | Cálculo |
+| --- | --- |
+| Ingresos aprobados | Suma de pagos `APROBADO` por fecha de aprobación (`aprobado_en`, Argentina). |
+| Reservas confirmadas y horas | Reservas `CONFIRMADA` por fecha de la reserva. |
+| Tasa de cancelación | Canceladas sobre confirmadas más canceladas; su variación se informa en puntos. |
+| Membresías activas | Membresías no dadas de baja con una cuota aprobada que cubre el último día del período (o hoy, si termina después). |
+| Ingresos por mes | Cuotas (`CUOTA_MENSUAL`) y reservas (`RESERVA`, `DIFERENCIA_TICKET`); al menos los últimos seis meses. |
+| Horas e ingresos por espacio | Horas de reservas confirmadas e ingresos de pagos de reservas aprobados. |
+| Demanda | Día ISO y hora de cada hora ocupada: una reserva de 18 a 20 suma en 18 y en 19. |
+| Asistencia | Reservas confirmadas terminadas con `consumida_en` sobre el total de terminadas. |
+| Socios y membresías | Socios activos por relación (con pendientes de verificar) y membresías activas por nivel. |
+
+Las conclusiones en texto se escriben con reglas simples y solo cuando hay datos: variación de ingresos y reservas (no se informa un porcentaje si el período anterior fue 0), espacio que concentra más horas, franja con más demanda, reservas terminadas sin ingreso y cancelaciones. El panel muestra también las últimas ocho acciones del registro de actividad. El porcentaje de ocupación sigue sin implementarse: su denominador es una decisión pendiente con la cátedra.
 
 ## Encuestas
 
@@ -66,4 +93,8 @@ Las escrituras requieren CSRF. Las tablas forman parte de `V1__esquema_inicial.s
 
 ## Verificación
 
-Hay tests unitarios de preguntas, permisos y validaciones de Control, filtros/CSV/instantáneas, tests HTTP de autorización y CSRF, y tests React de generación, errores, publicación y envío real. `scripts/smoke_cierre.py` verifica las consultas SQL contra PostgreSQL y el recorrido HTTP de pago efectivo, renovación única, permisos, cuatro informes, CSV, historial, cierre, respuestas concurrentes y estadísticas.
+Hay tests unitarios del panel de indicadores, del informe y registro de actividad,
+y de las validaciones de encuestas, filtros, CSV e instantáneas. Los tests HTTP
+cubren los permisos del panel y CSRF. Los tests de React comprueban los gráficos
+con las filas guardadas, la generación de informes, los errores, la publicación
+y el envío de encuestas.

@@ -3,11 +3,16 @@ package edu.unse.sera.usuario.control;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import edu.unse.sera.actividad.control.ActividadService;
+import edu.unse.sera.actividad.entity.TipoActividad;
+import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
 import edu.unse.sera.socio.entity.Socio;
 import edu.unse.sera.socio.persistence.SocioRepository;
@@ -39,12 +44,13 @@ class UsuarioServiceTest {
   @Mock private UsuarioRepository usuarioRepository;
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private SocioRepository socios;
+  @Mock private ActividadService actividad;
 
   private UsuarioService usuarioService;
 
   @BeforeEach
   void setUp() {
-    usuarioService = new UsuarioService(usuarioRepository, passwordEncoder, socios);
+    usuarioService = new UsuarioService(usuarioRepository, passwordEncoder, socios, actividad);
   }
 
   @Test
@@ -267,6 +273,11 @@ class UsuarioServiceTest {
     assertThat(captor.getValue().getRelacionUnse())
         .isEqualTo(relacion == null ? RelacionUnse.EXTERNO : relacion);
     assertThat(captor.getValue().getIdentificadorUnse()).isEqualTo("legajo-123");
+    assertThat(captor.getValue().getEstadoVerificacionUnse())
+        .isEqualTo(
+            relacion == null || relacion == RelacionUnse.EXTERNO
+                ? EstadoVerificacionUnse.VERIFICADA
+                : EstadoVerificacionUnse.PENDIENTE);
   }
 
   @Test
@@ -399,6 +410,154 @@ class UsuarioServiceTest {
                 usuarioService.registrarUsuario(
                     "Ada", "ada@example.com", 12345678, RolUsuario.USUARIO, "password-seguro"))
         .isSameAs(violation);
+  }
+
+  @Test
+  void registraElInicioDeSesionYLosIntentosFallidosSinGuardarLaPassword() {
+    Usuario usuario = crearUsuario();
+    UUID id = UUID.randomUUID();
+    org.springframework.test.util.ReflectionTestUtils.setField(usuario, "id", id);
+    when(usuarioRepository.findByEmailIgnoreCase("ada@example.com"))
+        .thenReturn(Optional.of(usuario));
+    when(passwordEncoder.matches("Secreta-123", "hash")).thenReturn(true);
+    when(passwordEncoder.matches("Otra-456", "hash")).thenReturn(false);
+
+    assertThat(usuarioService.autenticar("ada@example.com", "Secreta-123")).isPresent();
+    assertThat(usuarioService.autenticar("ada@example.com", "Otra-456")).isEmpty();
+    assertThat(usuarioService.autenticar("nadie@example.com", "Secreta-123")).isEmpty();
+    assertThat(usuarioService.autenticar("ada@example.com", "á".repeat(40))).isEmpty();
+    usuario.cambiarEstado(EstadoUsuario.INACTIVO);
+    assertThat(usuarioService.autenticar("ada@example.com", "Secreta-123")).isEmpty();
+
+    verify(actividad).registrar(id, "ada@example.com", TipoActividad.INICIO_SESION, "Rol usuario");
+    verify(actividad)
+        .registrar(
+            id, "ada@example.com", TipoActividad.INICIO_SESION_FALLIDO, "Contraseña incorrecta");
+    verify(actividad)
+        .registrar(
+            isNull(),
+            eq("nadie@example.com"),
+            eq(TipoActividad.INICIO_SESION_FALLIDO),
+            eq("El correo no corresponde a ninguna cuenta"));
+    verify(actividad)
+        .registrar(
+            isNull(),
+            eq("ada@example.com"),
+            eq(TipoActividad.INICIO_SESION_FALLIDO),
+            eq("Contraseña con formato inválido"));
+    verify(actividad)
+        .registrar(
+            id, "ada@example.com", TipoActividad.INICIO_SESION_FALLIDO, "La cuenta no está activa");
+    var detalles = ArgumentCaptor.forClass(String.class);
+    verify(actividad, org.mockito.Mockito.times(5))
+        .registrar(any(), any(), any(), detalles.capture());
+    assertThat(detalles.getAllValues())
+        .noneMatch(d -> d.contains("Secreta-123") || d.contains("Otra-456") || d.contains("ááá"));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = EstadoVerificacionUnse.class,
+      names = {"PENDIENTE", "RECHAZADA"})
+  void bloqueaAlUsuarioComunConLaRelacionSinVerificar(EstadoVerificacionUnse estado) {
+    Usuario usuario = crearUsuario();
+    when(usuarioRepository.findByEmailIgnoreCase("ada@example.com"))
+        .thenReturn(Optional.of(usuario));
+    when(passwordEncoder.matches("correcta", "hash")).thenReturn(true);
+    when(socios.findByUsuarioId(usuario.getId()))
+        .thenReturn(Optional.of(new Socio(usuario, RelacionUnse.ESTUDIANTE, estado, null)));
+
+    assertThatThrownBy(() -> usuarioService.autenticar("ada@example.com", "correcta"))
+        .isInstanceOfSatisfying(
+            RelacionNoVerificadaException.class,
+            e -> {
+              assertThat(e.getEstado()).isEqualTo(estado);
+              assertThat(e.getMessage())
+                  .contains(
+                      estado == EstadoVerificacionUnse.PENDIENTE
+                          ? "cuando administración la confirme"
+                          : "Acercate a administración");
+            });
+    verify(actividad)
+        .registrar(
+            usuario.getId(),
+            "ada@example.com",
+            TipoActividad.INICIO_SESION_BLOQUEADO,
+            "Relación con la UNSE " + estado.name().toLowerCase(java.util.Locale.ROOT));
+    verify(actividad, never()).registrar(any(), any(), eq(TipoActividad.INICIO_SESION), any());
+  }
+
+  @Test
+  void conLaPasswordIncorrectaNoRevelaQueLaRelacionEstaPendiente() {
+    Usuario usuario = crearUsuario();
+    when(usuarioRepository.findByEmailIgnoreCase("ada@example.com"))
+        .thenReturn(Optional.of(usuario));
+    when(passwordEncoder.matches("incorrecta", "hash")).thenReturn(false);
+
+    assertThat(usuarioService.autenticar("ada@example.com", "incorrecta")).isEmpty();
+    verifyNoInteractions(socios);
+  }
+
+  @Test
+  void ingresaCuandoAdministracionVerificaLaRelacion() {
+    Usuario usuario = crearUsuario();
+    Socio socio =
+        new Socio(usuario, RelacionUnse.ESTUDIANTE, EstadoVerificacionUnse.PENDIENTE, null);
+    when(usuarioRepository.findByEmailIgnoreCase("ada@example.com"))
+        .thenReturn(Optional.of(usuario));
+    when(passwordEncoder.matches("correcta", "hash")).thenReturn(true);
+    when(socios.findByUsuarioId(usuario.getId())).thenReturn(Optional.of(socio));
+    assertThatThrownBy(() -> usuarioService.autenticar("ada@example.com", "correcta"))
+        .isInstanceOf(RelacionNoVerificadaException.class);
+
+    socio.actualizarDatos(RelacionUnse.ESTUDIANTE, EstadoVerificacionUnse.VERIFICADA, null);
+
+    assertThat(usuarioService.autenticar("ada@example.com", "correcta")).isPresent();
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RolUsuario.class,
+      names = {"ADMIN", "STAFF"})
+  void administracionYPersonalNoDependenDeLaRelacion(RolUsuario rol) {
+    Usuario usuario =
+        new Usuario("Ada", "ada@example.com", 12345678, EstadoUsuario.ACTIVO, rol, "hash");
+    UUID id = UUID.randomUUID();
+    when(usuarioRepository.findByEmailIgnoreCase("ada@example.com"))
+        .thenReturn(Optional.of(usuario));
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuario));
+    when(passwordEncoder.matches("correcta", "hash")).thenReturn(true);
+
+    assertThat(usuarioService.autenticar("ada@example.com", "correcta")).isPresent();
+    assertThat(usuarioService.consultarActivo(id)).isPresent();
+    verifyNoInteractions(socios);
+  }
+
+  @ParameterizedTest
+  @EnumSource(EstadoVerificacionUnse.class)
+  void laSesionAbiertaSeCierraSiLaRelacionDejaDeEstarVerificada(EstadoVerificacionUnse estado) {
+    UUID id = UUID.randomUUID();
+    Usuario usuario = crearUsuario();
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuario));
+    when(socios.findByUsuarioId(usuario.getId()))
+        .thenReturn(Optional.of(new Socio(usuario, RelacionUnse.DOCENTE, estado, null)));
+
+    assertThat(usuarioService.consultarActivo(id).isPresent())
+        .isEqualTo(estado == EstadoVerificacionUnse.VERIFICADA);
+  }
+
+  @Test
+  void registraElCierreDeSesionSoloDeUnaCuentaExistente() {
+    UUID id = UUID.randomUUID();
+    Usuario usuario = crearUsuario();
+    when(usuarioRepository.findById(id)).thenReturn(Optional.of(usuario));
+
+    usuarioService.registrarCierreSesion(id);
+    usuarioService.registrarCierreSesion(UUID.randomUUID());
+
+    verify(actividad)
+        .registrar(usuario.getId(), "ada@example.com", TipoActividad.CIERRE_SESION, null);
+    verify(actividad).registrar(any(), any(), any(), any());
   }
 
   private Usuario crearUsuario() {

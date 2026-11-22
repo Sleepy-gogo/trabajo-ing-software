@@ -8,7 +8,6 @@ import edu.unse.sera.usuario.persistence.UsuarioRepository;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
-/** Recupera facturas cuando no llegó la notificación de Mercado Pago. */
 @Service
 public class ConciliacionPagoService {
   private final SuscripcionMercadoPagoRepository suscripciones;

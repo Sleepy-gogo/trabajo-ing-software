@@ -14,12 +14,14 @@ import {
   reportsApi,
   reportLabels,
   reportStates,
+  stateLabel,
   type Report,
   type ReportFilters,
   type ReportType,
 } from "@/lib/reports-api"
 import { spacesApi } from "@/lib/spaces-api"
-import { formatDateTime, formatCurrency } from "@/lib/format"
+import { formatDateTime } from "@/lib/format"
+import { ReportCharts } from "@/components/reports/report-charts"
 
 const relationships = [
   "ESTUDIANTE",
@@ -124,6 +126,8 @@ export function ReportsPage() {
                   ...current,
                   tipo: event.target.value as ReportType,
                   estado: "",
+                  relacion:
+                    event.target.value === "actividad" ? "" : current.relacion,
                   espacioId: null,
                 }))
                 generate.reset()
@@ -153,31 +157,35 @@ export function ReportsPage() {
             />
             {reportStates[filters.tipo].length > 0 && (
               <SelectField
-                label="Estado"
+                label={
+                  filters.tipo === "actividad" ? "Tipo de acción" : "Estado"
+                }
                 value={filters.estado}
                 onChange={(event) => update("estado", event.target.value)}
               >
                 <option value="">Todos</option>
                 {reportStates[filters.tipo].map((state) => (
                   <option key={state} value={state}>
-                    {label(state)}
+                    {stateLabel(state)}
                   </option>
                 ))}
               </SelectField>
             )}
-            <SelectField
-              label="Relación con UNSE"
-              value={filters.relacion}
-              onChange={(event) => update("relacion", event.target.value)}
-            >
-              <option value="">Todas</option>
-              {relationships.map((r) => (
-                <option key={r} value={r}>
-                  {label(r)}
-                </option>
-              ))}
-            </SelectField>
-            {filters.tipo !== "socios" && (
+            {filters.tipo !== "actividad" && (
+              <SelectField
+                label="Relación con UNSE"
+                value={filters.relacion}
+                onChange={(event) => update("relacion", event.target.value)}
+              >
+                <option value="">Todas</option>
+                {relationships.map((r) => (
+                  <option key={r} value={r}>
+                    {label(r)}
+                  </option>
+                ))}
+              </SelectField>
+            )}
+            {filters.tipo !== "socios" && filters.tipo !== "actividad" && (
               <SelectField
                 label="Espacio"
                 value={filters.espacioId ?? ""}
@@ -201,7 +209,9 @@ export function ReportsPage() {
                 ? "El período filtra la fecha de creación de la orden. El importe aprobado incluye solo pagos aprobados."
                 : filters.tipo === "uso_servicios"
                   ? "Las horas corresponden a reservas confirmadas. Los ingresos cuentan reservas con ingreso registrado; las personas son las declaradas en esas reservas."
-                  : "El período filtra la fecha de la reserva. El estado refleja su situación actual."}{" "}
+                  : filters.tipo === "actividad"
+                    ? "El período filtra la fecha de la acción. Incluye inicios y cierres de sesión, intentos fallidos o bloqueados, reservas, verificaciones e informes. No guarda contraseñas ni datos de pago."
+                    : "El período filtra la fecha de la reserva. El estado refleja su situación actual."}{" "}
             Fechas de Argentina. Máximo 5000 filas por informe.
           </p>
           <ErrorMessage error={generate.error ?? spaces.error} />
@@ -250,20 +260,30 @@ function ReportViewer({
         title="Filtros guardados"
         description={`${report.filtros.desde} a ${report.filtros.hasta}`}
       >
-        <p className="text-sm text-muted-foreground">
-          Estado:{" "}
-          {report.filtros.estado ? label(report.filtros.estado) : "todos"}.
-          Relación:{" "}
-          {report.filtros.relacion ? label(report.filtros.relacion) : "todas"}.
-          Espacio: {report.espacioNombre ?? "todos"}.
-        </p>
+        {report.tipo === "actividad" ? (
+          <p className="text-sm text-muted-foreground">
+            Tipo de acción:{" "}
+            {report.filtros.estado
+              ? stateLabel(report.filtros.estado).toLowerCase()
+              : "todas"}
+            .
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Estado:{" "}
+            {report.filtros.estado ? label(report.filtros.estado) : "todos"}.
+            Relación:{" "}
+            {report.filtros.relacion ? label(report.filtros.relacion) : "todas"}
+            . Espacio: {report.espacioNombre ?? "todos"}.
+          </p>
+        )}
         <p role="status" className="mt-3 text-sm font-semibold">
           {report.resumen.registros} registros
-          {report.resumen.importe_aprobado !== undefined
-            ? ` · Importe aprobado: ${formatCurrency(report.resumen.importe_aprobado)}`
-            : ""}
         </p>
       </SectionCard>
+      <div className="mt-5">
+        <ReportCharts report={report} />
+      </div>
       <div className="mt-5">
         <SectionCard
           title="Resultados"

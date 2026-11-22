@@ -7,6 +7,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import edu.unse.sera.actividad.control.ActividadService;
+import edu.unse.sera.actividad.entity.TipoActividad;
 import edu.unse.sera.reporte.entity.Informe;
 import edu.unse.sera.reporte.persistence.InformeRepository;
 import edu.unse.sera.reporte.persistence.ReporteRepository;
@@ -47,13 +49,15 @@ class ReporteServiceTest {
     var informes = mock(InformeRepository.class);
     var usuarios = mock(UsuarioRepository.class);
     var mapper = JsonMapper.builder().findAndAddModules().build();
+    var actividad = mock(ActividadService.class);
     var service =
         new ReporteService(
             datos,
             informes,
             usuarios,
             mapper,
-            mock(edu.unse.sera.espacio.persistence.EspacioRepository.class));
+            mock(edu.unse.sera.espacio.persistence.EspacioRepository.class),
+            actividad);
     UUID actor = UUID.randomUUID();
     var usuario = mock(Usuario.class);
     when(usuario.getNombreCompleto()).thenReturn("Admin");
@@ -71,5 +75,76 @@ class ReporteServiceTest {
     when(informes.findById(reporte.id())).thenReturn(Optional.of(guardado.getValue()));
     assertThat(service.consultar(reporte.id()).filtros()).isEqualTo(filtros);
     assertThat(service.csv(reporte.id())).contains("\"10.50\"", "\"99.00\"");
+    org.mockito.Mockito.verify(actividad)
+        .registrar(
+            eq(actor),
+            any(),
+            eq(TipoActividad.INFORME_GENERADO),
+            org.mockito.ArgumentMatchers.startsWith("Informe de pagos del "));
+  }
+
+  @Test
+  void elInformeDeActividadFiltraPorTipoYExportaLasMismasFilas() {
+    var datos = mock(ReporteRepository.class);
+    var informes = mock(InformeRepository.class);
+    var usuarios = mock(UsuarioRepository.class);
+    var actividad = mock(ActividadService.class);
+    var service =
+        new ReporteService(
+            datos,
+            informes,
+            usuarios,
+            JsonMapper.builder().findAndAddModules().build(),
+            mock(edu.unse.sera.espacio.persistence.EspacioRepository.class),
+            actividad);
+    UUID actor = UUID.randomUUID();
+    var usuario = mock(Usuario.class);
+    when(usuario.getEmail()).thenReturn("admin@example.com");
+    when(usuarios.findById(actor)).thenReturn(Optional.of(usuario));
+    var desde = LocalDate.of(2026, 11, 1);
+    var hasta = LocalDate.of(2026, 11, 17);
+    var filtros = new ReporteFiltros("actividad", desde, hasta, "INICIO_SESION_FALLIDO", "", null);
+    when(datos.actividad(desde, hasta, "INICIO_SESION_FALLIDO"))
+        .thenReturn(
+            List.of(
+                Map.of(
+                    "fecha", "2026-11-17 10:00:00",
+                    "tipo", "INICIO_SESION_FALLIDO",
+                    "accion", "Inicio de sesión fallido",
+                    "usuario", "ana@example.com",
+                    "nombre", "Ana",
+                    "detalle", "Contraseña incorrecta")));
+
+    var reporte = service.generar(filtros, actor);
+
+    assertThat(reporte.columnas())
+        .extracting(ReporteDetalle.Columna::key)
+        .containsExactly("fecha", "accion", "usuario", "nombre", "detalle");
+    var guardado = ArgumentCaptor.forClass(Informe.class);
+    org.mockito.Mockito.verify(informes).save(guardado.capture());
+    when(informes.findById(reporte.id())).thenReturn(Optional.of(guardado.getValue()));
+    assertThat(service.csv(reporte.id()))
+        .contains(
+            "\"Fecha y hora\",\"Acción\",\"Usuario\",\"Nombre\",\"Detalle\"",
+            "\"2026-11-17 10:00:00\",\"Inicio de sesión fallido\",\"ana@example.com\",\"Ana\","
+                + "\"Contraseña incorrecta\"");
+    org.mockito.Mockito.verify(actividad)
+        .registrar(
+            actor,
+            "admin@example.com",
+            TipoActividad.INFORME_GENERADO,
+            "Informe de actividad del 01/11/2026 al 17/11/2026");
+  }
+
+  @Test
+  void elInformeDeActividadSoloAceptaTiposDeAccionYNoFiltraPorRelacionNiEspacio() {
+    var hoy = LocalDate.of(2026, 11, 17);
+    assertThat(new ReporteFiltros("actividad", hoy, hoy, null, null, null).estado()).isEmpty();
+    assertThatThrownBy(() -> new ReporteFiltros("actividad", hoy, hoy, "APROBADO", "", null))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new ReporteFiltros("actividad", hoy, hoy, "", "EXTERNO", null))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new ReporteFiltros("actividad", hoy, hoy, "", "", UUID.randomUUID()))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

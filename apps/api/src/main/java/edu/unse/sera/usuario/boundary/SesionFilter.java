@@ -13,7 +13,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/** Consulta rol y estado en cada request para que las bajas y cambios rijan de inmediato. */
 public class SesionFilter extends OncePerRequestFilter {
   public static final String USUARIO_ID = "sera.usuarioId";
   private final UsuarioService usuarios;

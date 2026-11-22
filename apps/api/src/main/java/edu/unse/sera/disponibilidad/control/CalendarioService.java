@@ -7,12 +7,15 @@ import edu.unse.sera.disponibilidad.persistence.DisponibilidadRepository;
 import edu.unse.sera.espacio.control.EspacioNoEncontradoException;
 import edu.unse.sera.espacio.entity.EstadoEspacio;
 import edu.unse.sera.espacio.persistence.EspacioRepository;
+import edu.unse.sera.reserva.entity.Reserva;
 import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
 import edu.unse.sera.socio.persistence.SocioRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -55,6 +58,11 @@ public class CalendarioService {
 
   @Transactional(readOnly = true)
   public Calendario consultar(UUID id, LocalDate fecha, UUID usuarioId) {
+    return consultar(id, fecha, usuarioId, OffsetDateTime.now(Reserva.ZONA));
+  }
+
+  @Transactional(readOnly = true)
+  public Calendario consultar(UUID id, LocalDate fecha, UUID usuarioId, OffsetDateTime ahora) {
     var espacio = espacios.findById(id).orElseThrow(() -> new EspacioNoEncontradoException(id));
     RelacionUnse relacion =
         socios
@@ -62,9 +70,9 @@ public class CalendarioService {
             .filter(s -> s.getEstadoVerificacionUnse() == EstadoVerificacionUnse.VERIFICADA)
             .map(s -> s.getRelacionUnse())
             .orElse(RelacionUnse.EXTERNO);
+    LocalDateTime limite = Reserva.inicioMasTemprano(ahora);
     List<Franja> libres = new ArrayList<>();
-    if (espacio.getEstado() == EstadoEspacio.HABILITADO
-        && !fecha.isBefore(LocalDate.now(edu.unse.sera.reserva.entity.Reserva.ZONA))) {
+    if (espacio.getEstado() == EstadoEspacio.HABILITADO && !fecha.isBefore(limite.toLocalDate())) {
       DiaSemana dia = DiaSemana.values()[fecha.getDayOfWeek().getValue() - 1];
       List<Franja> cortes = new ArrayList<>();
       bloqueos
@@ -96,21 +104,15 @@ public class CalendarioService {
         }
       }
     }
-    var ahora = LocalTime.now(edu.unse.sera.reserva.entity.Reserva.ZONA);
-    libres =
-        libres.stream()
-            .filter(
-                f ->
-                    !fecha.equals(LocalDate.now(edu.unse.sera.reserva.entity.Reserva.ZONA))
-                        || f.hasta().isAfter(ahora))
-            .map(
-                f ->
-                    fecha.equals(LocalDate.now(edu.unse.sera.reserva.entity.Reserva.ZONA))
-                            && f.desde().isBefore(ahora)
-                        ? new Franja(ahora.withNano(0), f.hasta())
-                        : f)
-            .sorted(java.util.Comparator.comparing(Franja::desde))
-            .toList();
+    if (fecha.equals(limite.toLocalDate())) {
+      LocalTime corte = limite.toLocalTime();
+      libres =
+          libres.stream()
+              .filter(f -> f.hasta().isAfter(corte))
+              .map(f -> f.desde().isBefore(corte) ? new Franja(corte, f.hasta()) : f)
+              .toList();
+    }
+    libres = libres.stream().sorted(java.util.Comparator.comparing(Franja::desde)).toList();
     return new Calendario(
         fecha, espacio.getEstado(), espacio.tarifaPara(relacion), relacion, libres);
   }

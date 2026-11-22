@@ -23,7 +23,6 @@ import {
   LogOut,
   Menu,
   QrCode,
-  Settings2,
   ShieldCheck,
   Ticket,
   Users,
@@ -192,31 +191,26 @@ export function AppShell({
       {role === "admin" && (
         <div className="mt-8 px-3">
           <p className="mb-3 px-3 text-[11px] text-slate-400">Administración</p>
-          {[
-            { label: "Usuarios", path: "/admin/users", icon: Users },
-            {
-              label: "Configuración",
-              path: "/admin/settings",
-              icon: Settings2,
-            },
-          ].map(({ label, path, icon: Icon }) => (
-            <NavLink
-              key={path}
-              to={path}
-              onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  "flex min-h-11 items-center gap-3 rounded-lg px-3 text-[13px]",
-                  isActive
-                    ? "bg-blue-500/20 text-white"
-                    : "text-slate-300 hover:bg-white/5"
-                )
-              }
-            >
-              <Icon className="size-[18px]" aria-hidden="true" />
-              {label}
-            </NavLink>
-          ))}
+          {[{ label: "Usuarios", path: "/admin/users", icon: Users }].map(
+            ({ label, path, icon: Icon }) => (
+              <NavLink
+                key={path}
+                to={path}
+                onClick={() => setMenuOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "flex min-h-11 items-center gap-3 rounded-lg px-3 text-[13px]",
+                    isActive
+                      ? "bg-blue-500/20 text-white"
+                      : "text-slate-300 hover:bg-white/5"
+                  )
+                }
+              >
+                <Icon className="size-[18px]" aria-hidden="true" />
+                {label}
+              </NavLink>
+            )
+          )}
         </div>
       )}
       <div className="mt-auto px-5 pt-8 pb-5">
@@ -347,15 +341,6 @@ export function AppShell({
             role === "member" && "pb-28 lg:pb-10"
           )}
         >
-          {/\/settings(\/|$)/.test(location.pathname) && (
-            <div
-              role="note"
-              className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
-            >
-              <strong>Vista previa de configuración.</strong> Los cambios de
-              esta sección todavía no se guardan.
-            </div>
-          )}
           {children ?? <Outlet />}
         </main>
         <footer

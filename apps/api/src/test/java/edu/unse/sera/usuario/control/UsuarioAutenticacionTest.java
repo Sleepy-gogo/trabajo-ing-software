@@ -27,7 +27,12 @@ class UsuarioAutenticacionTest {
             EstadoUsuario.ACTIVO,
             RolUsuario.USUARIO,
             encoder.encode("password-seguro"));
-    var servicio = new UsuarioService(repositorio, encoder, mock(SocioRepository.class));
+    var servicio =
+        new UsuarioService(
+            repositorio,
+            encoder,
+            mock(SocioRepository.class),
+            mock(edu.unse.sera.actividad.control.ActividadService.class));
     when(repositorio.findByEmailIgnoreCase("ada@example.com")).thenReturn(Optional.of(usuario));
     UUID id = UUID.randomUUID();
     when(repositorio.findById(id)).thenReturn(Optional.of(usuario));
