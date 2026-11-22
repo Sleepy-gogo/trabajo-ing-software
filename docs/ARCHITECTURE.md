@@ -29,7 +29,7 @@ POST /api/reservas → ReservaController → ReservaService → Reserva y reposi
 ```
 
 Los módulos son `usuario`, `socio`, `membresia`, `espacio`, `disponibilidad`,
-`reserva`, `pagos`, `acceso`, `reporte` y `encuesta`. `shared` contiene configuración,
+`reserva`, `pagos`, `acceso`, `reporte`, `encuesta` y `actividad`. `shared` contiene configuración,
 errores comunes y el endpoint de salud.
 
 ## Sesión y permisos

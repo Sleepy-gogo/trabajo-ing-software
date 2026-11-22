@@ -20,8 +20,10 @@ import edu.unse.sera.disponibilidad.control.DisponibilidadService;
 import edu.unse.sera.espacio.boundary.EspacioController;
 import edu.unse.sera.espacio.control.EspacioService;
 import edu.unse.sera.shared.config.SecurityConfig;
+import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
 import edu.unse.sera.usuario.boundary.dto.LoginRequest;
+import edu.unse.sera.usuario.control.RelacionNoVerificadaException;
 import edu.unse.sera.usuario.control.UsuarioDetalle;
 import edu.unse.sera.usuario.control.UsuarioService;
 import edu.unse.sera.usuario.entity.EstadoUsuario;
@@ -128,7 +130,58 @@ class AuthControllerTest {
     mvc.perform(post("/api/auth/logout").session(session).with(csrf()))
         .andExpect(status().isNoContent());
     org.junit.jupiter.api.Assertions.assertTrue(session.isInvalid());
+    verify(usuarios).registrarCierreSesion(usuario.id());
     mvc.perform(get("/api/usuarios/me")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void loginConLaRelacionPendienteDevuelve403SinAbrirSesion() throws Exception {
+    when(usuarios.autenticar(any(), any()))
+        .thenThrow(new RelacionNoVerificadaException(EstadoVerificacionUnse.PENDIENTE));
+    var result =
+        mvc.perform(
+                post("/api/auth/login")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"email\":\"ada@example.com\",\"password\":\"correcta\"}"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.codigo").value("relacion_no_verificada"))
+            .andExpect(jsonPath("$.campos.verificacion").value("PENDIENTE"))
+            .andExpect(
+                jsonPath("$.mensaje")
+                    .value(
+                        "Tu relación con la UNSE todavía no fue verificada. Vas a poder ingresar"
+                            + " cuando administración la confirme."))
+            .andReturn();
+    assertThat(result.getRequest().getSession(false)).isNull();
+  }
+
+  @Test
+  void loginConLaRelacionRechazadaIndicaAcercarseAAdministracion() throws Exception {
+    when(usuarios.autenticar(any(), any()))
+        .thenThrow(new RelacionNoVerificadaException(EstadoVerificacionUnse.RECHAZADA));
+    mvc.perform(
+            post("/api/auth/login")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"ada@example.com\",\"password\":\"correcta\"}"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.codigo").value("relacion_no_verificada"))
+        .andExpect(jsonPath("$.campos.verificacion").value("RECHAZADA"))
+        .andExpect(
+            jsonPath("$.mensaje")
+                .value(
+                    "Administración no pudo verificar tu relación con la UNSE. Acercate a"
+                        + " administración del polideportivo para revisarla."));
+  }
+
+  @Test
+  void logoutDeUnaSesionSinIdentidadNoRegistraCierre() {
+    var request = new MockHttpServletRequest();
+    var session = (MockHttpSession) request.getSession(true);
+    assertThat(new AuthController(usuarios).logout(request).getStatusCode().value()).isEqualTo(204);
+    assertThat(session.isInvalid()).isTrue();
+    verifyNoInteractions(usuarios);
   }
 
   @Test

@@ -2,6 +2,7 @@ package edu.unse.sera.usuario.boundary;
 
 import edu.unse.sera.shared.boundary.dto.ApiError;
 import edu.unse.sera.usuario.control.PasswordInvalidaException;
+import edu.unse.sera.usuario.control.RelacionNoVerificadaException;
 import edu.unse.sera.usuario.control.UsuarioDuplicadoException;
 import java.util.Map;
 import org.springframework.core.Ordered;
@@ -33,5 +34,16 @@ public class UsuarioExceptionHandler {
             exception.getMessage(),
             Map.of(exception.getCampo(), exception.getMessage()));
     return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+  }
+
+  @ExceptionHandler(RelacionNoVerificadaException.class)
+  public ResponseEntity<ApiError> handleRelacionNoVerificada(
+      RelacionNoVerificadaException exception) {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .body(
+            new ApiError(
+                "relacion_no_verificada",
+                exception.getMessage(),
+                Map.of("verificacion", exception.getEstado().name())));
   }
 }

@@ -77,10 +77,11 @@ export const membersApi = {
     search: string,
     state: string,
     relation: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    verification = ""
   ) =>
     api<Member[]>(
-      `/socios?${new URLSearchParams({ buscar: search, ...(state ? { estadoMembresia: state } : {}), ...(relation ? { relacionUnse: relation } : {}) })}`,
+      `/socios?${new URLSearchParams({ buscar: search, ...(state ? { estadoMembresia: state } : {}), ...(relation ? { relacionUnse: relation } : {}), ...(verification ? { verificacion: verification } : {}) })}`,
       { signal }
     ),
   register: (data: MemberInput) =>
@@ -114,6 +115,10 @@ export const membersApi = {
     }),
   audit: (id: string, signal?: AbortSignal) =>
     api<Audit[]>(`/socios/${id}/historial`, { signal }),
+}
+/** Quien se declara externo no tiene una relación con la UNSE que verificar. */
+export function needsVerification(relation: Relationship) {
+  return relation !== "EXTERNO"
 }
 export function label(value: string | null | undefined) {
   return value

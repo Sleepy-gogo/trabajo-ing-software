@@ -80,6 +80,21 @@ public class Socio {
     return relacionUnse;
   }
 
+  /**
+   * Una persona externa no declara un vínculo con la UNSE, por lo que no hay nada que verificar.
+   * Las demás relaciones esperan la revisión de administración.
+   */
+  public static EstadoVerificacionUnse verificacionInicial(RelacionUnse relacion) {
+    return relacion == RelacionUnse.EXTERNO
+        ? EstadoVerificacionUnse.VERIFICADA
+        : EstadoVerificacionUnse.PENDIENTE;
+  }
+
+  /** Solo una relación verificada habilita el ingreso de un usuario común al sistema. */
+  public boolean habilitaIngreso() {
+    return estadoVerificacionUnse == EstadoVerificacionUnse.VERIFICADA;
+  }
+
   public RelacionUnse relacionParaTarifa() {
     return estadoVerificacionUnse == EstadoVerificacionUnse.VERIFICADA
         ? relacionUnse

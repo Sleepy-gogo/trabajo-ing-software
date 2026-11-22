@@ -1,5 +1,7 @@
 package edu.unse.sera.reserva.control;
 
+import edu.unse.sera.actividad.control.ActividadService;
+import edu.unse.sera.actividad.entity.TipoActividad;
 import edu.unse.sera.disponibilidad.control.CalendarioService;
 import edu.unse.sera.espacio.control.EspacioNoEncontradoException;
 import edu.unse.sera.espacio.persistence.EspacioRepository;
@@ -21,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -32,6 +35,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 @Transactional
 public class ReservaService {
+  private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+  private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
   private final ReservaRepository reservas;
   private final UsuarioRepository usuarios;
   private final EspacioRepository espacios;
@@ -39,6 +44,7 @@ public class ReservaService {
   private final PagoRepository pagos;
   private final MercadoPagoGateway mercadoPago;
   private final TransactionTemplate transacciones;
+  private final ActividadService actividad;
 
   public ReservaService(
       ReservaRepository reservas,
@@ -47,7 +53,8 @@ public class ReservaService {
       CalendarioService calendario,
       PagoRepository pagos,
       MercadoPagoGateway mercadoPago,
-      TransactionTemplate transacciones) {
+      TransactionTemplate transacciones,
+      ActividadService actividad) {
     this.reservas = reservas;
     this.usuarios = usuarios;
     this.espacios = espacios;
@@ -55,6 +62,7 @@ public class ReservaService {
     this.pagos = pagos;
     this.mercadoPago = mercadoPago;
     this.transacciones = transacciones;
+    this.actividad = actividad;
   }
 
   public record Solicitud(
@@ -126,6 +134,8 @@ public class ReservaService {
     } else {
       pagos.saveAndFlush(new Pago(reserva, solicitud.medioPago()));
     }
+    actividad.registrar(
+        usuario.getId(), usuario.getEmail(), TipoActividad.RESERVA_CREADA, describir(reserva));
     return detalle(reserva);
   }
 
@@ -177,8 +187,30 @@ public class ReservaService {
   public ReservaDetalle cancelar(UUID id, UUID actor) {
     Reserva reserva = bloquear(id);
     autorizar(reserva, actor);
+    EstadoReserva anterior = reserva.getEstado();
     cancelarInterno(reserva, false);
+    if (anterior != reserva.getEstado()) {
+      Usuario titular = reserva.getUsuario();
+      boolean propia = titular.getId().equals(actor);
+      Usuario quien = propia ? titular : usuario(actor);
+      actividad.registrar(
+          quien.getId(),
+          quien.getEmail(),
+          TipoActividad.RESERVA_CANCELADA,
+          describir(reserva) + (propia ? "" : ", reserva de " + titular.getNombreCompleto()));
+    }
     return detalle(reserva);
+  }
+
+  /** Describe la reserva sin datos de pago, por ejemplo "Cancha, 20/11/2026 de 18:00 a 19:00". */
+  private static String describir(Reserva r) {
+    return r.getEspacio().getNombre()
+        + ", "
+        + r.getFecha().format(FECHA)
+        + " de "
+        + r.getDesde().format(HORA)
+        + " a "
+        + r.getHasta().format(HORA);
   }
 
   private void cancelarInterno(Reserva reserva, boolean vencimiento) {

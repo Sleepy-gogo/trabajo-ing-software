@@ -41,6 +41,8 @@ El registro público crea una cuenta de usuario. Los roles de administración y 
 3. Elegí **Iniciar sesión**.
 4. Esperá a que aparezca tu pantalla de inicio. Las opciones del menú dependen de tu rol.
 
+Si declaraste una relación con la UNSE (estudiante, docente, no docente, graduado o visitante), vas a poder ingresar cuando administración la verifique. Mientras tanto, con la contraseña correcta el acceso muestra un aviso que lo explica. Si administración rechazó la relación, el aviso te pide que te acerques a administración para revisarla. Con un email o una contraseña incorrectos se muestra el mismo error de siempre.
+
 ![Pantalla de acceso de SERA](images/guia/01-acceso.png)
 
 *Figura 1. Acceso con email y contraseña. El ícono del ojo permite revisar la contraseña antes de enviarla.*
@@ -52,7 +54,10 @@ El registro público crea una cuenta de usuario. Los roles de administración y 
 3. Indicá tu relación declarada con la UNSE y el identificador correspondiente, si aplica.
 4. Enviá el formulario. Si aparece un error, corregí el campo indicado y volvé a enviarlo.
 
-La contraseña debe tener al menos ocho caracteres. La relación declarada con la UNSE queda pendiente de verificación administrativa: declararte estudiante no habilita automáticamente la tarifa de estudiante.
+La contraseña debe tener al menos ocho caracteres. El aviso debajo de la relación cambia según lo que elijas:
+
+- **Externo**: no hay una relación que verificar. La cuenta queda lista para usar apenas la creás.
+- **Cualquier otra relación**: administración tiene que verificarla. Hasta que la confirme no vas a poder iniciar sesión. Declararte estudiante tampoco habilita la tarifa de estudiante hasta la verificación.
 
 ![Formulario de registro](images/guia/02-registro.png)
 
@@ -183,8 +188,8 @@ Abrí **Espacios**, buscá el lugar y elegí **Consultar disponibilidad**. Revis
 
 ### Crear una reserva
 
-1. Desde el espacio o **Mis reservas**, iniciá una nueva reserva.
-2. Elegí **Espacio**, **Fecha**, **Duración** y **Horario disponible**.
+1. En la consulta del espacio, elegí la **Fecha**, un **Horario de inicio** y la **Duración** con los botones **−** y **+**. El selector marca el rango completo, por ejemplo de 18:00 a 20:00.
+2. Elegí **Reservar este espacio**. El formulario llega con el espacio, la fecha y el horario ya elegidos; si querés cambiarlos, usá **Cambiar horario**, que abre el mismo selector. También podés empezar desde **Mis reservas** y elegir ahí el espacio y el horario.
 3. Indicá la **Cantidad de personas**, dentro de la capacidad del lugar.
 4. Elegí el **Medio de pago**. Si tenés un ticket con saldo, podés seleccionarlo.
 5. Revisá el resumen de tarifa, total, ticket aplicado e importe restante.
@@ -199,7 +204,7 @@ Abrí **Espacios**, buscá el lugar y elegí **Consultar disponibilidad**. Revis
 
 *Figura 12. Revisá espacio, fecha, horario, personas e importe antes de crear la reserva.*
 
-Las duraciones disponibles son de una a cuatro horas completas. Los horarios corresponden a Argentina y no pueden cruzar medianoche. Si un horario deja de estar disponible mientras completás la solicitud, elegí otro: SERA comprueba la disponibilidad nuevamente al guardar.
+Las reservas se hacen con al menos 40 minutos de anticipación: la disponibilidad de hoy solo ofrece horarios que la cumplen y, si se intenta otro, SERA indica el primer horario posible. La duración se elige en horas completas y su máximo depende de las horas libres a continuación del inicio: cuando no quedan más, el botón **+** se deshabilita y el selector lo explica. Si elegís un inicio donde no entra la duración que tenías, se ajusta a la máxima y aparece un aviso. Cambiar la duración no borra el inicio. Al cambiar la fecha, el horario se conserva si sigue libre ese día; si no, se limpia y se avisa. Los horarios corresponden a Argentina y no pueden cruzar medianoche. Si un horario deja de estar disponible mientras completás la solicitud, elegí otro: SERA comprueba la disponibilidad nuevamente al guardar.
 
 ### Confirmar el pago de la reserva
 
@@ -274,11 +279,13 @@ Revisá la identidad y el rol antes de guardar. Inactivar una cuenta no borra su
 ### Verificar la relación UNSE y gestionar membresías
 
 1. Abrí **Socios**.
-2. Buscá a la persona. Podés filtrar por estado de membresía o relación UNSE.
+2. Buscá a la persona. Podés filtrar por estado de membresía, relación UNSE o verificación de la relación. El contador **Relaciones por verificar** del inicio abre directamente el listado de las personas pendientes, que no pueden ingresar hasta que alguien las revise.
 3. Abrí la edición del registro.
 4. Contrastá la documentación y actualizá la relación, su verificación y el identificador correspondiente.
 5. Si modificás el estado de membresía, elegí una transición válida.
 6. Completá el motivo y guardá los cambios. Consultá el historial de cambios para revisar las intervenciones anteriores.
+
+Si rechazás la relación de alguien que tiene la sesión abierta, esa sesión se cierra. Para que una persona rechazada pueda ingresar, corregí su relación (por ejemplo a Externo) o verificala.
 
 ![Gestión de socios, verificación UNSE y membresía](images/guia/14-admin-socios.png)
 
@@ -338,14 +345,29 @@ En **Reservas**, revisá los registros y filtros disponibles. Abrí el detalle p
 
 ## 9. Informes y exportación
 
+### Panel de indicadores
+
+El **Inicio** de administración es un panel de indicadores. Elegí el período (**Este mes**, **Últimos 30 días**, **Últimos 3 meses** o **Últimos 12 meses**). Cada indicador se compara con el período anterior de igual duración:
+
+- Ingresos aprobados, reservas confirmadas, horas reservadas, tasa de cancelación (su variación se indica en puntos) y membresías activas.
+- Ingresos de cada mes, separados en cuotas de membresía y reservas.
+- Horas reservadas e ingresos de cada espacio.
+- Mapa de calor con la demanda por día de la semana y hora: una reserva de 18 a 20 suma en las 18 y en las 19.
+- Asistencia: qué parte de las reservas que ya terminaron tuvo un ingreso registrado por el personal.
+- Socios según su relación con la UNSE y membresías activas de cada nivel.
+- Conclusiones en texto, que solo aparecen cuando hay datos suficientes. Por ejemplo, si el período anterior no tuvo ingresos no se informa un porcentaje de crecimiento.
+- Las últimas acciones del registro de actividad.
+
+El panel muestra horas reservadas y no un porcentaje de ocupación, que todavía no está definido.
+
 ### Generar un informe
 
 1. Abrí **Informes**.
-2. Elegí el **Tipo de informe**: socios, reservas, pagos o utilización de espacios.
+2. Elegí el **Tipo de informe**: socios, reservas, pagos, utilización de espacios o actividad.
 3. Indicá **Desde** y **Hasta**.
 4. Completá los filtros de estado, relación UNSE y espacio que correspondan al tipo elegido.
 5. Elegí **Generar informe**.
-6. Revisá **Filtros guardados**, el resumen y las filas del resultado.
+6. Revisá **Filtros guardados**, el **Resumen** con sus gráficos y las filas del resultado. Los gráficos se calculan con las mismas filas guardadas, así que un informe abierto más tarde muestra los valores originales.
 
 ![Informe generado con sus filtros y resultados](images/guia/17-admin-informes.png)
 
@@ -356,7 +378,8 @@ En **Reservas**, revisá los registros y filtros disponibles. Abrí el detalle p
 | Socios | Usa la fecha de alta del socio para el período. Muestra relación UNSE, verificación y estado de membresía. |
 | Reservas | Usa la fecha reservada para el período. Permite revisar espacio, titular, horario, personas y estado. |
 | Pagos | Usa la fecha de creación del pago. El importe aprobado suma los registros aprobados incluidos en el resultado. |
-| Utilización de espacios | Resume reservas, ingresos registrados, horas reservadas y personas por espacio. Las reservas pendientes o canceladas no representan asistencia. |
+| Utilización de espacios | Resume reservas, reservas terminadas, ingresos registrados, horas reservadas y personas por espacio. El gráfico muestra horas y asistencia de cada espacio. Las reservas pendientes o canceladas no representan asistencia. |
+| Actividad | Registro de acciones de los usuarios: inicios y cierres de sesión, intentos fallidos o bloqueados por la verificación pendiente, creación y cancelación de reservas, cambios de verificación e informes generados. Se filtra por período y **Tipo de acción**. No guarda contraseñas ni datos de pago. |
 
 La utilización describe actividad registrada; no es un porcentaje de ocupación contra toda la capacidad horaria. Si necesitás comparar asistencia, revisá la cantidad de ingresos registrados además de las reservas. Para la definición precisa de cada columna y métrica, consultá [REPORTES_ENCUESTAS.md](REPORTES_ENCUESTAS.md).
 
@@ -425,7 +448,7 @@ Si el resultado rechaza el acceso, revisá el motivo: una reserva futura todaví
 
 | Situación | Qué revisar o hacer |
 | --- | --- |
-| No puedo iniciar sesión. | Revisá email, contraseña y estado de la cuenta. Si no recordás la contraseña, pedí ayuda a administración. |
+| No puedo iniciar sesión. | Revisá email, contraseña y estado de la cuenta. Si el aviso indica que tu relación con la UNSE no está verificada, esperá la confirmación de administración o acercate si fue rechazada. Si no recordás la contraseña, pedí ayuda a administración. |
 | El pago fue realizado, pero la membresía sigue pendiente. | Si es efectivo, pedí que administración confirme el cobro. Si es Mercado Pago, abrí Mi membresía y elegí Ya pagué, verificar pago. |
 | Hay un pago aprobado, pero sigo sin beneficios. | Consultá si requiere revisión o pertenece a una contratación anterior. Revisá también el estado de cuenta, suspensión y próximo vencimiento. |
 | Mercado Pago no vuelve automáticamente a SERA. | Regresá a Mi membresía y verificá el cobro. Para una reserva, abrí su detalle y la verificación del pago. |
@@ -440,7 +463,7 @@ Si el resultado rechaza el acceso, revisá el motivo: una reserva futura todaví
 | El informe anterior no refleja un pago nuevo. | Es una instantánea. Generá otro informe con los filtros deseados. |
 | No veo una opción que tiene otra cuenta. | Revisá tu rol. Los usuarios no tienen acceso a informes, resultados de encuestas ni confirmación administrativa de efectivo. |
 
-La sección **Configuración** conserva una vista previa cuyos cambios no se guardan. Usá las secciones específicas de niveles, espacios, usuarios y socios para las operaciones implementadas. Los avisos de la interfaz no constituyen un historial completo de eventos.
+Los permisos y datos generales se administran desde las secciones de niveles, espacios, usuarios y socios. Las acciones principales de los usuarios quedan en el informe de actividad.
 
 ## 13. Recorrido de demostración
 

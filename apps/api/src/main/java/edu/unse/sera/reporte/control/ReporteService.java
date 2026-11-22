@@ -1,5 +1,7 @@
 package edu.unse.sera.reporte.control;
 
+import edu.unse.sera.actividad.control.ActividadService;
+import edu.unse.sera.actividad.entity.TipoActividad;
 import edu.unse.sera.espacio.control.EspacioNoEncontradoException;
 import edu.unse.sera.espacio.persistence.EspacioRepository;
 import edu.unse.sera.reporte.entity.Informe;
@@ -24,23 +26,35 @@ import tools.jackson.databind.ObjectMapper;
 @Transactional(readOnly = true)
 public class ReporteService {
   private static final ZoneId ZONA = ZoneId.of("America/Argentina/Buenos_Aires");
+  private static final java.time.format.DateTimeFormatter FECHA =
+      java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+  private static final Map<String, String> NOMBRES =
+      Map.of(
+          "socios", "socios",
+          "reservas", "reservas",
+          "pagos", "pagos",
+          "uso_servicios", "uso de servicios",
+          "actividad", "actividad");
   private final ReporteRepository datos;
   private final InformeRepository informes;
   private final UsuarioRepository usuarios;
   private final ObjectMapper mapper;
   private final EspacioRepository espacios;
+  private final ActividadService actividad;
 
   public ReporteService(
       ReporteRepository datos,
       InformeRepository informes,
       UsuarioRepository usuarios,
       ObjectMapper mapper,
-      EspacioRepository espacios) {
+      EspacioRepository espacios,
+      ActividadService actividad) {
     this.datos = datos;
     this.informes = informes;
     this.usuarios = usuarios;
     this.mapper = mapper;
     this.espacios = espacios;
+    this.actividad = actividad;
   }
 
   @Transactional
@@ -67,7 +81,9 @@ public class ReporteService {
                   ahora.toLocalDateTime());
           case "pagos" ->
               datos.pagos(f.desde(), f.hasta(), f.estado(), f.relacion(), f.espacioId());
-          default -> datos.uso(f.desde(), f.hasta(), f.relacion(), f.espacioId());
+          case "actividad" -> datos.actividad(f.desde(), f.hasta(), f.estado());
+          default ->
+              datos.uso(f.desde(), f.hasta(), f.relacion(), f.espacioId(), ahora.toLocalDateTime());
         };
     if (filas.size() > 5000) {
       throw new IllegalArgumentException(
@@ -100,6 +116,16 @@ public class ReporteService {
             resumen);
     informes.save(
         new Informe(detalle.id(), f.tipo(), ahora, actor, mapper.writeValueAsString(detalle)));
+    actividad.registrar(
+        actor,
+        usuario.getEmail(),
+        TipoActividad.INFORME_GENERADO,
+        "Informe de "
+            + NOMBRES.get(f.tipo())
+            + " del "
+            + f.desde().format(FECHA)
+            + " al "
+            + f.hasta().format(FECHA));
     return detalle;
   }
 
@@ -167,10 +193,19 @@ public class ReporteService {
                 {"fecha", "Creación"},
                 {"revision", "Requiere revisión"}
               };
+          case "actividad" ->
+              new String[][] {
+                {"fecha", "Fecha y hora"},
+                {"accion", "Acción"},
+                {"usuario", "Usuario"},
+                {"nombre", "Nombre"},
+                {"detalle", "Detalle"}
+              };
           default ->
               new String[][] {
                 {"espacio", "Espacio"},
                 {"reservas", "Reservas confirmadas"},
+                {"terminadas", "Reservas terminadas"},
                 {"ingresos", "Ingresos registrados"},
                 {"horas", "Horas reservadas"},
                 {"personas", "Personas en reservas utilizadas"}

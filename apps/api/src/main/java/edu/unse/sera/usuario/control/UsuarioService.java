@@ -1,5 +1,7 @@
 package edu.unse.sera.usuario.control;
 
+import edu.unse.sera.actividad.control.ActividadService;
+import edu.unse.sera.actividad.entity.TipoActividad;
 import edu.unse.sera.socio.entity.EstadoVerificacionUnse;
 import edu.unse.sera.socio.entity.RelacionUnse;
 import edu.unse.sera.socio.entity.Socio;
@@ -29,14 +31,17 @@ public class UsuarioService {
   private final UsuarioRepository usuarioRepository;
   private final PasswordEncoder passwordEncoder;
   private final SocioRepository socios;
+  private final ActividadService actividad;
 
   public UsuarioService(
       UsuarioRepository usuarioRepository,
       PasswordEncoder passwordEncoder,
-      SocioRepository socios) {
+      SocioRepository socios,
+      ActividadService actividad) {
     this.usuarioRepository = usuarioRepository;
     this.passwordEncoder = passwordEncoder;
     this.socios = socios;
+    this.actividad = actividad;
   }
 
   public UsuarioDetalle registrarUsuario(
@@ -60,28 +65,64 @@ public class UsuarioService {
         new Usuario(nombreCompleto, email, dni, EstadoUsuario.ACTIVO, rol, hashedPassword);
     try {
       usuarioRepository.saveAndFlush(usuario);
+      RelacionUnse declarada = relacion == null ? RelacionUnse.EXTERNO : relacion;
       socios.save(
-          new Socio(
-              usuario,
-              relacion == null ? RelacionUnse.EXTERNO : relacion,
-              EstadoVerificacionUnse.PENDIENTE,
-              identificador));
+          new Socio(usuario, declarada, Socio.verificacionInicial(declarada), identificador));
       return toResponse(usuario);
     } catch (DataIntegrityViolationException exception) {
       throw traducirConflictoDeUnicidad(exception);
     }
   }
 
+  /**
+   * Comprueba las credenciales y registra el intento en el historial de actividad. Un usuario común
+   * necesita además una relación con la UNSE verificada. El motivo del bloqueo solo se informa
+   * cuando la contraseña es correcta, para no revelar el estado de una cuenta ajena.
+   */
   @Transactional(readOnly = true)
   public Optional<UsuarioDetalle> autenticar(String email, String password) {
+    String emailNormalizado = normalizarEmail(email);
     if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
-      return Optional.empty();
+      return rechazar(null, emailNormalizado, "Contraseña con formato inválido");
     }
-    return usuarioRepository
-        .findByEmailIgnoreCase(normalizarEmail(email))
-        .filter(usuario -> passwordEncoder.matches(password, usuario.getPasswordHash()))
-        .filter(usuario -> usuario.getEstadoCuenta() == EstadoUsuario.ACTIVO)
-        .map(this::toResponse);
+    Optional<Usuario> cuenta = usuarioRepository.findByEmailIgnoreCase(emailNormalizado);
+    if (cuenta.isEmpty()) {
+      return rechazar(null, emailNormalizado, "El correo no corresponde a ninguna cuenta");
+    }
+    Usuario usuario = cuenta.get();
+    if (!passwordEncoder.matches(password, usuario.getPasswordHash())) {
+      return rechazar(usuario.getId(), usuario.getEmail(), "Contraseña incorrecta");
+    }
+    if (usuario.getEstadoCuenta() != EstadoUsuario.ACTIVO) {
+      return rechazar(usuario.getId(), usuario.getEmail(), "La cuenta no está activa");
+    }
+    Optional<EstadoVerificacionUnse> verificacion = relacionSinVerificar(usuario);
+    if (verificacion.isPresent()) {
+      actividad.registrar(
+          usuario.getId(),
+          usuario.getEmail(),
+          TipoActividad.INICIO_SESION_BLOQUEADO,
+          "Relación con la UNSE " + verificacion.get().name().toLowerCase(Locale.ROOT));
+      throw new RelacionNoVerificadaException(verificacion.get());
+    }
+    actividad.registrar(
+        usuario.getId(),
+        usuario.getEmail(),
+        TipoActividad.INICIO_SESION,
+        "Rol " + usuario.getRol().name().toLowerCase(Locale.ROOT));
+    return Optional.of(toResponse(usuario));
+  }
+
+  private Optional<UsuarioDetalle> rechazar(UUID usuarioId, String email, String motivo) {
+    actividad.registrar(usuarioId, email, TipoActividad.INICIO_SESION_FALLIDO, motivo);
+    return Optional.empty();
+  }
+
+  public void registrarCierreSesion(UUID id) {
+    usuarioRepository
+        .findById(id)
+        .ifPresent(
+            u -> actividad.registrar(u.getId(), u.getEmail(), TipoActividad.CIERRE_SESION, null));
   }
 
   @Transactional(readOnly = true)
@@ -89,7 +130,19 @@ public class UsuarioService {
     return usuarioRepository
         .findById(id)
         .filter(usuario -> usuario.getEstadoCuenta() == EstadoUsuario.ACTIVO)
+        .filter(usuario -> relacionSinVerificar(usuario).isEmpty())
         .map(this::toResponse);
+  }
+
+  /** ADMIN y STAFF no dependen de una relación declarada: sus roles los asigna administración. */
+  private Optional<EstadoVerificacionUnse> relacionSinVerificar(Usuario usuario) {
+    if (usuario.getRol() != RolUsuario.USUARIO) {
+      return Optional.empty();
+    }
+    return socios
+        .findByUsuarioId(usuario.getId())
+        .filter(socio -> !socio.habilitaIngreso())
+        .map(Socio::getEstadoVerificacionUnse);
   }
 
   public UsuarioDetalle actualizarPerfil(UUID id, String nombreCompleto, String email, int dni) {

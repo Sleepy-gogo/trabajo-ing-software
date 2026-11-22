@@ -91,4 +91,52 @@ class CalendarioServiceTest {
             () -> service.bloquear(id, fecha, LocalTime.of(11, 0), LocalTime.of(13, 0), "Otro"))
         .isInstanceOf(IllegalStateException.class);
   }
+
+  @Test
+  void hoyNoOfreceHorariosQueEmpiezanEnMenosDeCuarentaMinutos() {
+    LocalDate hoy = LocalDate.of(2026, 11, 19);
+    abiertoTodoElDia();
+    // A las 10:00:30 el primer inicio admitido es 10:41 (40 minutos, redondeado al minuto).
+    var franjas = service.consultar(id, hoy, actor, instante(hoy, 10, 0, 30)).franjas();
+    assertThat(franjas).containsExactly(new CalendarioService.Franja(LocalTime.of(10, 41), FIN));
+  }
+
+  @Test
+  void mananaOfreceTodosLosHorariosLibres() {
+    LocalDate hoy = LocalDate.of(2026, 11, 19);
+    abiertoTodoElDia();
+    var franjas = service.consultar(id, hoy.plusDays(1), actor, instante(hoy, 10, 0, 0)).franjas();
+    assertThat(franjas).containsExactly(new CalendarioService.Franja(INICIO, FIN));
+  }
+
+  @Test
+  void cercaDeMedianocheNoOfreceHorariosDelDiaQueTermina() {
+    LocalDate hoy = LocalDate.of(2026, 11, 19);
+    abiertoTodoElDia();
+    var ahora = instante(hoy, 23, 40, 0);
+    assertThat(service.consultar(id, hoy, actor, ahora).franjas()).isEmpty();
+    assertThat(service.consultar(id, hoy.plusDays(1), actor, ahora).franjas())
+        .containsExactly(new CalendarioService.Franja(LocalTime.of(0, 20), FIN));
+    assertThat(service.consultar(id, hoy.minusDays(1), actor, ahora).franjas()).isEmpty();
+  }
+
+  private static final LocalTime INICIO = LocalTime.MIN;
+  private static final LocalTime FIN = LocalTime.of(23, 0);
+
+  private void abiertoTodoElDia() {
+    when(espacios.findById(id)).thenReturn(Optional.of(espacio));
+    when(horarios.findAllByEspacioId(id))
+        .thenReturn(
+            java.util.Arrays.stream(DiaSemana.values())
+                .map(d -> new Disponibilidad(espacio, d, INICIO, FIN))
+                .toList());
+  }
+
+  private static java.time.OffsetDateTime instante(
+      LocalDate fecha, int hora, int minuto, int segundo) {
+    return fecha
+        .atTime(hora, minuto, segundo)
+        .atZone(edu.unse.sera.reserva.entity.Reserva.ZONA)
+        .toOffsetDateTime();
+  }
 }

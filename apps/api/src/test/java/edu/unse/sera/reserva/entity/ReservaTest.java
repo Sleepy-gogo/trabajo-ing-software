@@ -158,4 +158,62 @@ class ReservaTest {
     assertThatThrownBy(() -> r.consumir(inicio, UUID.randomUUID()))
         .isInstanceOf(IllegalStateException.class);
   }
+
+  @Test
+  void aLasDiezRechazaUnaReservaParaLasDiezYMediaIndicandoLasDiezYCuarenta() {
+    assertThatThrownBy(
+            () ->
+                Reserva.validarHorario(
+                    ahora.toLocalDate(), LocalTime.of(10, 30), LocalTime.of(11, 30), ahora))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            "Las reservas se hacen con al menos 40 minutos de anticipación. Elegí un horario"
+                + " desde las 10:40.");
+  }
+
+  @Test
+  void aLasDiezAceptaLasDiezYCuarentaComoValorLimite() {
+    Reserva.validarHorario(ahora.toLocalDate(), LocalTime.of(10, 40), LocalTime.of(11, 40), ahora);
+    Reserva r =
+        new Reserva(
+            usuario,
+            espacio,
+            ahora.toLocalDate(),
+            LocalTime.of(10, 40),
+            LocalTime.of(11, 40),
+            1,
+            new BigDecimal("1000"),
+            "EXTERNO",
+            UUID.randomUUID(),
+            ahora);
+    // La reserva pendiente retiene el horario como máximo hasta su inicio.
+    assertThat(r.getVenceEn()).isEqualTo(ahora.plusMinutes(40));
+  }
+
+  @Test
+  void redondeaHaciaArribaElPrimerHorarioPosible() {
+    assertThatThrownBy(
+            () ->
+                Reserva.validarHorario(
+                    ahora.toLocalDate(),
+                    LocalTime.of(10, 40),
+                    LocalTime.of(11, 40),
+                    ahora.plusNanos(1)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageEndingWith("desde las 10:41.");
+    assertThat(Reserva.inicioMasTemprano(ahora.plusSeconds(20)))
+        .isEqualTo(ahora.toLocalDateTime().plusMinutes(41));
+  }
+
+  @Test
+  void cercaDeMedianocheIndicaElDiaDelPrimerHorarioPosible() {
+    var tarde = OffsetDateTime.parse("2026-09-28T23:45:00-03:00");
+    assertThatThrownBy(
+            () ->
+                Reserva.validarHorario(
+                    tarde.toLocalDate().plusDays(1), LocalTime.of(0, 0), LocalTime.of(1, 0), tarde))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageEndingWith("desde las 00:25.");
+    assertThat(Reserva.inicioMasTemprano(tarde)).isEqualTo("2026-09-29T00:25");
+  }
 }
